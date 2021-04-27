@@ -7,3 +7,18 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+util = { path = "../util" }
+# chrono = { version = "0.4.13", features = ["serde"] }
+# gnuplot = "0.0.37"
+# plotters = "0.2.15"
+# ordered-float = "2.0.0"
+itertools = "0.9.0"
+# derive_more = "0.99.13"
+# num-traits = "0.2.14"
+# rand = "0.8.3"
+# strum = "0.20.0"
+# strum_macros = "0.20.1"
+# calamine = "0.2.1"
+# custom_debug_derive = "0.5.0"
+# serde = { version = "1.0.125", features = ["derive"] }
+# serde_json = "1.0.64"
