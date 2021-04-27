@@ -1,15 +1,13 @@
-use std::fs::File;
-use std::{fs, io};
-use util::file_io;
-use std::io::BufRead;
-
-use crate::*;
 use super::*;
 
 pub fn main() {
-    report_categories();
+    // report_categories();
+    // get_categories();
+    // report_categories_by_topic_count();
+    report_category_tree_2();
 }
 
+/*
 fn report_categories() {
     // Something like [[$CATEGORY:Books]].
     let mut groups = group::Grouper::new("Categories");
@@ -23,4 +21,5 @@ fn report_categories() {
     }
     groups.print_by_count(0, None);
 }
+*/
 
