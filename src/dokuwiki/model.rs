@@ -1,11 +1,12 @@
-use itertools::Itertools;
-use std::fs;
+use std::hash::{Hash, Hasher};
 
 use crate::*;
-use std::hash::{Hasher, Hash};
+use std::fs;
 
-pub const PATH_PAGES: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/pages";
-pub const PATH_MEDIA: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/media";
+pub const NAMESPACE_NONE: &str = "";
+
+pub const PAGE_NAME_SIDEBAR: &str = "Sidebar";
+pub const PAGE_NAME_START:   &str = "Start";
 
 pub enum WikiImageSize {
     Small,
@@ -67,81 +68,6 @@ impl WikiImageLinkType {
             WikiImageLinkType::LinkOnly => Some("linkonly"),
         }
     }
-}
-
-pub struct WikiAttributeTable {
-    pub rows: Vec<WikiAttributeRow>,
-}
-
-pub struct WikiAttributeRow {
-    pub label: String,
-    pub markup: String,
-}
-
-pub struct WikiList {
-    pub items: Vec<String>,
-}
-
-impl WikiAttributeTable {
-    pub fn new() -> Self {
-        Self {
-            rows: vec![],
-        }
-    }
-
-    pub fn add_row(&mut self, label: &str, markup: &str) {
-        self.rows.push(WikiAttributeRow::new(label, markup));
-    }
-
-    pub fn add_markup(&self, page_text: &mut String) {
-        // The attributes table should look something like:
-        //   ^ Color    | Blue |
-        //   ^ Tapes    | 4    |
-        for row in self.rows.iter() {
-            page_text.push_str(&format!("^ {} | {} |\n", row.label, row.markup));
-        }
-        add_line(page_text);
-    }
-}
-
-impl WikiAttributeRow {
-    pub fn new(label: &str, markup: &str) -> Self {
-        Self {
-            label: label.to_string(),
-            markup: markup.to_string(),
-        }
-    }
-}
-
-impl WikiList {
-    pub fn new() -> Self {
-        Self {
-            items: vec![],
-        }
-    }
-
-    pub fn add_item(&mut self, markup: &str) {
-        self.items.push(format!("  * {}", markup));
-    }
-
-    pub fn add_item_indent(&mut self, depth: usize, markup: &str) {
-        self.items.push(format!("{}* {}", "  ".repeat(depth + 1), markup));
-    }
-
-    pub fn add_to_page(&self, page_text: &mut String, label: Option<&str>) {
-        if let Some(label) = label {
-            page_text.push_str(&format!("{}:\n", label));
-        }
-        for item in self.items.iter() {
-            page_text.push_str(&format!("{}\n", item));
-        }
-        add_line(page_text);
-    }
-
-    pub fn len(&self) -> usize {
-        self.items.len()
-    }
-
 }
 
 pub fn add_headline(page_text: &mut String, text: &str, level: usize) {
@@ -279,7 +205,7 @@ pub fn copy_image_file(from_path: &str, from_file_name: &str, to_path: &str, to_
     let from_full_file_name = format!("{}/{}", from_path, from_file_name);
     let to_full_file_name = format!("{}/{}/{}", to_path, namespace_to_path(to_namespace), legal_file_name(to_file_name));
     println!("{} => {}", from_full_file_name, to_full_file_name);
-    std::fs::copy(from_full_file_name, to_full_file_name).unwrap();
+    fs::copy(from_full_file_name, to_full_file_name).unwrap();
 }
 
 pub fn bold(value: &str) -> String {
