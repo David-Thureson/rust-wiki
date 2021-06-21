@@ -6,10 +6,52 @@ use std::collections::BTreeMap;
 
 use crate::*;
 use std::time::Instant;
+use crate::connectedtext::{TopicReference, NAMESPACE_TOOLS, NAMESPACE_HOME};
 
-const PATH_CONNECTEDTEXT_EXPORT: &str = "T:\\Private Wiki Export";
+const PATH_CONNECTEDTEXT_EXPORT: &str = r"T:\Private Wiki Export";
+const PATH_CONNECTEDTEXT_EXPORT_TOOLS: &str = r"T:\Private Wiki Export\Tools";
+const PATH_CONNECTEDTEXT_EXPORT_HOME: &str = r"T:\Private Wiki Export\Home";
 
 pub const TAG_CATEGORY: &str = "$CATEGORY:";
+
+pub fn get_topic_text_both_namespaces(topic_limit_tools: Option<usize>, topic_limit_home: Option<usize>) -> BTreeMap<TopicReference, Vec<String>> {
+    let start_time = Instant::now();
+
+    let mut topics = BTreeMap::new();
+    get_topic_text_one_namespace(&mut topics, NAMESPACE_TOOLS, PATH_CONNECTEDTEXT_EXPORT_TOOLS, topic_limit_tools);
+    get_topic_text_one_namespace(&mut topics, NAMESPACE_HOME, PATH_CONNECTEDTEXT_EXPORT_HOME, topic_limit_home);
+
+    let limit_label_tools = topic_limit_tools.map_or("all".to_string(), |x| format!("{}", fc(x)));
+    let limit_label_home = topic_limit_home.map_or("all".to_string(), |x| format!("{}", fc(x)));
+    println!("get_topic_text({}, {}): topics = {}, elapsed = {:?}", limit_label_tools, limit_label_home, fc(topics.len()), Instant::now() - start_time);
+
+    topics
+}
+
+fn get_topic_text_one_namespace(topics: &mut BTreeMap<TopicReference, Vec<String>>, namespace: &str, export_path: &str, topic_limit: Option<usize>) {
+    for path in fs::read_dir(export_path).unwrap() {
+        if let Some(topic_limit) = topic_limit {
+            if topics.len() == topic_limit {
+                break;
+            }
+        }
+        let dir_entry = path.as_ref().unwrap();
+        let file_name = file_io::dir_entry_to_file_name(dir_entry);
+        if file_name.to_lowercase().ends_with(".txt") {
+            let topic_name = parse::before_ci(&file_name, ".txt");
+            let topic_reference = TopicReference::new(namespace, topic_name);
+            assert!(!topics.contains_key(&topic_reference));
+            let mut lines = vec![];
+            let file = File::open(format!("{}/{}", export_path, file_name)).unwrap();
+            for raw_line_result in io::BufReader::new(file).lines() {
+                //bg!(&raw_line_result);
+                let line = raw_line_result.unwrap();
+                lines.push(line);
+            }
+            topics.insert(topic_reference, lines);
+        }
+    }
+}
 
 pub fn get_topic_text(topic_limit: Option<usize>) -> BTreeMap<String, Vec<String>> {
     let start_time = Instant::now();
