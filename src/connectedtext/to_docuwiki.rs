@@ -1,16 +1,19 @@
-use crate::dokuwiki::gen_page::*;
-use crate::dokuwiki::model::*;
 use std::collections::BTreeMap;
 
 use crate::*;
 use super::*;
 use std::cmp::Ordering;
 
+use crate::dokuwiki::*;
+use proc_macro::bridge::client::ProcMacro::Attr;
+
 pub(crate) const NAMESPACE_TOOLS: &str = "tools";
 pub(crate) const NAMESPACE_HOME: &str = "home";
-const NAMESPACE_ATTRIBUTES: &str = "attr";
+// const NAMESPACE_ATTRIBUTES: &str = "attr";
 
 const ATTR_NAME_CATEGORY: &str = "Category";
+
+pub const ATTRIBUTE_VALUE_MISSING: &str = "{missing}";
 
 // const TOPIC_LIMIT_TOOLS: Option<usize> = None;
 const TOPIC_LIMIT_TOOLS: Option<usize> = Some(100);
@@ -27,13 +30,21 @@ struct CtGenProcess {
     errors: BTreeMap<TopicReference, Vec<String>>,
 }
 
+enum AttributeType {
+    String,
+    Date,
+    Boolean,
+    Unknown,
+}
+
 struct Attribute {
     name: String,
+    type_: AttributeType,
     values: BTreeMap<String, AttributeValue>,
 }
 
 struct AttributeValue {
-    name: String,
+    _name: String,
     topics: BTreeMap<TopicReference, ()>,
 }
 
@@ -56,9 +67,9 @@ impl CtGenProcess {
         self.source_topics = get_topic_text_both_namespaces(TOPIC_LIMIT_TOOLS, TOPIC_LIMIT_HOME);
         self.fill_attributes();
         // self.copy_image_files();
-        // self.gen_sidebar_page();
-        // self.gen_start_page();
-        // self.gen_imported_pages();
+        self.gen_sidebar_page();
+        self.gen_start_page();
+        self.gen_imported_pages();
         // gen_remaining_category_pages();
         self.report_errors();
     }
@@ -90,6 +101,10 @@ impl CtGenProcess {
             }
         }
         self.source_topics = std::mem::take(&mut source_topics);
+        // Figure out the attribute types.
+        for attribute in self.attributes.values_mut() {
+
+        }
         self.report_attributes(0);
     }
 
@@ -133,8 +148,6 @@ impl CtGenProcess {
         }
     }
 
-
-    /*
     fn gen_sidebar_page(&self) {
         let mut page = WikiGenPage::new(NAMESPACE_NONE, PAGE_NAME_SIDEBAR);
         self.add_main_page_links(&mut page, false, true);
@@ -142,15 +155,50 @@ impl CtGenProcess {
     }
 
     fn gen_start_page(&self) {
-        let mut page = WikiGenPage::new(&self.namespace, PAGE_NAME_START);
+        let mut page = WikiGenPage::new(NAMESPACE_TOOLS, PAGE_NAME_START);
         self.add_main_page_links(&mut page, false, true);
         page.write();
     }
 
     fn gen_imported_pages(&mut self) {
-        for (topic_name, _lines) in self.source_topics.iter() {
-            let page = WikiGenPage::new(&self.namespace, topic_name);
+        for (topic_reference, lines) in self.source_topics.iter() {
+            let (namespace, topic_name) = (&topic_reference.namespace, &topic_reference.topic_name);
+            let mut page = WikiGenPage::new(namespace, topic_name);
+            page.add_headline(topic_name, 0);
+            let mut table = None;
+            for line in lines.iter() {
+                let line = line.trim();
+                if line.is_empty() {
+                    if let Some(table) = table {
+                        page.add_line(table.get_markup());
+                    }
+                    table = None;
+                    page.add_blank_line();
+                }
+                if line.starts_with("{|") {
+                    table = Some(WikiAttributeTable::new());
+                    continue;
+                }
+                if let Some(category_name) = parse_line_as_category(line) {
+                    debug_assert_eq!(false, in_table);
+                    let link = page_link(NAMESPACE_TOOLS, &category_name, Some(&category_name));
+                    page.add_line(&format!("Category: {}", link));
+                } else {
+                    if let Some((name, values)) = self.eval_result_opt(&topic_reference,parse_line_as_attribute(line)) {
+                        match table {
+                            Some(table) => {
+                                let value_markup = values.iter()
+                            }
+                        }
+                        debug_assert_eq!(true, in_table);
 
+                        for value in values.iter() {
+                            self.record_attribute(&topic_reference, &name, value);
+                        }
+                    }
+                }
+
+            }
             page.write();
         }
     }
@@ -158,7 +206,7 @@ impl CtGenProcess {
     fn add_main_page_links(&self, page: &mut WikiGenPage, use_list: bool, include_start_page: bool) {
         let mut links = vec![];
         if include_start_page {
-            links.push(page_link(&self.namespace, PAGE_NAME_START, None));
+            links.push(page_link(NAMESPACE_TOOLS, PAGE_NAME_START, None));
         };
         /*
         links.append(&mut vec![
@@ -181,7 +229,7 @@ impl CtGenProcess {
             }
         }
     }
-    */
+
     /*
     fn source_lines(&self) -> Vec<String> {
         self.source_topics.values().map(|lines| lines.iter()).flatten().map(|x| x.to_string()).collect()
@@ -193,6 +241,7 @@ impl Attribute {
     pub fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
+            type_: AttributeType::Unknown,
             values: Default::default(),
         }
     }
@@ -220,7 +269,7 @@ impl Attribute {
 impl AttributeValue {
     pub fn new(name: &str) -> Self {
         Self {
-            name: name.to_string(),
+            _name: name.to_string(),
             topics: Default::default()
         }
     }

@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use std::fs;
 
 use super::gen::*;
@@ -7,19 +6,6 @@ pub struct WikiGenPage {
     pub namespace: String,
     pub topic_name: String,
     pub content: String,
-}
-
-pub struct WikiAttributeTable {
-    pub rows: Vec<WikiAttributeRow>,
-}
-
-pub struct WikiAttributeRow {
-    pub label: String,
-    pub markup: String,
-}
-
-pub struct WikiList {
-    pub items: Vec<String>,
 }
 
 impl WikiGenPage {
@@ -96,8 +82,16 @@ impl WikiGenPage {
         self.content.push_str(&format!("{}\n\n", section_link_same_page(section_name, label)));
     }
 
-    pub fn add_line(&mut self) {
+    pub fn add_blank_line(&mut self) {
         self.content.push_str("\n");
+    }
+
+    pub fn add(&mut self, text: &str) {
+        self.content.push_str(text);
+    }
+
+    pub fn add_line(&mut self, text: &str) {
+        self.content.push_str(&format!("{}\n", text));
     }
 
     /*
@@ -115,82 +109,4 @@ impl WikiGenPage {
         fs::write(full_file_name, self.content).unwrap();
     }
 
-}
-
-impl WikiAttributeTable {
-    pub fn new() -> Self {
-        Self {
-            rows: vec![],
-        }
-    }
-
-    pub fn add_row(&mut self, label: &str, markup: &str) {
-        self.rows.push(WikiAttributeRow::new(label, markup));
-    }
-
-    pub fn get_markup(&self) -> String {
-        // The attributes table should look something like:
-        //   ^ Color    | Blue |
-        //   ^ Tapes    | 4    |
-        self.rows.iter()
-            .map(|row| format!("^ {} | {} |\n", row.label, row.markup))
-            .join("")
-    }
-}
-
-impl WikiAttributeRow {
-    pub fn new(label: &str, markup: &str) -> Self {
-        Self {
-            label: label.to_string(),
-            markup: markup.to_string(),
-        }
-    }
-}
-
-impl WikiList {
-    pub fn new() -> Self {
-        Self {
-            items: vec![],
-        }
-    }
-
-    pub fn add_item(&mut self, markup: &str) {
-        self.items.push(format!("  * {}", markup));
-    }
-
-    pub fn add_item_indent(&mut self, depth: usize, markup: &str) {
-        self.items.push(format!("{}* {}", "  ".repeat(depth + 1), markup));
-    }
-
-    pub fn get_markup(&self, label: Option<&str>) -> String {
-        let mut markup = "".to_string();
-        if let Some(label) = label {
-            markup.push_str(&format!("{}:\n", label));
-        }
-        for item in self.items.iter() {
-            markup.push_str(&format!("{}\n", item));
-        }
-        markup
-    }
-
-    pub fn len(&self) -> usize {
-        self.items.len()
-    }
-
-}
-
-
-pub fn copy_image_file(from_path: &str, from_file_name: &str, to_path: &str, to_namespace: &str, to_file_name: &str) {
-    let from_full_file_name = format!("{}/{}", from_path, from_file_name);
-    let to_full_file_name = format!("{}/{}/{}", to_path, namespace_to_path(to_namespace), legal_file_name(to_file_name));
-    println!("{} => {}", from_full_file_name, to_full_file_name);
-    std::fs::copy(from_full_file_name, to_full_file_name).unwrap();
-}
-
-pub fn bold(value: &str) -> String {
-    format!("**{}**", value)
-}
-
-pub fn italic(value: &str) -> String {
-    format!("//{}//", value)
 }

@@ -70,6 +70,7 @@ impl WikiImageLinkType {
     }
 }
 
+/*
 pub fn add_headline(page_text: &mut String, text: &str, level: usize) {
     // Like "----- Categories -----" where a level 1 (top) headline has five hyphens.
     debug_assert!(level >= 1);
@@ -215,3 +216,4 @@ pub fn bold(value: &str) -> String {
 pub fn italic(value: &str) -> String {
     format!("//{}//", value)
 }
+*/

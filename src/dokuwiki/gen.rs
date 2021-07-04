@@ -94,13 +94,16 @@ impl WikiAttributeTable {
     }
 
     pub fn add_markup(&self, page_text: &mut String) {
+        page_text.push_str(&self.get_markup());
+    }
+
+    pub fn get_markup(&self) -> String {
         // The attributes table should look something like:
         //   ^ Color    | Blue |
         //   ^ Tapes    | 4    |
-        for row in self.rows.iter() {
-            page_text.push_str(&format!("^ {} | {} |\n", row.label, row.markup));
-        }
-        add_line(page_text);
+        self.rows.iter()
+            .map(|row| format!("^ {} | {} |\n", row.label, row.markup))
+            .join("")
     }
 }
 
@@ -129,13 +132,18 @@ impl WikiList {
     }
 
     pub fn add_to_page(&self, page_text: &mut String, label: Option<&str>) {
+        page_text.push_str(&self.get_markup(label));
+    }
+
+    pub fn get_markup(&self, label: Option<&str>) -> String {
+        let mut markup = "".to_string();
         if let Some(label) = label {
-            page_text.push_str(&format!("{}:\n", label));
+            markup.push_str(&format!("{}:\n", label));
         }
         for item in self.items.iter() {
-            page_text.push_str(&format!("{}\n", item));
+            markup.push_str(&format!("{}\n", item));
         }
-        add_line(page_text);
+        markup
     }
 
     pub fn len(&self) -> usize {

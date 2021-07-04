@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 
 use crate::*;
 use std::time::Instant;
-use crate::connectedtext::{TopicReference, NAMESPACE_TOOLS, NAMESPACE_HOME};
+use crate::connectedtext::{TopicReference, NAMESPACE_TOOLS, NAMESPACE_HOME, ATTRIBUTE_VALUE_MISSING};
 
 const PATH_CONNECTEDTEXT_EXPORT: &str = r"T:\Private Wiki Export";
 const PATH_CONNECTEDTEXT_EXPORT_TOOLS: &str = r"T:\Private Wiki Export\Tools";
@@ -106,7 +106,10 @@ pub fn parse_line_as_attribute(line: &str) -> Result<Option<(String, Vec<String>
                 if value_split.len() != 2 {
                     return Err(format!("Problem parsing attribute value in \"{}\".", line));
                 }
-                let value = value.split(":=").collect::<Vec<_>>()[1].trim();
+                let mut value = value.split(":=").collect::<Vec<_>>()[1].trim();
+                if value.is_empty() || value.contains("*") {
+                    value = ATTRIBUTE_VALUE_MISSING;
+                }
                 values.push(value.to_string());
             }
             return Ok(Some((name.to_string(), values)));
