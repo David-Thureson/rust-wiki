@@ -1,24 +1,63 @@
+// https://www.dokuwiki.org/images
+
 use super::*;
 
-pub enum Link {
+pub struct Link {
+    label: Option<String>,
+    type_: LinkType,
+}
+
+pub enum LinkType {
     Topic {
         topic: TopicRc,
-        label: Option<String>,
     },
     Section {
         section: SectionRc,
-        label: Option<String>,
     },
     External {
         url: String,
-        label: Option<String>,
     },
     Image {
-        file_name: String,
-        //size:
-    },
-    ExternalImage {
-        url: String,
-        //size:
+        source: ImageSource,
+        alignment: ImageAlignment,
+        size: ImageSize,
+        type_: ImageLinkType,
     },
 }
+
+pub enum ImageSource {
+    Internal {
+        namespace: NamespaceRc,
+        file_name: String,
+    },
+    External {
+        url: String,
+    }
+}
+
+pub enum ImageAlignment {
+    Center,
+    Left,
+    Right,
+}
+
+pub enum ImageSize {
+    Width {
+        width: usize,
+    },
+    Height {
+        height: usize,
+    },
+    WidthHeight {
+        width: usize,
+        height: usize,
+    },
+}
+
+pub enum ImageLinkType {
+    Detail,
+    Direct,
+    LinkOnly,
+    NoLink,
+}
+

@@ -2,23 +2,8 @@ use std::collections::BTreeMap;
 
 use crate::*;
 use super::*;
-use std::cmp::Ordering;
-
 use crate::dokuwiki::*;
-use proc_macro::bridge::client::ProcMacro::Attr;
-
-pub(crate) const NAMESPACE_TOOLS: &str = "tools";
-pub(crate) const NAMESPACE_HOME: &str = "home";
-// const NAMESPACE_ATTRIBUTES: &str = "attr";
-
-const ATTR_NAME_CATEGORY: &str = "Category";
-
-pub const ATTRIBUTE_VALUE_MISSING: &str = "{missing}";
-
-// const TOPIC_LIMIT_TOOLS: Option<usize> = None;
-const TOPIC_LIMIT_TOOLS: Option<usize> = Some(100);
-// const TOPIC_LIMIT_HOME: Option<usize> = None;
-const TOPIC_LIMIT_HOME: Option<usize> = Some(50);
+use std::cmp::Ordering;
 
 pub fn main() {
     CtGenProcess::new().gen();
@@ -30,28 +15,22 @@ struct CtGenProcess {
     errors: BTreeMap<TopicReference, Vec<String>>,
 }
 
-enum AttributeType {
+pub enum AttributeType {
     String,
     Date,
     Boolean,
     Unknown,
 }
 
-struct Attribute {
+pub struct Attribute {
     name: String,
     type_: AttributeType,
     values: BTreeMap<String, AttributeValue>,
 }
 
-struct AttributeValue {
+pub struct AttributeValue {
     _name: String,
     topics: BTreeMap<TopicReference, ()>,
-}
-
-#[derive(Clone, Eq, Ord, PartialEq)]
-pub struct TopicReference {
-    namespace: String,
-    topic_name: String,
 }
 
 impl CtGenProcess {
@@ -69,7 +48,7 @@ impl CtGenProcess {
         // self.copy_image_files();
         self.gen_sidebar_page();
         self.gen_start_page();
-        self.gen_imported_pages();
+        // self.gen_imported_pages();
         // gen_remaining_category_pages();
         self.report_errors();
     }
@@ -102,9 +81,13 @@ impl CtGenProcess {
         }
         self.source_topics = std::mem::take(&mut source_topics);
         // Figure out the attribute types.
+
+        /*
         for attribute in self.attributes.values_mut() {
 
         }
+
+         */
         self.report_attributes(0);
     }
 
@@ -160,6 +143,7 @@ impl CtGenProcess {
         page.write();
     }
 
+    /*
     fn gen_imported_pages(&mut self) {
         for (topic_reference, lines) in self.source_topics.iter() {
             let (namespace, topic_name) = (&topic_reference.namespace, &topic_reference.topic_name);
@@ -202,6 +186,7 @@ impl CtGenProcess {
             page.write();
         }
     }
+     */
 
     fn add_main_page_links(&self, page: &mut WikiGenPage, use_list: bool, include_start_page: bool) {
         let mut links = vec![];

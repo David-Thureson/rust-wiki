@@ -5,9 +5,6 @@ use std::fs;
 
 pub const NAMESPACE_NONE: &str = "";
 
-pub const PAGE_NAME_SIDEBAR: &str = "Sidebar";
-pub const PAGE_NAME_START:   &str = "Start";
-
 pub enum WikiImageSize {
     Small,
     Medium,

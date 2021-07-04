@@ -9,3 +9,9 @@ pub use parse::*;
 
 //pub mod model;
 //pub use model::*;
+
+pub(crate) const NAMESPACE_NONE: &str = "";
+
+pub const PAGE_NAME_SIDEBAR: &str = "Sidebar";
+pub const PAGE_NAME_START:   &str = "Start";
+

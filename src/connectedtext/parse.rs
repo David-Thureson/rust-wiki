@@ -6,7 +6,8 @@ use std::collections::BTreeMap;
 
 use crate::*;
 use std::time::Instant;
-use crate::connectedtext::{TopicReference, NAMESPACE_TOOLS, NAMESPACE_HOME, ATTRIBUTE_VALUE_MISSING};
+use crate::model::{ATTRIBUTE_VALUE_MISSING, TopicReference};
+use crate::connectedtext::{NAMESPACE_TOOLS, NAMESPACE_HOME};
 
 const PATH_CONNECTEDTEXT_EXPORT: &str = r"T:\Private Wiki Export";
 const PATH_CONNECTEDTEXT_EXPORT_TOOLS: &str = r"T:\Private Wiki Export\Tools";

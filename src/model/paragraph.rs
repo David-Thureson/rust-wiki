@@ -18,6 +18,11 @@ pub enum Paragraph {
     },
     Breadcrumbs {
         breadcrumbs: Breadcrumbs,
-    }
+    },
+    Attributes {
+        attributes: Vec<AttributeRc>,
+    },
+    Quote {
 
+    }
 }
