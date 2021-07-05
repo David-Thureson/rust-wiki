@@ -20,4 +20,5 @@ const TOPIC_LIMIT_TOOLS: Option<usize> = Some(100);
 // const TOPIC_LIMIT_HOME: Option<usize> = None;
 const TOPIC_LIMIT_HOME: Option<usize> = Some(50);
 
-
+const IMAGE_SIZE: usize = 750;
+const IMAGE_SIZE_LARGE: usize = 1_500;

@@ -3,8 +3,6 @@ use std::hash::{Hash, Hasher};
 use crate::*;
 use std::fs;
 
-pub const NAMESPACE_NONE: &str = "";
-
 pub enum WikiImageSize {
     Small,
     Medium,

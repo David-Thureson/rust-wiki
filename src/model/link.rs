@@ -42,11 +42,15 @@ pub enum ImageAlignment {
 }
 
 pub enum ImageSize {
-    Width {
-        width: usize,
-    },
+    DokuSmall,
+    DokuMedium,
+    DokuLarge,
     Height {
         height: usize,
+    },
+    Original,
+    Width {
+        width: usize,
     },
     WidthHeight {
         width: usize,
@@ -61,3 +65,16 @@ pub enum ImageLinkType {
     NoLink,
 }
 
+impl ImageSize {
+    pub fn get_name(&self) -> String {
+        match self {
+            ImageSize::DokuSmall => "Doku small (200)".to_string(),
+            ImageSize::DokuMedium => "Doku medium (400)".to_string(),
+            ImageSize::DokuLarge => "Doku large (600)".to_string(),
+            ImageSize::Height { height } => format!("height = {}", height),
+            ImageSize::Original => "original".to_string(),
+            ImageSize::Width { width } => format!("width = {}", width),
+            ImageSize::WidthHeight { width, height } => format!("width = {}; height = {}", width, height),
+        }
+    }
+}

@@ -9,6 +9,46 @@ pub use util::{format, group, parse};
 pub use util::format::{fc, ff};
 use std::rc::Rc;
 use std::cell::{RefCell, Ref};
+use std::fs;
+use util::file_io;
+use chrono::NaiveDate;
+use util::date_time::{naive_date_now, date_for_file_name_now};
+use util::parse::{after, before, between};
+use util::format::format_zeros;
+
+// These paths won't work for something like DokuWiki. They're simply folders in which to generate
+// wiki pages and copy image files for comparisons to test the generating and file copying code.
+// They're also used to make backups of the live wiki.
+pub const PATH_WORKING: &str = "C:/Wiki Working";
+pub const FOLDER_GEN: &str = "Gen";
+pub const FOLDER_BACKUP: &str = "Backup";
+pub const FOLDER_PAGES: &str = "Pages";
+pub const FOLDER_MEDIA: &str = "Media";
+
+const FILE_NUMBER_DIGITS: usize = 4;
+
+fn path_gen_root() -> String {
+    format!("{}/{}", PATH_WORKING, FOLDER_GEN)
+}
+
+fn path_backup_root() -> String {
+    format!("{}/{}", PATH_WORKING, FOLDER_BACKUP)
+}
+
+pub fn path_gen() -> String {
+    path_gen_or_backup(FOLDER_GEN)
+}
+
+pub fn path_backup() -> String {
+    path_gen_or_backup(FOLDER_BACKUP)
+}
+
+fn path_gen_or_backup(type_: &str) -> String {
+    let path_base = format!("{}/{}", PATH_WORKING, type_);
+    let date_string = date_for_file_name_now();
+    path_folder_next_number(&path_base, type_, FILE_NUMBER_DIGITS)
+}
+
 
 /*
 pub fn r<T>(value: T) -> Rc<RefCell<T>> {
