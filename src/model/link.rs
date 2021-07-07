@@ -3,8 +3,8 @@
 use super::*;
 
 pub struct Link {
-    label: Option<String>,
-    type_: LinkType,
+    _label: Option<String>,
+    _type_: LinkType,
 }
 
 pub enum LinkType {

@@ -50,15 +50,16 @@ impl Attribute {
         Self {
             wiki,
             name: name.to_string(),
-            type_: AttributeType::Unknown,
+            type_,
             values: Default::default(),
         }
     }
 
+    /*
     pub fn add_value_string(&mut self, value: &str) {
         let entry = self.values.entry(value.to_string()).or_insert(r!(AttributeValue::new(AttributeTypedValue::new_string(value))));
     }
-
+    */
     pub fn value_count(&self) -> usize {
         self.values.len()
     }
