@@ -5,8 +5,12 @@ use std::cell::RefCell;
 pub type ParagraphRc = Rc<RefCell<Paragraph>>;
 
 pub enum Paragraph {
+    SectionHeader {
+        name: String,
+        depth: usize,
+    },
     Text {
-        blocks: Vec<TextBlock>
+        lines: Vec<Vec<TextBlock>>,
     },
     List {
         type_: ListType,
@@ -14,7 +18,7 @@ pub enum Paragraph {
         items: Vec<ListItem>,
     },
     Category {
-        category: CategoryRc
+        category: CategoryRc,
     },
     Breadcrumbs {
         breadcrumbs: Breadcrumbs,
@@ -24,5 +28,9 @@ pub enum Paragraph {
     },
     Quote {
 
-    }
+    },
+    Unknown {
+        lines: Vec<String>,
+    },
 }
+

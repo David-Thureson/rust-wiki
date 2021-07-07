@@ -4,11 +4,10 @@ use std::cell::RefCell;
 
 pub type SectionRc = Rc<RefCell<Section>>;
 
+// At first keep a flat list of sections. We may not need them in a hierarchy.
 pub struct Section {
     pub topic: TopicRc,
-    pub parent: Option<SectionRc>,
     pub depth: usize,
-    pub title: Option<String>,
-    pub sections: Vec<SectionRc>,
+    pub title: String,
     pub paragraphs: Vec<ParagraphRc>,
 }

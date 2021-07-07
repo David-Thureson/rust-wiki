@@ -1,17 +1,25 @@
-pub mod parse;
-pub use parse::*;
+// pub mod parse;
+// pub use parse::*;
 
-pub mod report;
-pub use report::*;
+// pub mod report;
+// pub use report::*;
 
 // pub mod to_dokuwiki;
 // pub use to_dokuwiki::*;
 
 pub mod to_model;
 
-const NAMESPACE_TOOLS: &str = "tools";
-const NAMESPACE_HOME: &str = "home";
-const _NAMESPACE_ATTRIBUTES: &str = "attr";
+pub const PATH_CONNECTEDTEXT_EXPORT: &str = r"T:\Private Wiki Export";
+pub const PATH_CONNECTEDTEXT_EXPORT_TOOLS: &str = r"T:\Private Wiki Export\Tools";
+pub const PATH_CONNECTEDTEXT_EXPORT_HOME: &str = r"T:\Private Wiki Export\Home";
+
+pub const FILE_NAME_EXPORT_TOOLS: &str = "Tools.txt";
+
+pub const TAG_CATEGORY: &str = "$CATEGORY:";
+
+pub const NAMESPACE_TOOLS: &str = "tools";
+pub const NAMESPACE_HOME: &str = "home";
+pub const _NAMESPACE_ATTRIBUTES: &str = "attr";
 
 const _ATTR_NAME_CATEGORY: &str = "Category";
 

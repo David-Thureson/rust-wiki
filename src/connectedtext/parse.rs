@@ -4,15 +4,10 @@ use std::io::BufRead;
 use std::collections::BTreeMap;
 
 use crate::*;
+use super::*;
 use std::time::Instant;
 use crate::model::{ATTRIBUTE_VALUE_MISSING, TopicReference};
 use crate::connectedtext::{NAMESPACE_TOOLS, NAMESPACE_HOME};
-
-const PATH_CONNECTEDTEXT_EXPORT: &str = r"T:\Private Wiki Export";
-const PATH_CONNECTEDTEXT_EXPORT_TOOLS: &str = r"T:\Private Wiki Export\Tools";
-const PATH_CONNECTEDTEXT_EXPORT_HOME: &str = r"T:\Private Wiki Export\Home";
-
-pub const TAG_CATEGORY: &str = "$CATEGORY:";
 
 pub fn get_topic_text_both_namespaces(topic_limit_tools: Option<usize>, topic_limit_home: Option<usize>) -> BTreeMap<TopicReference, Vec<String>> {
     let start_time = Instant::now();
@@ -38,7 +33,7 @@ fn get_topic_text_one_namespace(topics: &mut BTreeMap<TopicReference, Vec<String
         let dir_entry = path.as_ref().unwrap();
         let file_name = util::file::dir_entry_to_file_name(dir_entry);
         if file_name.to_lowercase().ends_with(".txt") {
-            let topic_name = parse::before_ci(&file_name, ".txt");
+            let topic_name = util::parse::before_ci(&file_name, ".txt");
             let topic_reference = TopicReference::new(namespace, topic_name);
             assert!(!topics.contains_key(&topic_reference));
             let mut lines = vec![];
@@ -65,7 +60,7 @@ pub fn get_topic_text(topic_limit: Option<usize>) -> BTreeMap<String, Vec<String
         let dir_entry = path.as_ref().unwrap();
         let file_name = util::file::dir_entry_to_file_name(dir_entry);
         if file_name.to_lowercase().ends_with(".txt") {
-            let topic_name = parse::before_ci(&file_name, ".txt");
+            let topic_name = util::parse::before_ci(&file_name, ".txt");
             assert!(!topics.contains_key(&topic_name.to_string()));
             let mut lines = vec![];
             let file = File::open(format!("{}/{}", PATH_CONNECTEDTEXT_EXPORT, file_name)).unwrap();
@@ -85,18 +80,18 @@ pub fn get_topic_text(topic_limit: Option<usize>) -> BTreeMap<String, Vec<String
 pub fn parse_line_as_category(line: &str) -> Option<String> {
     // If it's a category line it will look like this:
     //   [[$CATEGORY:Books]]
-    parse::between_optional_trim(line, "[[$CATEGORY:", "]]").map(|x| x.to_string())
+    util::parse::between_optional_trim(line, "[[$CATEGORY:", "]]").map(|x| x.to_string())
 }
 
 pub fn parse_line_as_attribute(line: &str) -> Result<Option<(String, Vec<String>)>, String> {
     // If it's a category line it will look like this if it has multiple values:
     //   ||Author||[[Author:=Kenneth W. Harl]], [[Author:=The Great Courses]]||
     if line.contains(":=") {
-        if let Some(between_pipes) = parse::between_optional_trim(line, "||", "||") {
-            let name = parse::before(&between_pipes, "||").trim().to_string();
+        if let Some(between_pipes) = util::parse::between_optional_trim(line, "||", "||") {
+            let name = util::parse::before(&between_pipes, "||").trim().to_string();
             let name = fix_attribute_name(&name);
-            let remaining = parse::after(&between_pipes, &format!("{}||", name));
-            let remaining = parse::between(remaining, "[[", "]]");
+            let remaining = util::parse::after(&between_pipes, &format!("{}||", name));
+            let remaining = util::parse::between(remaining, "[[", "]]");
             let remaining = remaining.replace("]], [[", "]],[[");
             let mut values = vec![];
             for value in remaining.split("]],[[") {

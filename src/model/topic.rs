@@ -4,23 +4,44 @@ use std::cell::RefCell;
 use crate::*;
 use super::*;
 use std::cmp::Ordering;
+use std::collections::BTreeMap;
 
 pub type TopicRc = Rc<RefCell<Topic>>;
-pub type TopicKey = (String, String, String);
+pub type TopicKey = (String, String);
 
 pub struct Topic {
     pub wiki: WikiRc,
     pub parent: Option<TopicRc>,
     pub namespace: NamespaceRc,
     pub name: String,
-    pub file_name: String,
     pub category: Option<CategoryRc>,
-    pub section: SectionRc,
+    //pub sections: Vec<SectionRc>,
+    pub sections: BTreeMap<String, usize>,
+    pub errors: Vec<String>,
 }
 
 impl Topic {
+    pub fn new(wiki: &WikiRc, namespace: &NamespaceRc, name: &str) -> Self {
+        Self {
+            wiki: wiki.clone(),
+            parent: None,
+            namespace: namespace.clone(),
+            name: name.to_string(),
+            category: None,
+            sections: Default::default(),
+            errors: vec![]
+        }
+    }
+
     pub fn get_key(&self) -> TopicKey {
-        (b!(&self.wiki).name.clone(), b!(&self.namespace).name.clone(), self.name.clone())
+        //(b!(&self.wiki).name.clone(), b!(&self.namespace).name.clone(), self.name.clone())
+        (b!(&self.namespace).name.clone(), self.name.clone())
+    }
+
+    pub fn print_errors(&self) {
+        if !self.errors.is_empty() {
+            println!("\t{}", self.name)
+        }
     }
 }
 

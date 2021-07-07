@@ -2,23 +2,26 @@ use std::rc::Rc;
 use std::cell::RefCell;
 
 use super::*;
+use std::collections::BTreeMap;
 
 pub type NamespaceRc = Rc<RefCell<Namespace>>;
 
 pub struct Namespace {
+    pub wiki: WikiRc,
     pub parent: Option<NamespaceRc>,
     pub name: String,
-    pub namespaces: Vec<NamespaceRc>,
-    pub topics: Vec<TopicRc>,
+    pub namespaces: BTreeMap<String, NamespaceRc>,
+    // pub topics: BTreeMap<TopicKey, TopicRc>,
 }
 
 impl Namespace {
-    pub fn new(parent: Option<NamespaceRc>, name: &str) -> Self {
+    pub fn new(wiki: &WikiRc, parent: Option<&NamespaceRc>, name: &str) -> Self {
         Self {
-            parent,
+            wiki: wiki.clone(),
+            parent: parent.map(|namespace_rc| namespace_rc.clone()),
             name: name.to_string(),
-            namespaces: vec![],
-            topics: vec![]
+            namespaces: Default::default(),
+            // topics: Default::default(),
         }
     }
 }
