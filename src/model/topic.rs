@@ -15,7 +15,7 @@ pub struct Topic {
     pub namespace: NamespaceRc,
     pub name: String,
     pub category: Option<CategoryRc>,
-    pub paragraphs: Vec<Paragraph>,
+    pub paragraphs: Vec<ParagraphRc>,
     //pub sections: Vec<SectionRc>,
     pub sections: BTreeMap<String, usize>,
     pub errors: Vec<String>,
@@ -41,7 +41,7 @@ impl Topic {
     }
 
     pub fn add_paragraph(&mut self, paragraph: Paragraph) {
-        self.paragraphs.push(paragraph);
+        self.paragraphs.push(r!(paragraph));
     }
 
     pub fn print_errors(&self) {

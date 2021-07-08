@@ -5,6 +5,23 @@ use std::cell::RefCell;
 pub type ParagraphRc = Rc<RefCell<Paragraph>>;
 
 pub enum Paragraph {
+    Attributes {
+        attributes: Vec<AttributeRc>,
+    },
+    Breadcrumbs {
+        breadcrumbs: Breadcrumbs,
+    },
+    Category {
+        category: CategoryRc,
+    },
+    List {
+        type_: ListType,
+        label: Option<String>,
+        items: Vec<ListItem>,
+    },
+    Quote {
+
+    },
     SectionHeader {
         name: String,
         depth: usize,
@@ -14,23 +31,6 @@ pub enum Paragraph {
     },
     TextUnresolved {
         text: String,
-    },
-    List {
-        type_: ListType,
-        label: Option<String>,
-        items: Vec<ListItem>,
-    },
-    Category {
-        category: CategoryRc,
-    },
-    Breadcrumbs {
-        breadcrumbs: Breadcrumbs,
-    },
-    Attributes {
-        attributes: Vec<AttributeRc>,
-    },
-    Quote {
-
     },
     Unknown {
         text: String,
@@ -44,5 +44,19 @@ impl Paragraph {
 
     pub fn new_unknown(text: &str) -> Self {
         Paragraph::Unknown { text: text.to_string() }
+    }
+
+    pub fn get_variant_name(&self) -> &str {
+        match self {
+            Paragraph::Attributes { .. } => "Attributes",
+            Paragraph::Breadcrumbs { .. } => "Breadcrumbs",
+            Paragraph::Category { .. } => "Category",
+            Paragraph::List { .. } => "List",
+            Paragraph::Quote { .. } => "Quote",
+            Paragraph::SectionHeader { .. } => "SectionHeader",
+            Paragraph::Text { .. } => "Text",
+            Paragraph::TextUnresolved { .. } => "TextUnresolved",
+            Paragraph::Unknown { .. } => "Unknown",
+        }
     }
 }

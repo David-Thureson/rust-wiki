@@ -2,8 +2,10 @@ use crate::model::*;
 use crate::connectedtext::NAMESPACE_TOOLS;
 use std::path::PathBuf;
 use std::fs;
+use std::cell::Ref;
 use crate::*;
 use super::*;
+use crate::model::report::WikiReport;
 
 const TOPIC_BREAK: &str = "{{Topic}} ";
 const PARAGRAPH_BREAK: &str = "\r\n\r\n";
@@ -38,6 +40,7 @@ impl BuildProcess {
 
     pub fn build(&mut self) {
         self.parse_from_text_file();
+        WikiReport::new(&self.wiki).paragraphs().go();
     }
 
     fn parse_from_text_file(&mut self) {
@@ -65,7 +68,7 @@ impl BuildProcess {
 
             // Break the topic into paragraphs.
             topic_text.split(PARAGRAPH_BREAK).for_each(|paragraph_text| topic.add_paragraph(Paragraph::new_unknown(paragraph_text)));
-            println!("{}: {}", topic_name, topic.paragraphs.len());
+            //rintln!("{}: {}", topic_name, topic.paragraphs.len());
 
             m!(&self.wiki).add_topic(&r!(topic));
         }
@@ -91,14 +94,31 @@ impl BuildProcess {
             }
             std::mem::replace(&mut topic.paragraphs, new_paragraphs);
             */
-            for paragraph in topic.paragraphs.iter_mut() {
-                *paragraph = match paragraph {
+            /*
+            for paragraph_rc in topic.paragraphs.iter() {
+                let paragraph = b!(paragraph_rc);
+                match paragraph {
                     Paragraph::Unknown { text } => {
-                            self.paragraph_as_category(&topic_rc, &text)
-                                .unwrap_or(self.paragraph_as_text_unresolved(&topic_rc, &text))
+                        (self.paragraph_as_category(&topic_rc, &text)
+                            .unwrap_or(self.paragraph_as_text_unresolved(&topic_rc, &text)))
                     },
                     _ => panic!("Expected Paragraph::Unknown.")
                 };
+            }
+             */
+            for paragraph_index in 0..topic.paragraphs.len() {
+                topic.paragraphs[paragraph_index] = r!({
+                    // let source_paragraph = b!(&topic.paragraphs[paragraph_index]);
+                    // let source_paragraph = Ref::leak(b!(&topic.paragraphs[paragraph_index].clone()));
+                    // match b!(&topic.paragraphs[paragraph_index]) {
+                    match Ref::leak(b!(&topic.paragraphs[paragraph_index].clone())) {
+                        Paragraph::Unknown { text } => {
+                            (self.paragraph_as_category(&topic_rc, &text)
+                                .unwrap_or(self.paragraph_as_text_unresolved(&topic_rc, &text)))
+                        },
+                        _ => panic!("Expected Paragraph::Unknown.")
+                    }
+                    });
             }
         }
     }

@@ -1,4 +1,5 @@
 #![macro_use]
+#![feature(cell_leak)]
 
 pub mod connectedtext;
 pub mod dokuwiki;

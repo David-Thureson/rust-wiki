@@ -52,4 +52,8 @@ impl Wiki {
             category_rc
         }
     }
+
+    pub fn get_paragraphs(&self) -> Vec<ParagraphRc> {
+        self.topics.values().map(|topic_rc| b!(topic_rc).paragraphs.clone()).flatten().collect()
+    }
 }
