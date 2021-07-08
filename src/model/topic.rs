@@ -15,6 +15,7 @@ pub struct Topic {
     pub namespace: NamespaceRc,
     pub name: String,
     pub category: Option<CategoryRc>,
+    pub paragraphs: Vec<Paragraph>,
     //pub sections: Vec<SectionRc>,
     pub sections: BTreeMap<String, usize>,
     pub errors: Vec<String>,
@@ -28,6 +29,7 @@ impl Topic {
             namespace: namespace.clone(),
             name: name.to_string(),
             category: None,
+            paragraphs: vec![],
             sections: Default::default(),
             errors: vec![]
         }
@@ -35,7 +37,11 @@ impl Topic {
 
     pub fn get_key(&self) -> TopicKey {
         //(b!(&self.wiki).name.clone(), b!(&self.namespace).name.clone(), self.name.clone())
-        (b!(&self.namespace).name.clone(), self.name.clone())
+        (b!(&self.namespace).name.to_lowercase().to_string(), self.name.to_lowercase().to_string())
+    }
+
+    pub fn add_paragraph(&mut self, paragraph: Paragraph) {
+        self.paragraphs.push(paragraph);
     }
 
     pub fn print_errors(&self) {

@@ -1,7 +1,7 @@
 // pub mod parse;
 // pub use parse::*;
 
-// pub mod report;
+pub mod report;
 // pub use report::*;
 
 // pub mod to_dokuwiki;

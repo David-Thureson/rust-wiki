@@ -12,6 +12,9 @@ pub enum Paragraph {
     Text {
         lines: Vec<Vec<TextBlock>>,
     },
+    TextUnresolved {
+        text: String,
+    },
     List {
         type_: ListType,
         label: Option<String>,
@@ -30,7 +33,16 @@ pub enum Paragraph {
 
     },
     Unknown {
-        lines: Vec<String>,
+        text: String,
     },
 }
 
+impl Paragraph {
+    pub fn new_text_unresolved(text: &str) -> Self {
+        Paragraph::TextUnresolved { text: text.to_string() }
+    }
+
+    pub fn new_unknown(text: &str) -> Self {
+        Paragraph::Unknown { text: text.to_string() }
+    }
+}

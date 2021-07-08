@@ -10,3 +10,13 @@ pub struct Category {
     pub parent: Option<CategoryRc>,
     pub name: String,
 }
+
+impl Category {
+    pub fn new(wiki: &WikiRc, parent: Option<&CategoryRc>, name: &str) -> Self {
+        Self {
+            wiki: wiki.clone(),
+            parent: parent.map(|category_rc| category_rc.clone()),
+            name: name.to_string(),
+        }
+    }
+}

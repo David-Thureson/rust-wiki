@@ -3,8 +3,8 @@
 use super::*;
 
 pub struct Link {
-    _label: Option<String>,
-    _type_: LinkType,
+    label: Option<String>,
+    type_: LinkType,
 }
 
 pub enum LinkType {
@@ -23,6 +23,9 @@ pub enum LinkType {
         size: ImageSize,
         type_: ImageLinkType,
     },
+    InternalUnresolved {
+        dest: String,
+    }
 }
 
 pub enum ImageSource {
@@ -63,6 +66,18 @@ pub enum ImageLinkType {
     Direct,
     LinkOnly,
     NoLink,
+}
+
+impl Link {
+    pub fn new_internal_unresolved(label: Option<&str>, dest: &str) -> Self {
+        let type_ = LinkType::InternalUnresolved {
+            dest: dest.to_string()
+        };
+        Self {
+            label: label.map(|label| label.to_string()),
+            type_,
+        }
+    }
 }
 
 impl ImageSize {
