@@ -2,11 +2,13 @@
 
 use super::*;
 
+#[derive(Clone)]
 pub struct Link {
     label: Option<String>,
     type_: LinkType,
 }
 
+#[derive(Clone)]
 pub enum LinkType {
     Topic {
         topic: TopicRc,
@@ -28,6 +30,7 @@ pub enum LinkType {
     }
 }
 
+#[derive(Clone)]
 pub enum ImageSource {
     Internal {
         namespace: NamespaceRc,
@@ -38,12 +41,14 @@ pub enum ImageSource {
     }
 }
 
+#[derive(Clone)]
 pub enum ImageAlignment {
     Center,
     Left,
     Right,
 }
 
+#[derive(Clone)]
 pub enum ImageSize {
     DokuSmall,
     DokuMedium,
@@ -61,6 +66,7 @@ pub enum ImageSize {
     },
 }
 
+#[derive(Clone)]
 pub enum ImageLinkType {
     Detail,
     Direct,

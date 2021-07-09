@@ -2,7 +2,7 @@ use crate::model::*;
 use crate::connectedtext::NAMESPACE_TOOLS;
 use std::path::PathBuf;
 use std::fs;
-use std::cell::Ref;
+use std::cell::RefMut;
 use crate::*;
 use super::*;
 use crate::model::report::WikiReport;
@@ -105,7 +105,6 @@ impl BuildProcess {
                     _ => panic!("Expected Paragraph::Unknown.")
                 };
             }
-             */
             for paragraph_index in 0..topic.paragraphs.len() {
                 topic.paragraphs[paragraph_index] = r!({
                     // let source_paragraph = b!(&topic.paragraphs[paragraph_index]);
@@ -120,20 +119,71 @@ impl BuildProcess {
                     }
                     });
             }
+             */
+            /*
+            // This approach works, but it requires building an array of new paragraphs, then
+            // them placing them in the topic at the end. This is fine for this code but it
+            // wouldn't work for later cases when we might want to look through a collection of
+            // Rc<RefCell<T>> and replace only a few of them.
+            let mut new_paragraphs = vec![];
+            for source_paragraph_rc in topic.paragraphs.iter() {
+                let source_paragraph = b!(source_paragraph_rc);
+                new_paragraphs.push(match &*source_paragraph {
+                    Paragraph::Unknown { text } => {
+                        r!(self.paragraph_as_category(&topic_rc, &text)
+                            .unwrap_or(self.paragraph_as_text_unresolved(&topic_rc, &text)))
+                    },
+                    _ => panic!("Expected Paragraph::Unknown.")
+                });
+            }
+            topic.paragraphs = new_paragraphs;
+             */
+            // In this approach we replace the paragraphs one at a time. It's not necessary here
+            // because we're going to replace all of them anyway, but it will be needed later when
+            // we want to look through a collection of Rc<RefCell<T>> and replace only a few of
+            // them.
+            /*
+            for i in 0..topic.paragraphs.len() {
+                let source_paragraph = b!(&topic.paragraphs[i]);
+                let new_paragraph = match &*source_paragraph {
+                    Paragraph::Unknown { text } => {
+                        r!(self.paragraph_as_category(&mut topic, &text)
+                            .unwrap_or(self.paragraph_as_text_unresolved(&topic_rc, &text)))
+                    },
+                    _ => panic!("Expected Paragraph::Unknown.")
+                };
+                drop(source_paragraph);
+                topic.paragraphs[i] = new_paragraph;
+            }
+             */
+            for i in 0..topic.paragraphs.len() {
+                // let source_paragraph = (*b!(&topic.paragraphs[i])).clone();
+                let source_paragraph_rc: ParagraphRc = std::mem::replace(&mut topic.paragraphs[i], r!(Paragraph::Breadcrumbs));
+                let new_paragraph = match &*b!(&source_paragraph_rc) {
+                    Paragraph::Unknown { text } => {
+                        self.paragraph_as_category(&mut topic, &text)
+                            .unwrap_or(self.paragraph_as_text_unresolved(&text))
+                    },
+                    _ => panic!("Expected Paragraph::Unknown.")
+                };
+                topic.paragraphs[i] = r!(new_paragraph);
+            }
         }
     }
 
-    fn paragraph_as_category(&mut self, topic_rc: &TopicRc, text: &str) -> Option<Paragraph> {
+    // fn paragraph_as_category(&mut self, topic_rc: &TopicRc, text: &str) -> Option<Paragraph> {
+    fn paragraph_as_category(&mut self, topic_ref: &mut RefMut<Topic>, text: &str) -> Option<Paragraph> {
         // If it's a category line it will look like this:
         //   [[$CATEGORY:Books]]
         util::parse::between_optional_trim(text, "[[$CATEGORY:", "]]")
             .map(|category_name| {
                 let category_rc = m!(&self.wiki).get_or_create_category(self.wiki.clone(), category_name);
-                Paragraph::Category { category: category_rc }
+                topic_ref.category = Some(category_rc);
+                Paragraph::Category
             })
     }
 
-    fn paragraph_as_text_unresolved(&self, topic_rc: &TopicRc, text: &str) -> Paragraph {
+    fn paragraph_as_text_unresolved(&self, text: &str) -> Paragraph {
         Paragraph::new_text_unresolved(text)
     }
 }

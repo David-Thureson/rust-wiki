@@ -17,7 +17,7 @@ pub struct Wiki {
 
 impl Wiki {
     pub fn new(name: &str) -> Self {
-        let mut wiki = Self {
+        let wiki = Self {
             name: name.to_string(),
             namespaces: Default::default(),
             topics: Default::default(),

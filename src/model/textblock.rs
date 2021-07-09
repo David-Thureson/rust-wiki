@@ -5,6 +5,7 @@ use super::*;
 
 pub type TextBlockRc = Rc<RefCell<TextBlock>>;
 
+#[derive(Clone)]
 pub enum TextBlock {
     Text {
         text: String,

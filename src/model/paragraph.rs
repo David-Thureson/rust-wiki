@@ -4,16 +4,11 @@ use std::cell::RefCell;
 
 pub type ParagraphRc = Rc<RefCell<Paragraph>>;
 
+#[derive(Clone)]
 pub enum Paragraph {
-    Attributes {
-        attributes: Vec<AttributeRc>,
-    },
-    Breadcrumbs {
-        breadcrumbs: Breadcrumbs,
-    },
-    Category {
-        category: CategoryRc,
-    },
+    Attributes,
+    Breadcrumbs,
+    Category,
     List {
         type_: ListType,
         label: Option<String>,

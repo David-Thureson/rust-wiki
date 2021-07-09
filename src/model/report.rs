@@ -29,7 +29,7 @@ impl WikiReport {
             namespace_count, topic_count, category_count, attribute_count);
         let child_depth = 1;
         if self.paragraphs {
-            self.paragraph_breakdown(1);
+            self.paragraph_breakdown(child_depth);
         }
     }
 

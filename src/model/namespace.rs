@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 
 pub type NamespaceRc = Rc<RefCell<Namespace>>;
 
+#[derive(Clone)]
 pub struct Namespace {
     pub wiki: WikiRc,
     pub parent: Option<NamespaceRc>,

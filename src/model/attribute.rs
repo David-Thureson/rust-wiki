@@ -25,7 +25,12 @@ pub struct Attribute {
     pub values: BTreeMap<String, AttributeValueRc>,
 }
 
+pub struct AttributeValueList {
+    pub list: Vec<AttributeValueRc>,
+}
+
 pub struct AttributeValue {
+    pub attribute: AttributeRc,
     pub value: AttributeTypedValue,
     pub topics: BTreeMap<TopicKey, TopicRc>,
 }
@@ -79,9 +84,18 @@ impl Attribute {
     }
 }
 
-impl AttributeValue {
-    pub fn new(value: AttributeTypedValue) -> Self {
+impl AttributeValueList {
+    pub fn new() -> Self {
         Self {
+            list: vec![],
+        }
+    }
+}
+
+impl AttributeValue {
+    pub fn new(attribute: &AttributeRc, value: AttributeTypedValue) -> Self {
+        Self {
+            attribute: attribute.clone(),
             value,
             topics: Default::default()
         }

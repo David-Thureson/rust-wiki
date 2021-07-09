@@ -15,6 +15,7 @@ pub struct Topic {
     pub namespace: NamespaceRc,
     pub name: String,
     pub category: Option<CategoryRc>,
+    pub attributes: AttributeValueList,
     pub paragraphs: Vec<ParagraphRc>,
     //pub sections: Vec<SectionRc>,
     pub sections: BTreeMap<String, usize>,
@@ -29,6 +30,7 @@ impl Topic {
             namespace: namespace.clone(),
             name: name.to_string(),
             category: None,
+            attributes: AttributeValueList::new(),
             paragraphs: vec![],
             sections: Default::default(),
             errors: vec![]
