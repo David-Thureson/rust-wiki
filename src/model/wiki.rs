@@ -41,6 +41,14 @@ impl Wiki {
         self.topics.insert(key, topic_rc.clone());
     }
 
+    pub fn find_topic_rc(&self, namespace_name: &str, topic_name: &str, context: &str) -> Result<TopicRc, String> {
+        let key = Topic::make_key(namespace_name, topic_name);
+        match self.topics.get(&key) {
+            Some(topic_rc) => Ok(topic_rc.clone()),
+            None => Err(format!("{}: Unable to find topic {} -> {}", context, namespace_name, topic_name)),
+        }
+    }
+
     pub fn get_or_create_category(&mut self, wiki_rc: WikiRc, name: &str) -> CategoryRc {
         let key = name.to_lowercase();
         if self.categories.contains_key(&key) {
@@ -56,4 +64,6 @@ impl Wiki {
     pub fn get_paragraphs(&self) -> Vec<ParagraphRc> {
         self.topics.values().map(|topic_rc| b!(topic_rc).paragraphs.clone()).flatten().collect()
     }
+
+
 }

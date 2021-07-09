@@ -11,7 +11,7 @@ pub type TopicKey = (String, String);
 
 pub struct Topic {
     pub wiki: WikiRc,
-    pub parent: Option<TopicRc>,
+    pub parents: Vec<TopicRc>,
     pub namespace: NamespaceRc,
     pub name: String,
     pub category: Option<CategoryRc>,
@@ -26,7 +26,7 @@ impl Topic {
     pub fn new(wiki: &WikiRc, namespace: &NamespaceRc, name: &str) -> Self {
         Self {
             wiki: wiki.clone(),
-            parent: None,
+            parents: vec![],
             namespace: namespace.clone(),
             name: name.to_string(),
             category: None,
@@ -38,17 +38,25 @@ impl Topic {
     }
 
     pub fn get_key(&self) -> TopicKey {
-        //(b!(&self.wiki).name.clone(), b!(&self.namespace).name.clone(), self.name.clone())
-        (b!(&self.namespace).name.to_lowercase().to_string(), self.name.to_lowercase().to_string())
+        Self::make_key(&b!(&self.namespace).name, &self.name)
+    }
+
+    pub fn make_key(namespace_name: &str, topic_name: &str) -> TopicKey {
+        (namespace_name.to_lowercase().to_string(), topic_name.to_lowercase().to_string())
     }
 
     pub fn add_paragraph(&mut self, paragraph: Paragraph) {
         self.paragraphs.push(r!(paragraph));
     }
 
+    pub fn add_error(&mut self, msg: &str) {
+        self.errors.push(msg.to_string());
+    }
+
     pub fn print_errors(&self) {
         if !self.errors.is_empty() {
-            println!("\t{}", self.name)
+            println!("\t{}", self.name);
+            self.errors.iter().for_each(|msg| { println!("\t{}", msg)});
         }
     }
 }
