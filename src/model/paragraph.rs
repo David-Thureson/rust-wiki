@@ -14,6 +14,7 @@ pub enum Paragraph {
         label: Option<String>,
         items: Vec<ListItem>,
     },
+    Placeholder,
     Quote {
 
     },
@@ -47,6 +48,7 @@ impl Paragraph {
             Paragraph::Breadcrumbs { .. } => "Breadcrumbs",
             Paragraph::Category { .. } => "Category",
             Paragraph::List { .. } => "List",
+            Paragraph::Placeholder { .. } => "Placeholder",
             Paragraph::Quote { .. } => "Quote",
             Paragraph::SectionHeader { .. } => "SectionHeader",
             Paragraph::Text { .. } => "Text",

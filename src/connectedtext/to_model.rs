@@ -6,7 +6,7 @@ use std::cell::RefMut;
 use crate::*;
 use super::*;
 use crate::model::report::WikiReport;
-use util::parse::split_3_two_delimiters_rc;
+use util::parse::{split_3_two_delimiters_rc, split_trim, between};
 
 const CT_BRACKET_LEFT: &str = "[[";
 const CT_BRACKET_RIGHT: &str = "]]";
@@ -18,6 +18,7 @@ const CT_BOOKMARK_DELIM_RIGHT: &str = "»";
 const CT_BOOKMARK_DELIM_LEFT: &str = "«";
 const CT_TABLE_START: &str = "{|";
 const CT_TABLE_END: &str = "|}";
+const CT_TABLE_DELIM: &str = "||";
 // const CT_PIPE: &str = "|";
 // const CT_CURRENT_TOPIC: &str = "(($CURRENTTOPIC))";
 
@@ -50,6 +51,7 @@ impl BuildProcess {
 
     pub fn build(&mut self) {
         self.parse_from_text_file();
+        b!(&self.wiki).print_errors();
         WikiReport::new(&self.wiki).paragraphs().go();
     }
 
@@ -77,7 +79,11 @@ impl BuildProcess {
             let mut topic = Topic::new(&self.wiki, &self.namespace_main, &topic_name);
 
             // Break the topic into paragraphs.
-            topic_text.split(CT_PARAGRAPH_BREAK).for_each(|paragraph_text| topic.add_paragraph(Paragraph::new_unknown(paragraph_text)));
+            for paragraph_text in topic_text.split(CT_PARAGRAPH_BREAK) {
+                if !paragraph_text.is_empty() {
+                    topic.add_paragraph(Paragraph::new_unknown(paragraph_text));
+                }
+            }
             //rintln!("{}: {}", topic_name, topic.paragraphs.len());
 
             m!(&self.wiki).add_topic(&r!(topic));
@@ -88,7 +94,7 @@ impl BuildProcess {
         let topics = m!(&self.wiki).topics.values().map(|x| x.clone()).collect::<Vec<_>>();
         for topic_rc in topics.iter() {
             let mut topic_ref = m!(&topic_rc);
-            let context = format!("Refining paragraphs for {}", topic_ref.name);
+            let context = format!("Refining paragraphs for \"{}\".", topic_ref.name);
             for paragraph_index in 0..topic_ref.paragraphs.len() {
                 match self.refine_one_paragraph_rc(&mut topic_ref, paragraph_index, &context) {
                     Err(msg) => { topic_ref.add_error(&msg); }
@@ -99,15 +105,21 @@ impl BuildProcess {
     }
 
     fn refine_one_paragraph_rc(&mut self, topic_ref: &mut RefMut<Topic>, paragraph_index: usize, context: &str) -> Result<(), String> {
-        let source_paragraph_rc: ParagraphRc = std::mem::replace(&mut topic_ref.paragraphs[paragraph_index], r!(Paragraph::Breadcrumbs));
+        let source_paragraph_rc: ParagraphRc = std::mem::replace(&mut topic_ref.paragraphs[paragraph_index], r!(Paragraph::Placeholder));
         let new_paragraph = match &*b!(&source_paragraph_rc) {
             Paragraph::Unknown { text } => {
                 self.paragraph_as_category_rc(topic_ref, &text, context)?
                     .or(self.paragraph_as_bookmark_rc(topic_ref, &text, context)?)
+                    .or(self.paragraph_as_attributes_rc(topic_ref, &text, context)?)
                     .unwrap_or(self.paragraph_as_text_unresolved(&text))
             },
             _ => panic!("Expected Paragraph::Unknown.")
         };
+        if new_paragraph.get_variant_name() == Paragraph::Placeholder.get_variant_name() {
+            dbg!(&topic_ref.name);
+            dbg!(paragraph_index);
+            panic!();
+        }
         topic_ref.paragraphs[paragraph_index] = r!(new_paragraph);
         Ok(())
     }
@@ -132,19 +144,20 @@ impl BuildProcess {
         //   {|
         //   ||**[[AutoVoice]] » (($CURRENTTOPIC)) « [[Tasker]]**
         //   |}
-        let context = &format!("{}: Seems to be a bookmark paragraph", context);
+        let context = &format!("{} Seems to be a bookmark paragraph.", context);
         if text.contains(CT_BOOKMARK_DELIM_RIGHT) {
             let lines = text.lines().collect::<Vec<_>>();
             if lines.len() != 3 {
-                return Err(format!("{}: Expected 3 lines, found {}.", context, lines.len()));
+                return Err(format!("{} Expected 3 lines, found {}.", context, lines.len()));
             }
             if lines[0] != CT_TABLE_START || lines[2] != CT_TABLE_END {
-                return Err(format!("{}: Table delimiters are not right.", context));
+                return Err(format!("{} Table delimiters are not right.", context));
             }
-            let line = lines[1];
+            // Get rid of the table row delimiter at the front and bold (**) markup.
+            let line = lines[1].replace(CT_TABLE_DELIM, "").replace("**", "");
             if line.contains(CT_BOOKMARK_DELIM_LEFT) {
                 // This is a combination topic with two owners.
-                let (left, _, right) = split_3_two_delimiters_rc(line, CT_BOOKMARK_DELIM_RIGHT, CT_BOOKMARK_DELIM_LEFT, context)?;
+                let (left, _, right) = split_3_two_delimiters_rc(&line, CT_BOOKMARK_DELIM_RIGHT, CT_BOOKMARK_DELIM_LEFT, context)?;
                 let (left, right) = (remove_brackets_rc(left, context)?, remove_brackets_rc(right, context)?);
                 let left_topic_rc = b!(&self.wiki).find_topic_rc(NAMESPACE_TOOLS, &left, context)?;
                 let right_topic_rc = b!(&self.wiki).find_topic_rc(NAMESPACE_TOOLS, &right, context)?;
@@ -157,9 +170,54 @@ impl BuildProcess {
                 let parent_split_index = splits.len() - 2;
                 let parent_topic_name = remove_brackets_rc(splits[parent_split_index], context)?;
                 let parent_topic_rc = b!(&self.wiki).find_topic_rc(NAMESPACE_TOOLS, &parent_topic_name, context)?;
+                //rintln!("Parent topic = \"{}\".", b!(&parent_topic_rc).name);
                 topic_ref.parents.push(parent_topic_rc);
             }
             Ok(Some(Paragraph::Breadcrumbs))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn paragraph_as_attributes_rc(&mut self, topic_ref: &mut RefMut<Topic>, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
+        // A paragraph with a list of attributes will look something like this:
+        //   {|
+        //   ||Domain||[[Domain:=Serverless]], [[Domain:=Function as a Service / FaaS]]||
+        //   ||Added||[[Added:=20201204]]||
+        let context = &format!("{} Seems to be an attributes paragraph.", context);
+        let lines = text.lines().collect::<Vec<_>>();
+        if lines[0].trim() == CT_TABLE_START
+                && lines.len() > 1
+                && lines[1].starts_with(CT_TABLE_DELIM)
+                && split_trim(lines[1], CT_TABLE_DELIM).len() == 4 {
+            // We're going to guess that this is a table of attributes.
+            for line_index in 1..lines.len() {
+                let line = lines[line_index].trim();
+                if line == CT_TABLE_END {
+                    break;
+                }
+                let line = between(line, CT_TABLE_DELIM, CT_TABLE_DELIM);
+                let split = split_trim(line, CT_TABLE_DELIM);
+                if split.len() != 2 {
+                    return Err(format!("{} Wrong number of table cells in \"{}\".", context, line));
+                }
+                let (name, values) = (split[0].to_string(), split[1].to_string());
+                let attribute = topic_ref.attributes.entry(name.clone())
+                    .or_insert(vec![]);
+                let values = between(&values, CT_BRACKET_LEFT, CT_BRACKET_RIGHT);
+                let values = values.replace("]], [[", "]],[[");
+                for value in values.split("]],[[") {
+                    let mut value= value.trim().to_string();
+                    if value.contains("*") {
+                        value = "".to_string();
+                    }
+                    if attribute.contains(&value) {
+                        return Err(format!("{} In attribute \"{}\", duplicated value \"{}\".", context, name, value));
+                    }
+                    attribute.push(value);
+                }
+            }
+            Ok(Some(Paragraph::Attributes))
         } else {
             Ok(None)
         }
@@ -178,7 +236,7 @@ fn build_wiki(topic_limit: Option<usize>) {
 pub fn remove_brackets_rc(text: &str, context: &str) -> Result<String, String> {
     let text = text.trim();
     if !text.starts_with(CT_BRACKET_LEFT) || !text.ends_with(CT_BRACKET_RIGHT) {
-        Err(format!("{}: Malformed bracketed string \"{}\"", context, text))
+        Err(format!("{} Malformed bracketed string \"{}\"", context, text))
     } else {
         Ok(util::parse::between_trim(text, CT_BRACKET_LEFT, CT_BRACKET_RIGHT).to_string())
     }

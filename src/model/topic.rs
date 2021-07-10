@@ -15,7 +15,7 @@ pub struct Topic {
     pub namespace: NamespaceRc,
     pub name: String,
     pub category: Option<CategoryRc>,
-    pub attributes: AttributeValueList,
+    pub attributes: BTreeMap<String, Vec<String>>,
     pub paragraphs: Vec<ParagraphRc>,
     //pub sections: Vec<SectionRc>,
     pub sections: BTreeMap<String, usize>,
@@ -30,7 +30,7 @@ impl Topic {
             namespace: namespace.clone(),
             name: name.to_string(),
             category: None,
-            attributes: AttributeValueList::new(),
+            attributes: Default::default(),
             paragraphs: vec![],
             sections: Default::default(),
             errors: vec![]
@@ -56,7 +56,7 @@ impl Topic {
     pub fn print_errors(&self) {
         if !self.errors.is_empty() {
             println!("\t{}", self.name);
-            self.errors.iter().for_each(|msg| { println!("\t{}", msg)});
+            self.errors.iter().for_each(|msg| { println!("\t\t{}", msg)});
         }
     }
 }

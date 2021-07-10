@@ -1,13 +1,11 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 
-use crate::*;
 use super::*;
 use std::collections::BTreeMap;
-use chrono::NaiveDate;
 
 pub type AttributeRc = Rc<RefCell<Attribute>>;
-pub type AttributeValueRc = Rc<RefCell<AttributeValue>>;
+// pub type AttributeValueRc = Rc<RefCell<AttributeValue>>;
 
 pub enum AttributeType {
     Boolean,
@@ -22,19 +20,24 @@ pub struct Attribute {
     pub wiki: WikiRc,
     pub type_: AttributeType,
     pub name: String,
-    pub values: BTreeMap<String, AttributeValueRc>,
+    pub values: BTreeMap<String, String>,
 }
 
+/*
 pub struct AttributeValueList {
-    pub list: Vec<AttributeValueRc>,
+    pub list: BTreeMap<String, Vec<String>>,
 }
+*/
 
+/*
 pub struct AttributeValue {
     pub attribute: AttributeRc,
-    pub value: AttributeTypedValue,
+    pub value: String,
     pub topics: BTreeMap<TopicKey, TopicRc>,
 }
+*/
 
+/*
 pub enum AttributeTypedValue {
     Boolean {
         value: bool,
@@ -49,6 +52,7 @@ pub enum AttributeTypedValue {
         value: String,
     }
 }
+*/
 
 impl Attribute {
     pub fn new(wiki: WikiRc, type_: AttributeType, name: &str) -> Self {
@@ -65,10 +69,12 @@ impl Attribute {
         let entry = self.values.entry(value.to_string()).or_insert(r!(AttributeValue::new(AttributeTypedValue::new_string(value))));
     }
     */
+
     pub fn value_count(&self) -> usize {
         self.values.len()
     }
 
+    /*
     pub fn topic_count(&self) -> usize {
         self.values.values().map(|value| b!(value).topic_count()).sum()
     }
@@ -82,18 +88,21 @@ impl Attribute {
         topics.dedup();
         topics
     }
+     */
 }
 
+/*
 impl AttributeValueList {
     pub fn new() -> Self {
         Self {
-            list: vec![],
+            list: Default::default(),
         }
     }
 }
-
+*/
+/*
 impl AttributeValue {
-    pub fn new(attribute: &AttributeRc, value: AttributeTypedValue) -> Self {
+    pub fn new(attribute: &AttributeRc, value: String) -> Self {
         Self {
             attribute: attribute.clone(),
             value,
@@ -117,3 +126,4 @@ impl AttributeTypedValue {
         }
     }
 }
+*/

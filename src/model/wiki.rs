@@ -45,7 +45,7 @@ impl Wiki {
         let key = Topic::make_key(namespace_name, topic_name);
         match self.topics.get(&key) {
             Some(topic_rc) => Ok(topic_rc.clone()),
-            None => Err(format!("{}: Unable to find topic {} -> {}", context, namespace_name, topic_name)),
+            None => Err(format!("{}: Unable to find topic \"{}\" -> \"{}\"", context, namespace_name, topic_name)),
         }
     }
 
@@ -65,5 +65,8 @@ impl Wiki {
         self.topics.values().map(|topic_rc| b!(topic_rc).paragraphs.clone()).flatten().collect()
     }
 
-
+    pub fn print_errors(&self) {
+        println!("Errors:");
+        self.topics.values().for_each(|topic_rc| { b!(topic_rc).print_errors(); });
+    }
 }
