@@ -30,9 +30,12 @@ const CT_PREFIX_IMAGE_FOLDER: &str = r"Images\";
 const CT_IMAGE_SIZE_STD: &str = "(($IMG_SIZE))";
 const CT_IMAGE_SIZE_LARGE: &str = "(($IMG_SIZE_LARGE))";
 const CT_IMAGE_SIZE_100_PCT: &str = "100%";
+const CT_DELIM_QUOTE_START: &str = "{{{";
+const CT_DELIM_QUOTE_END: &str = "}}}";
 
 pub fn main() {
-    build_wiki(Some(100));
+    // build_wiki(Some(100));
+    build_wiki(None);
 }
 
 struct BuildProcess {
@@ -82,7 +85,13 @@ impl BuildProcess {
         // break. So trim the end of every line and reassemble the block of text. This also turns
         // every line break into a standard \n. We can't trim the beginning of the lines since
         // things like list items depend on the number of spaces at the beginning.
-        let export_text = export_text.lines().map(|x| x.trim_end()).join("\n");
+        let export_text = export_text.lines()
+            .map(|x| x.trim_end())
+            // For now we're ignoring quoted passages.
+            .filter(|x| x != &CT_TABLE_END && x != &CT_DELIM_QUOTE_START && x != &CT_DELIM_QUOTE_END)
+            .join("\n");
+        // Get rid of extra line breaks.
+        let export_text = export_text.replace(&CT_LINE_BREAK.repeat(3), &CT_LINE_BREAK.repeat(2));
         for topic_text in export_text.split(CT_TOPIC_BREAK)
             .filter(|topic_text| !topic_text.trim().is_empty())
             .take(self.topic_limit.unwrap_or(usize::max_value())) {
@@ -156,13 +165,17 @@ impl BuildProcess {
         //   ||**[[AutoVoice]] » (($CURRENTTOPIC)) « [[Tasker]]**
         //   |}
         let context = &format!("{} Seems to be a bookmark paragraph.", context);
+        let err_func = |msg: &str| Err(format!("{} paragraph_as_bookmark_rc: {}: text = \"{}\".", context, msg, text));
         if text.contains(CT_BOOKMARK_DELIM_RIGHT) {
             let lines = text.lines().collect::<Vec<_>>();
-            if lines.len() != 3 {
-                return Err(format!("{} Expected 3 lines, found {}.", context, lines.len()));
+            if lines.len() < 2 || lines.len() > 3 {
+                return err_func(&format!("Expected 2 or 3 lines, found {}.", lines.len()));
             }
-            if lines[0] != CT_TABLE_START || lines[2] != CT_TABLE_END {
-                return Err(format!("{} Table delimiters are not right.", context));
+            if lines[0] != CT_TABLE_START {
+                return err_func("Table start delimiter is not right.");
+            }
+            if lines.len() > 2 && lines[2] != CT_TABLE_END {
+                return err_func("Table end delimiter is not right.");
             }
             // Get rid of the table row delimiter at the front and bold (**) markup.
             let line = lines[1].replace(CT_TABLE_DELIM, "").replace("**", "");
@@ -241,7 +254,6 @@ impl BuildProcess {
         //    * [[By the Numbers]]
         //    * [[Genealogy (coding project)]]
         let context = &format!("{} Seems to be a list paragraph.", context);
-        let err_func = |msg: &str| Err(format!("{} paragraph_as_list_rc: {}: text = \"{}\".", context, msg, text));
         if !text.contains(" *") {
             return Ok(None);
         }
@@ -249,6 +261,7 @@ impl BuildProcess {
         if lines.len() < 2 || !lines[1].trim().starts_with("*") {
             return Ok(None);
         }
+        let err_func = |msg: &str| Err(format!("{} paragraph_as_list_rc: {}: partial = \n\t\t\t{}\n\t\t\t{}.", context, msg, lines[0], lines[1]));
         // At this point we're going to assume that it's a list and consider it an error if
         // that doesn't work out.
         if lines[0].trim().starts_with("*") {
@@ -302,9 +315,10 @@ impl BuildProcess {
 
     fn make_link_rc(&self, text: &str, context: &str) -> Result<Link, String> {
         let text = text.trim();
+        let err_func = |msg: &str| Err(format!("{} make_link_rc: {}: text = \"{}\".", context, msg, text));
         // The brackets should have been removed by this point.
         if text.contains(CT_BRACKET_LEFT) || text.contains(CT_BRACKET_RIGHT) {
-            return Err(format!("{} Brackets found in text for a link. They should have been removed.", context));
+            return err_func("Brackets found in text for a link. They should have been removed.");
         }
         if text.starts_with(CT_PREFIX_IMAGE) {
             return self.make_image_link_rc(text, context);
