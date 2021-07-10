@@ -13,8 +13,8 @@ pub use link::*;
 pub mod list;
 pub use list::*;
 
-pub mod namespace;
-pub use namespace::*;
+// pub mod namespace;
+// pub use namespace::*;
 
 pub mod paragraph;
 pub use paragraph::*;
@@ -22,8 +22,8 @@ pub use paragraph::*;
 pub mod parse;
 pub use parse::*;
 
-pub mod section;
-pub use section::*;
+// pub mod section;
+// pub use section::*;
 
 pub mod report;
 

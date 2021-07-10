@@ -1,15 +1,12 @@
-use crate::*;
 use super::*;
 
 pub struct WikiReport {
-    wiki: WikiRc,
     paragraphs: bool,
 }
 
 impl WikiReport {
-    pub fn new(wiki_rc: &WikiRc) -> Self {
+    pub fn new() -> Self {
         Self {
-            wiki: wiki_rc.clone(),
             paragraphs: false,
         }
     }
@@ -19,8 +16,7 @@ impl WikiReport {
         self
     }
 
-    pub fn go(&self) {
-        let wiki = b!(&self.wiki);
+    pub fn go(&self, wiki: &Wiki) {
         let namespace_count = wiki.topics.len();
         let topic_count = wiki.topics.len();
         let category_count = wiki.categories.len();
@@ -29,16 +25,17 @@ impl WikiReport {
             namespace_count, topic_count, category_count, attribute_count);
         let child_depth = 1;
         if self.paragraphs {
-            self.paragraph_breakdown(child_depth);
+            self.paragraph_breakdown(wiki, child_depth);
         }
     }
 
-    fn paragraph_breakdown(&self, depth: usize) {
-        let wiki = b!(&self.wiki);
+    fn paragraph_breakdown(&self, wiki: &Wiki, depth: usize) {
         let mut groups = util::group::Grouper::new("Paragraph Types");
-        wiki.get_paragraphs().iter().for_each(|paragraph_rc| {
-            groups.record_entry(&b!(paragraph_rc).get_variant_name().to_string());
-        });
+        for topic in wiki.topics.values() {
+            for paragraph in topic.paragraphs.iter() {
+                groups.record_entry(&paragraph.get_variant_name().to_string());
+            }
+        }
         groups.print_by_count(depth, None);
     }
 }

@@ -11,10 +11,10 @@ pub struct Link {
 #[derive(Clone)]
 pub enum LinkType {
     Topic {
-        topic: TopicRc,
+        topic: TopicKey,
     },
     Section {
-        section: SectionRc,
+        section: SectionKey,
     },
     External {
         url: String,
@@ -33,7 +33,7 @@ pub enum LinkType {
 #[derive(Clone)]
 pub enum ImageSource {
     Internal {
-        namespace: NamespaceRc,
+        namespace: String,
         file_name: String,
     },
     External {
