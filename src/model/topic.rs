@@ -38,6 +38,10 @@ impl Topic {
         (namespace_name.to_lowercase().to_string(), topic_name.to_lowercase().to_string())
     }
 
+    pub fn make_section_key(namespace_name: &str, topic_name: &str, section_name: &str) -> SectionKey {
+        (Self::make_key(namespace_name, topic_name), section_name.to_lowercase().to_string())
+    }
+
     pub fn add_paragraph(&mut self, paragraph: Paragraph) {
         self.paragraphs.push(paragraph);
     }
