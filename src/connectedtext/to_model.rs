@@ -51,7 +51,7 @@ impl BuildProcess {
         wiki.add_namespace(NAMESPACE_TOOLS);
         self.parse_from_text_file(&mut wiki);
         self.print_errors();
-        WikiReport::new().paragraphs().go(&wiki);
+        WikiReport::new().categories().paragraphs().attributes().go(&wiki);
     }
 
     fn parse_from_text_file(&mut self, wiki: &mut Wiki) {
@@ -150,22 +150,20 @@ impl BuildProcess {
             }
             // Get rid of the table row delimiter at the front and bold (**) markup.
             let line = lines[1].replace(CT_TABLE_DELIM, "").replace("**", "");
-            if line.contains(CT_BOOKMARK_DELIM_LEFT) {
+            let parents = if line.contains(CT_BOOKMARK_DELIM_LEFT) {
                 // This is a combination topic with two owners.
                 let (left, _, right) = split_3_two_delimiters_rc(&line, CT_BOOKMARK_DELIM_RIGHT, CT_BOOKMARK_DELIM_LEFT, context)?;
-                let (left, right) = (remove_brackets_rc(left, context)?, remove_brackets_rc(right, context)?);
-                let left_topic_key = Topic::make_key(NAMESPACE_TOOLS, &left);
-                let right_topic_key = Topic::make_key(NAMESPACE_TOOLS, &right);
-                topic.parents.push(left_topic_key);
-                topic.parents.push(right_topic_key);
+                vec![left, right]
             } else {
                 // The topic has one owner.
                 let splits = line.split(CT_BOOKMARK_DELIM_RIGHT).collect::<Vec<_>>();
                 // The second-to-last item should be the parent of the current topic.
                 let parent_split_index = splits.len() - 2;
-                let parent_topic_name = remove_brackets_rc(splits[parent_split_index], context)?;
-                let parent_topic_key = Topic::make_key(NAMESPACE_TOOLS, &parent_topic_name);
-                topic.parents.push(parent_topic_key);
+                vec![splits[parent_split_index]]
+            };
+            for parent in parents.iter() {
+                let parent = remove_brackets_rc(parent, context)?;
+                topic.parents.push(Topic::make_key(NAMESPACE_TOOLS, &parent));
             }
             Ok(Some(Paragraph::Breadcrumbs))
         } else {
@@ -222,13 +220,14 @@ impl BuildProcess {
     }
 
     fn print_errors(&self) {
-        println!("Errors:");
+        println!("\nErrors:");
         for topic_name in self.errors.keys() {
             println!("\t{}", topic_name);
             for msg in self.errors[topic_name].iter() {
                 println!("\t\t{}", msg);
             }
         }
+        println!();
     }
 }
 
