@@ -87,26 +87,39 @@ impl BuildProcess {
         // things like list items depend on the number of spaces at the beginning.
         let export_text = export_text.lines()
             .map(|x| x.trim_end())
-            // For now we're ignoring quoted passages.
-            .filter(|x| x != &CT_TABLE_END && x != &CT_DELIM_QUOTE_START && x != &CT_DELIM_QUOTE_END)
+            .filter(|x| x != &CT_TABLE_END)
             .join("\n");
         // Get rid of extra line breaks.
         let export_text = export_text.replace(&CT_LINE_BREAK.repeat(3), &CT_LINE_BREAK.repeat(2));
         for topic_text in export_text.split(CT_TOPIC_BREAK)
-            .filter(|topic_text| !topic_text.trim().is_empty())
-            .take(self.topic_limit.unwrap_or(usize::max_value())) {
+                .filter(|topic_text| !topic_text.trim().is_empty())
+                .take(self.topic_limit.unwrap_or(usize::max_value())) {
             //bg!(&topic_text);
             let (topic_name, topic_text) = util::parse::split_2(topic_text, CT_LINE_BREAK);
             //rintln!("{}", topic_name);
 
             let mut topic = Topic::new(&self.namespace_main, &topic_name);
 
-            // Break the topic into paragraphs.
-            for paragraph_text in topic_text.split(CT_PARAGRAPH_BREAK) {
-                if !paragraph_text.is_empty() {
-                    topic.add_paragraph(Paragraph::new_unknown(paragraph_text));
-                }
+            // Pull out the quoted sections ("{{{" and "}}}") before breaking into paragraphs.
+            let context = format!("read_text_file_as_topics: quote splits for \"{}\".", topic_name);
+            match util::parse::split_delimited_and_normal_rc(topic_text, CT_DELIM_QUOTE_START, CT_DELIM_QUOTE_END, &context) {
+                Ok(quote_splits) => {
+                    for (is_quote, entry_text) in quote_splits.iter() {
+                        if *is_quote {
+                            topic.add_paragraph(Paragraph::new_quote(entry_text));
+                        } else {
+                            // Break the topic into paragraphs.
+                            for paragraph_text in entry_text.split(CT_PARAGRAPH_BREAK) {
+                                if !paragraph_text.is_empty() {
+                                    topic.add_paragraph(Paragraph::new_unknown(paragraph_text));
+                                }
+                            }
+                        }
+                    }
+                },
+                Err(msg) => { self.add_error(topic_name, &msg); },
             }
+
             //rintln!("{}: {}", topic_name, topic.paragraphs.len());
 
             wiki.add_topic(topic);
@@ -119,10 +132,7 @@ impl BuildProcess {
             let paragraph_count = topic.paragraphs.len();
             for paragraph_index in 0..paragraph_count {
                 match self.refine_one_paragraph_rc(topic, paragraph_index, &context) {
-                    Err(msg) => {
-                        let entry = self.errors.entry(topic.name.clone()).or_insert(vec![]);
-                        entry.push(msg);
-                    },
+                    Err(msg) => { self.add_error(&topic.name, &msg); },
                     _ => (),
                 }
             }
@@ -139,7 +149,7 @@ impl BuildProcess {
                     .or(self.paragraph_as_list_rc(topic, &text, context)?)
                     .unwrap_or(self.paragraph_as_text_unresolved(&text))
             },
-            _ => panic!("Expected Paragraph::Unknown.")
+            _ => source_paragraph,
         };
         topic.paragraphs[paragraph_index] = new_paragraph;
         Ok(())
@@ -374,6 +384,11 @@ impl BuildProcess {
         let source = ImageSource::new_internal(&self.namespace_main, &source);
         let link = Link::new_image(None, source, ImageAlignment::Left, size, ImageLinkType::Direct);
         Ok(link)
+    }
+
+    fn add_error(&mut self, topic_name: &str, msg: &str) {
+        let entry = self.errors.entry(topic_name.to_string()).or_insert(vec![]);
+        entry.push(msg.to_string());
     }
 
     fn print_errors(&self) {

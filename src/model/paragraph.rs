@@ -16,7 +16,7 @@ pub enum Paragraph {
     },
     Placeholder,
     Quote {
-
+        text: String,
     },
     SectionHeader {
         name: String,
@@ -36,6 +36,10 @@ pub enum Paragraph {
 impl Paragraph {
     pub fn new_text_unresolved(text: &str) -> Self {
         Paragraph::TextUnresolved { text: text.to_string() }
+    }
+
+    pub fn new_quote(text: &str) -> Self {
+        Paragraph::Quote { text: text.to_string() }
     }
 
     pub fn new_unknown(text: &str) -> Self {
