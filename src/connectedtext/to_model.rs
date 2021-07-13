@@ -7,6 +7,7 @@ use crate::model::report::WikiReport;
 use util::parse::{split_3_two_delimiters_rc, split_trim, between};
 use std::collections::BTreeMap;
 use crate::Itertools;
+use crate::connectedtext::report::report_category_tree;
 
 const CT_BRACKET_LEFT: &str = "[[";
 const CT_BRACKET_RIGHT: &str = "]]";
@@ -65,6 +66,7 @@ impl BuildProcess {
         self.parse_from_text_file(&mut wiki);
         self.print_errors();
         WikiReport::new().categories().paragraphs().attributes().go(&wiki);
+        // report_category_tree(&wiki);
     }
 
     fn parse_from_text_file(&mut self, wiki: &mut Wiki) {
@@ -99,6 +101,10 @@ impl BuildProcess {
             //rintln!("{}", topic_name);
 
             let mut topic = Topic::new(&self.namespace_main, &topic_name);
+
+            if topic_name.chars().next().unwrap().is_ascii_lowercase() {
+                self.add_error(topic_name, "Starts with a lowercase letter.");
+            }
 
             // Pull out the quoted sections ("{{{" and "}}}") before breaking into paragraphs.
             let context = format!("read_text_file_as_topics: quote splits for \"{}\".", topic_name);

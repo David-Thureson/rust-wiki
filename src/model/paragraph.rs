@@ -9,6 +9,8 @@ pub enum Paragraph {
     Attributes,
     Breadcrumbs,
     Category,
+    GenStart,
+    GenEnd,
     List {
         type_: ListType,
         header: TextBlock,
@@ -51,6 +53,8 @@ impl Paragraph {
             Paragraph::Attributes { .. } => "Attributes",
             Paragraph::Breadcrumbs { .. } => "Breadcrumbs",
             Paragraph::Category { .. } => "Category",
+            Paragraph::GenStart { .. } => "GenStart",
+            Paragraph::GenEnd { .. } => "GenEnd",
             Paragraph::List { .. } => "List",
             Paragraph::Placeholder { .. } => "Placeholder",
             Paragraph::Quote { .. } => "Quote",
