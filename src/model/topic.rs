@@ -13,8 +13,11 @@ pub struct Topic {
     pub category: Option<String>,
     pub attributes: BTreeMap<String, Vec<String>>,
     pub paragraphs: Vec<Paragraph>,
+    pub inbound_links: Vec<Link>,
+    pub outbound_links: Vec<Link>,
+    pub subtopics: Vec<TopicKey>,
     //pub sections: Vec<SectionRc>,
-    pub sections: BTreeMap<String, usize>,
+    // pub sections: BTreeMap<String, usize>,
 }
 
 impl Topic {
@@ -26,7 +29,10 @@ impl Topic {
             category: None,
             attributes: Default::default(),
             paragraphs: vec![],
-            sections: Default::default(),
+            inbound_links: vec![],
+            outbound_links: vec![],
+            subtopics: vec![],
+            // sections: Default::default(),
         }
     }
 
@@ -45,6 +51,22 @@ impl Topic {
     pub fn add_paragraph(&mut self, paragraph: Paragraph) {
         self.paragraphs.push(paragraph);
     }
+
+    pub fn has_section(&self, section_name: &str) -> bool {
+        let section_name = section_name.to_lowercase();
+        for paragraph in self.paragraphs.iter() {
+            match paragraph {
+                Paragraph::SectionHeader { name, .. } => {
+                    if name.to_lowercase() == section_name {
+                        return true;
+                    }
+                },
+                _ => {},
+            }
+        }
+        false
+    }
+
 }
 
 impl PartialEq for Topic {

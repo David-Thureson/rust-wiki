@@ -4,17 +4,17 @@ use super::*;
 
 #[derive(Clone)]
 pub struct Link {
-    label: Option<String>,
-    type_: LinkType,
+    pub label: Option<String>,
+    pub type_: LinkType,
 }
 
 #[derive(Clone)]
 pub enum LinkType {
     Topic {
-        topic: TopicKey,
+        topic_key: TopicKey,
     },
     Section {
-        section: SectionKey,
+        section_key: SectionKey,
     },
     External {
         url: String,
@@ -110,7 +110,7 @@ impl Link {
     pub fn new_section(label: Option<&str>, namespace_name: &str, topic_name: &str, section_name: &str) -> Self {
         let section_key = Topic::make_section_key(namespace_name, topic_name, section_name);
         let type_ = LinkType::Section {
-            section: section_key,
+            section_key,
         };
         Self::new(label, type_)
     }
@@ -118,7 +118,7 @@ impl Link {
     pub fn new_topic(label: Option<&str>, namespace_name: &str, topic_name: &str) -> Self {
         let topic_key = Topic::make_key(namespace_name, topic_name);
         let type_ = LinkType::Topic {
-            topic: topic_key,
+            topic_key,
         };
         Self::new(label, type_)
     }

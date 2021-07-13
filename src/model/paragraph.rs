@@ -25,7 +25,7 @@ pub enum Paragraph {
         depth: usize,
     },
     Text {
-        lines: Vec<Vec<TextBlock>>,
+        text_block: TextBlock,
     },
     TextUnresolved {
         text: String,
@@ -36,6 +36,10 @@ pub enum Paragraph {
 }
 
 impl Paragraph {
+    pub fn new_text(text_block: TextBlock) -> Self {
+        Paragraph::Text { text_block }
+    }
+
     pub fn new_text_unresolved(text: &str) -> Self {
         Paragraph::TextUnresolved { text: text.to_string() }
     }

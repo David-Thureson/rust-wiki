@@ -45,7 +45,7 @@ struct BuildProcess {
     namespace_main: String,
     export_path: String,
     export_file_name: String,
-    errors: BTreeMap<String, Vec<String>>,
+    errors: BTreeMap<TopicKey, Vec<String>>,
     topic_limit: Option<usize>,
 }
 
@@ -65,6 +65,7 @@ impl BuildProcess {
         let mut wiki = Wiki::new(&self.wiki_name);
         wiki.add_namespace(NAMESPACE_TOOLS);
         self.parse_from_text_file(&mut wiki);
+        self.check_internal_links(&mut wiki);
         self.print_errors();
         WikiReport::new().categories().paragraphs().attributes().lists().go(&wiki);
         // report_category_tree(&wiki);
@@ -154,6 +155,7 @@ impl BuildProcess {
                     .or(self.paragraph_as_bookmark_rc(topic, &text, context)?)
                     .or(self.paragraph_as_attributes_rc(topic, &text, context)?)
                     .or(self.paragraph_as_list_rc(topic, &text, context)?)
+                    .or(self.paragraph_as_text_rc(topic, &text, context)?)
                     .unwrap_or(self.paragraph_as_text_unresolved(&text))
             },
             _ => source_paragraph,
@@ -261,7 +263,7 @@ impl BuildProcess {
         }
     }
 
-    fn paragraph_as_list_rc(&mut self, _topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
+    fn paragraph_as_list_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
         // Example with two levels (the first level has one space before the asterisk):
         // Projects:
         //   * [[Android]]
@@ -287,14 +289,14 @@ impl BuildProcess {
         let type_ = ListType::from_header(lines[0].trim());
         // The header may be a simple label like "Subtopics:" but it could also be a longer piece
         // of text containing links and other markup.
-        let header = self.make_text_block_rc(lines[1], context)?;
+        let header = self.make_text_block_rc(&topic.name, lines[1], context)?;
         let mut items = vec![];
         for line in lines.iter().skip(1) {
             // The depth of the list item is the number of spaces before the asterisk.
             match line.find("*") {
                 Some(depth) => {
                     let item_text = line[depth + 1..].trim();
-                    let item_text_block = self.make_text_block_rc(item_text, context)?;
+                    let item_text_block = self.make_text_block_rc(&topic.name, item_text, context)?;
                     items.push(ListItem::new(depth, item_text_block));
                 },
                 None => {
@@ -310,18 +312,31 @@ impl BuildProcess {
         Ok(Some(paragraph))
     }
 
+    fn paragraph_as_text_rc(&self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
+        let context = &format!("{} Seems to be a text paragraph.", context);
+        let text_block = self.make_text_block_rc(&topic.name, text, context)?;
+        Ok(Some(Paragraph::new_text(text_block)))
+    }
+
     fn paragraph_as_text_unresolved(&self, text: &str) -> Paragraph {
         Paragraph::new_text_unresolved(text)
     }
 
-    fn make_text_block_rc(&self, text: &str, context: &str) -> Result<TextBlock, String> {
+    fn check_internal_links(&mut self, wiki: &mut Wiki) {
+        let mut link_errors = wiki.catalog_links();
+        self.errors.append(&mut link_errors);
+    }
+
+    fn make_text_block_rc(&self, topic_name: &str, text: &str, context: &str) -> Result<TextBlock, String> {
         let text = text.trim();
         let mut text_block = TextBlock::new();
         let delimited_splits = util::parse::split_delimited_and_normal_rc(text, CT_BRACKET_LEFT, CT_BRACKET_RIGHT, context)?;
         for (item_is_delimited, item_text) in delimited_splits.iter() {
             if *item_is_delimited {
                 // Assume it's an internal or external link, or an image link.
-                text_block.items.push(TextItem::new_link(self.make_link_rc(item_text, context)?));
+                if let Some(link) = self.make_link_rc(topic_name, item_text, context)? {
+                    text_block.items.push(TextItem::new_link(link));
+                }
             } else {
                 // Assume it's plain text.
                 text_block.items.push(TextItem::new_text(item_text));
@@ -330,7 +345,7 @@ impl BuildProcess {
         Ok(text_block)
     }
 
-    fn make_link_rc(&self, text: &str, context: &str) -> Result<Link, String> {
+    fn make_link_rc(&self, topic_name: &str, text: &str, context: &str) -> Result<Option<Link>, String> {
         let text = text.trim();
         let err_func = |msg: &str| Err(format!("{} make_link_rc: {}: text = \"{}\".", context, msg, text));
         // The brackets should have been removed by this point.
@@ -338,22 +353,30 @@ impl BuildProcess {
             return err_func("Brackets found in text for a link. They should have been removed.");
         }
         if text.starts_with(CT_PREFIX_IMAGE) {
-            return self.make_image_link_rc(text, context);
+            return Ok(Some(self.make_image_link_rc(text, context)?));
         }
         if text.starts_with(CT_PREFIX_URL) {
             // External link.
             let (url, label) = util::parse::split_1_or_2_trim(&text, CT_PIPE);
-            return Ok(Link::new_external(label, url));
+            return Ok(Some(Link::new_external(label, url)));
+        }
+        // For now skip anything else starting with a "$" like $FILE.
+        if text.starts_with("$") {
+            return Ok(None);
         }
         // Assume it's an internal link, either to a topic or a section of a topic.
         let (dest, label) = util::parse::split_1_or_2_trim(&text, CT_PIPE);
         if dest.contains(CT_DELIM_SECTION) {
             // Link to a section of a topic.
-            let (topic_name, section_name) = util::parse::split_2_trim(dest, CT_DELIM_SECTION);
-            return Ok(Link::new_section(label,&self.namespace_main, topic_name, section_name));
+            let (mut link_topic_name, link_section_name) = util::parse::split_2_trim(dest, CT_DELIM_SECTION);
+            if link_topic_name.trim().is_empty() {
+                // This is a link to a section in the same topic.
+                link_topic_name = topic_name;
+            }
+            return Ok(Some(Link::new_section(label,&self.namespace_main, link_topic_name, link_section_name)));
         } else {
             // Link to a whole topic.
-            return Ok(Link::new_topic(label, &self.namespace_main, dest));
+            return Ok(Some(Link::new_topic(label, &self.namespace_main, dest)));
         }
     }
 
@@ -394,15 +417,16 @@ impl BuildProcess {
     }
 
     fn add_error(&mut self, topic_name: &str, msg: &str) {
-        let entry = self.errors.entry(topic_name.to_string()).or_insert(vec![]);
+        let topic_key = Topic::make_key(&self.namespace_main, topic_name);
+        let entry = self.errors.entry(topic_key).or_insert(vec![]);
         entry.push(msg.to_string());
     }
 
     fn print_errors(&self) {
         println!("\nErrors:");
-        for topic_name in self.errors.keys() {
-            println!("\n\t{}", topic_name);
-            for msg in self.errors[topic_name].iter() {
+        for topic_key in self.errors.keys() {
+            println!("\n\t{} -> {}", topic_key.0, topic_key.1);
+            for msg in self.errors[topic_key].iter() {
                 println!("\t\t{}", msg);
             }
         }
