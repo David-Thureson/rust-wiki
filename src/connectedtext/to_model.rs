@@ -7,6 +7,7 @@ use crate::model::report::WikiReport;
 use util::parse::{split_3_two_delimiters_rc, split_trim, between};
 use std::collections::BTreeMap;
 use crate::Itertools;
+#[allow(unused_imports)]
 use crate::connectedtext::report::report_category_tree;
 
 const CT_BRACKET_LEFT: &str = "[[";
@@ -65,7 +66,7 @@ impl BuildProcess {
         wiki.add_namespace(NAMESPACE_TOOLS);
         self.parse_from_text_file(&mut wiki);
         self.print_errors();
-        WikiReport::new().categories().paragraphs().attributes().go(&wiki);
+        WikiReport::new().categories().paragraphs().attributes().lists().go(&wiki);
         // report_category_tree(&wiki);
     }
 
@@ -283,7 +284,7 @@ impl BuildProcess {
         if lines[0].trim().starts_with("*") {
             return err_func("List with no header.");
         }
-        let type_ = ListType::from_header(lines[1].trim());
+        let type_ = ListType::from_header(lines[0].trim());
         // The header may be a simple label like "Subtopics:" but it could also be a longer piece
         // of text containing links and other markup.
         let header = self.make_text_block_rc(lines[1], context)?;

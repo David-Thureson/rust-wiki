@@ -31,7 +31,7 @@ impl ListType {
             "Crates:" => Self::Crates,
             "Dependencies:" => Self::Dependencies,
             "Ideas:" => Self::Ideas,
-            "Libraries" => Self::Libraries,
+            "Libraries:" => Self::Libraries,
             "Projects:" => Self::Projects,
             "Resources:" => Self::Resources,
             "See also:" => Self::SeeAlso,
@@ -43,6 +43,26 @@ impl ListType {
             "To read:" => Self::ToRead,
             "To try:" => Self::ToTry,
             _ => Self::General,
+        }
+    }
+
+    pub fn get_variant_name(&self) -> &str {
+        match self {
+            Self::Crates => "Crates",
+            Self::Dependencies => "Dependencies",
+            Self::General => "General",
+            Self::Ideas => "Ideas",
+            Self::Libraries => "Libraries",
+            Self::Projects => "Projects",
+            Self::Resources => "Resources",
+            Self::SeeAlso => "SeeAlso",
+            Self::Settings => "Settings",
+            Self::Specs => "Specs",
+            Self::Subtopics => "Subtopics",
+            Self::Tools => "Tools",
+            Self::ToDo => "ToDo",
+            Self::ToRead => "ToRead",
+            Self::ToTry => "ToTry",
         }
     }
 }

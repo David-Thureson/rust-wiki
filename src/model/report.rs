@@ -4,6 +4,7 @@ pub struct WikiReport {
     categories: bool,
     paragraphs: bool,
     attributes: bool,
+    lists: bool,
 }
 
 impl WikiReport {
@@ -12,6 +13,7 @@ impl WikiReport {
             categories: false,
             paragraphs: false,
             attributes: false,
+            lists: false,
         }
     }
 
@@ -27,6 +29,11 @@ impl WikiReport {
 
     pub fn attributes(mut self) -> Self {
         self.attributes = true;
+        self
+    }
+
+    pub fn lists(mut self) -> Self {
+        self.lists = true;
         self
     }
 
@@ -46,6 +53,9 @@ impl WikiReport {
         }
         if self.attributes {
             self.attribute_breakdown(wiki, child_depth);
+        }
+        if self.lists {
+            self.list_breakdown(wiki, child_depth);
         }
     }
 
@@ -74,6 +84,21 @@ impl WikiReport {
         for topic in wiki.topics.values() {
             for (name, values) in topic.attributes.iter() {
                 groups.record_entry_with_count(name, values.len());
+            }
+        }
+        groups.print_by_count(depth, Some(5));
+    }
+
+    fn list_breakdown(&self, wiki: &Wiki, depth: usize) {
+        let mut groups = util::group::Grouper::new("List Types");
+        for topic in wiki.topics.values() {
+            for paragraph in topic.paragraphs.iter() {
+                match paragraph {
+                    Paragraph::List { type_, .. } => {
+                        groups.record_entry(&type_.get_variant_name().to_string())
+                    },
+                    _ => {},
+                }
             }
         }
         groups.print_by_count(depth, Some(5));
