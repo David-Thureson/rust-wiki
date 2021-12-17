@@ -13,9 +13,11 @@ pub struct Topic {
     pub category: Option<String>,
     pub attributes: BTreeMap<String, Vec<String>>,
     pub paragraphs: Vec<Paragraph>,
-    pub inbound_links: Vec<Link>,
+    pub inbound_topic_keys: Vec<TopicKey>,
     pub outbound_links: Vec<Link>,
     pub subtopics: Vec<TopicKey>,
+    pub combo_subtopics: Vec<TopicKey>,
+    pub listed_topics: Vec<TopicKey>,
     //pub sections: Vec<SectionRc>,
     // pub sections: BTreeMap<String, usize>,
 }
@@ -29,9 +31,11 @@ impl Topic {
             category: None,
             attributes: Default::default(),
             paragraphs: vec![],
-            inbound_links: vec![],
+            inbound_topic_keys: vec![],
             outbound_links: vec![],
             subtopics: vec![],
+            combo_subtopics: vec![],
+            listed_topics: vec![],
             // sections: Default::default(),
         }
     }
@@ -48,15 +52,32 @@ impl Topic {
         (Self::make_key(namespace_name, topic_name), section_name.to_lowercase().to_string())
     }
 
+    pub fn section_key_to_topic_key(section_key: &SectionKey) -> TopicKey {
+        section_key.0.clone()
+    }
+
+    pub fn topic_key_to_string(topic_key: &TopicKey) -> String {
+        // format!("[{} | {}]", topic_key.0, topic_key.1)
+        format!("[{}]", topic_key.1)
+    }
+
+    pub fn section_key_to_string(section_key: &SectionKey) -> String {
+        // format!("[{} | {} # {}]", &section_key.0.0, &section_key.0.1, &section_key.1)
+        format!("[{} # {}]", &section_key.0.1, &section_key.1)
+    }
+
     pub fn add_paragraph(&mut self, paragraph: Paragraph) {
         self.paragraphs.push(paragraph);
     }
 
     pub fn has_section(&self, section_name: &str) -> bool {
         let section_name = section_name.to_lowercase();
+        // let debug = section_name == "runtime communication between a python and java app";
+        // if debug { dbg!(&self.name); }
         for paragraph in self.paragraphs.iter() {
             match paragraph {
                 Paragraph::SectionHeader { name, .. } => {
+                    // if debug { dbg!(&name); }
                     if name.to_lowercase() == section_name {
                         return true;
                     }
@@ -89,6 +110,4 @@ impl Ord for Topic {
         self.get_key().cmp(&other.get_key())
     }
 }
-
-
 

@@ -10,11 +10,16 @@ use crate::Itertools;
 #[allow(unused_imports)]
 use crate::connectedtext::report::report_category_tree;
 
-const CT_BRACKET_LEFT: &str = "[[";
-const CT_BRACKET_RIGHT: &str = "]]";
+const CT_BRACKETS_LEFT: &str = "[[";
+const CT_BRACKETS_RIGHT: &str = "]]";
+// const CT_BRACKET_SINGLE_LEFT: &str = "[";
+// const CT_BRACKET_SINGLE_RIGHT: &str = "]";
 const CT_TOPIC_BREAK: &str = "{{Topic}} ";
 // const CT_PARAGRAPH_BREAK: &str = "\r\n\r\n";
 const CT_PARAGRAPH_BREAK: &str = "\n\n";
+const CT_TEMP_PARAGRAPH_BREAK: &str = "{temp paragraph break}";
+const CT_TABLE_START_SINGLE_LINE_BREAK: &str = "\n{|";
+const CT_TABLE_START_DOUBLE_LINE_BREAK: &str = "\n\n{|";
 //const CT_LINE_BREAK: &str = "\r\n";
 const CT_LINE_BREAK: &str = "\n";
 const CT_CATEGORY_PREFIX: &str = "[[$CATEGORY:";
@@ -26,7 +31,8 @@ const CT_TABLE_DELIM: &str = "||";
 const CT_PREFIX_IMAGE: &str = "$IMG:";
 const CT_PREFIX_URL: &str = "$URL:";
 const CT_PIPE: &str = "|";
-const CT_DELIM_SECTION: &str = "#";
+const CT_DELIM_SECTION_IN_LINK: &str = "#";
+const CT_MARK_SECTION_HEADER: &str = "=";
 const CT_PREFIX_IMAGE_FOLDER: &str = r"Images\";
 // const CT_CURRENT_TOPIC: &str = "(($CURRENTTOPIC))";
 const CT_IMAGE_SIZE_STD: &str = "(($IMG_SIZE))";
@@ -66,9 +72,12 @@ impl BuildProcess {
         wiki.add_namespace(NAMESPACE_TOOLS);
         self.parse_from_text_file(&mut wiki);
         self.check_internal_links(&mut wiki);
+        self.check_subtopic_relationships(&mut wiki);
         self.print_errors();
+        // self.list_missing_topics();
         WikiReport::new().categories().paragraphs().attributes().lists().go(&wiki);
         // report_category_tree(&wiki);
+        // wiki.catalog_possible_list_types().print_by_count(0, None);
     }
 
     fn parse_from_text_file(&mut self, wiki: &mut Wiki) {
@@ -82,6 +91,10 @@ impl BuildProcess {
 
     fn read_text_file_as_topics(&mut self, wiki: &mut Wiki) {
         let path_export_file = PathBuf::from(&self.export_path).join(&self.export_file_name);
+
+        // Back up the export file.
+        util::file::back_up_file_next_number_r(&path_export_file, PATH_CT_EXPORT_FILE_BACKUP_FOLDER, "Project Export", "txt", 4).unwrap();
+
         //bg!(util::file::path_name(&path_export_file));
         let export_text = fs::read_to_string(&path_export_file).unwrap();
         let export_text = export_text.replace("\u{feff}", "");
@@ -117,6 +130,12 @@ impl BuildProcess {
                             topic.add_paragraph(Paragraph::new_quote(entry_text));
                         } else {
                             // Break the topic into paragraphs.
+                            // First, though, find cases where there is a table start "{|" in the
+                            // line right after some text, and make sure the table start ends up
+                            // preceeded by two linefeeds.
+                            let entry_text= entry_text.replace(CT_PARAGRAPH_BREAK, CT_TEMP_PARAGRAPH_BREAK);
+                            let entry_text = entry_text.replace(CT_TABLE_START_SINGLE_LINE_BREAK, CT_TABLE_START_DOUBLE_LINE_BREAK);
+                            let entry_text= entry_text.replace(CT_TEMP_PARAGRAPH_BREAK, CT_PARAGRAPH_BREAK);
                             for paragraph_text in entry_text.split(CT_PARAGRAPH_BREAK) {
                                 if !paragraph_text.is_empty() {
                                     topic.add_paragraph(Paragraph::new_unknown(paragraph_text));
@@ -152,6 +171,7 @@ impl BuildProcess {
         let new_paragraph = match source_paragraph {
             Paragraph::Unknown { text } => {
                 self.paragraph_as_category_rc(topic, &text, context)?
+                    .or(self.paragraph_as_section_header_rc(topic, &text, context)?)
                     .or(self.paragraph_as_bookmark_rc(topic, &text, context)?)
                     .or(self.paragraph_as_attributes_rc(topic, &text, context)?)
                     .or(self.paragraph_as_list_rc(topic, &text, context)?)
@@ -167,11 +187,50 @@ impl BuildProcess {
     fn paragraph_as_category_rc(&mut self, topic: &mut Topic, text: &str, _context: &str) -> Result<Option<Paragraph>, String> {
         // If it's a category line it will look like this:
         //   [[$CATEGORY:Books]]
-        Ok(util::parse::between_optional_trim(text, CT_CATEGORY_PREFIX, CT_BRACKET_RIGHT)
+        Ok(util::parse::between_optional_trim(text, CT_CATEGORY_PREFIX, CT_BRACKETS_RIGHT)
             .map(|category_name| {
                 topic.category = Some(category_name.to_string());
                 Paragraph::Category
             }))
+    }
+
+    fn paragraph_as_section_header_rc(&mut self, _topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
+        // A section header will look like:
+        //   =Title=
+        // with the number of equal signs indicating the depth.
+        let context = &format!("{} Seems to be a section header paragraph.", context);
+        let err_func = |msg: &str| Err(format!("{} paragraph_as_section_header_rc: {}: text = \"{}\".", context, msg, text));
+        let text = text.trim();
+        if text.starts_with(CT_MARK_SECTION_HEADER) {
+            let lines = text.lines().collect::<Vec<_>>();
+            if lines.len() > 1 {
+                return err_func(&format!("Expected a single line, found {}.", lines.len()));
+            }
+            let marker_char = CT_MARK_SECTION_HEADER.chars().nth(0).unwrap();
+            let mut depth = 0;
+            for char in text.chars() {
+                if char == marker_char {
+                    depth += 1;
+                } else {
+                    break;
+                }
+            }
+            let section_marker = CT_MARK_SECTION_HEADER.repeat(depth);
+            debug_assert!(text.starts_with(&section_marker));
+            if !text.ends_with(&section_marker) {
+                return err_func("Matching marker on right side not found.");
+            }
+            let section_name = util::parse::between(text, &section_marker, &section_marker).trim();
+            if section_name.is_empty() {
+                return err_func("Empty section header.");
+            }
+            if section_name.ends_with(CT_MARK_SECTION_HEADER) {
+                return err_func("Too many markers on right side.");
+            }
+            Ok(Some(Paragraph::new_section_header(section_name, depth)))
+        } else {
+            Ok(None)
+        }
     }
 
     fn paragraph_as_bookmark_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
@@ -244,9 +303,11 @@ impl BuildProcess {
                 let (name, values) = (split[0].to_string(), split[1].to_string());
                 let attribute = topic.attributes.entry(name.clone())
                     .or_insert(vec![]);
-                let values = between(&values, CT_BRACKET_LEFT, CT_BRACKET_RIGHT);
-                let values = values.replace("]], [[", "]],[[");
-                for value in values.split("]],[[") {
+                let values = between(&values, CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT);
+                let bracket_delim_with_space = format!("{}, {}", CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT);
+                let bracket_delim_no_space = format!("{},{}", CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT);
+                let values = values.replace(&bracket_delim_with_space, &bracket_delim_no_space);
+                for value in values.split(&bracket_delim_no_space) {
                     let mut value= value.trim().to_string();
                     if value.contains("*") {
                         value = "".to_string();
@@ -289,7 +350,7 @@ impl BuildProcess {
         let type_ = ListType::from_header(lines[0].trim());
         // The header may be a simple label like "Subtopics:" but it could also be a longer piece
         // of text containing links and other markup.
-        let header = self.make_text_block_rc(&topic.name, lines[1], context)?;
+        let header = self.make_text_block_rc(&topic.name, lines[0], context)?;
         let mut items = vec![];
         for line in lines.iter().skip(1) {
             // The depth of the list item is the number of spaces before the asterisk.
@@ -327,10 +388,15 @@ impl BuildProcess {
         self.errors.append(&mut link_errors);
     }
 
+    fn check_subtopic_relationships(&mut self, wiki: &mut Wiki) {
+        let mut subtopic_errors = wiki.check_subtopic_relatioships();
+        self.errors.append(&mut subtopic_errors);
+    }
+
     fn make_text_block_rc(&self, topic_name: &str, text: &str, context: &str) -> Result<TextBlock, String> {
         let text = text.trim();
         let mut text_block = TextBlock::new();
-        let delimited_splits = util::parse::split_delimited_and_normal_rc(text, CT_BRACKET_LEFT, CT_BRACKET_RIGHT, context)?;
+        let delimited_splits = util::parse::split_delimited_and_normal_rc(text, CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT, context)?;
         for (item_is_delimited, item_text) in delimited_splits.iter() {
             if *item_is_delimited {
                 // Assume it's an internal or external link, or an image link.
@@ -349,7 +415,10 @@ impl BuildProcess {
         let text = text.trim();
         let err_func = |msg: &str| Err(format!("{} make_link_rc: {}: text = \"{}\".", context, msg, text));
         // The brackets should have been removed by this point.
-        if text.contains(CT_BRACKET_LEFT) || text.contains(CT_BRACKET_RIGHT) {
+        if text.starts_with("$ASK:") {
+            return Ok(None);
+        }
+        if text.contains(CT_BRACKETS_LEFT) || text.contains(CT_BRACKETS_RIGHT) {
             return err_func("Brackets found in text for a link. They should have been removed.");
         }
         if text.starts_with(CT_PREFIX_IMAGE) {
@@ -366,9 +435,9 @@ impl BuildProcess {
         }
         // Assume it's an internal link, either to a topic or a section of a topic.
         let (dest, label) = util::parse::split_1_or_2_trim(&text, CT_PIPE);
-        if dest.contains(CT_DELIM_SECTION) {
+        if dest.contains(CT_DELIM_SECTION_IN_LINK) {
             // Link to a section of a topic.
-            let (mut link_topic_name, link_section_name) = util::parse::split_2_trim(dest, CT_DELIM_SECTION);
+            let (mut link_topic_name, link_section_name) = util::parse::split_2_trim(dest, CT_DELIM_SECTION_IN_LINK);
             if link_topic_name.trim().is_empty() {
                 // This is a link to a section in the same topic.
                 link_topic_name = topic_name;
@@ -387,17 +456,17 @@ impl BuildProcess {
         // The brackets should have been removed by this point.
         let err_func = |msg: &str| Err(format!("{} make_image_link_rc: {}: text = \"{}\".", context, msg, text));
         let text = text.trim();
-        if text.contains(CT_BRACKET_LEFT) || text.contains(CT_BRACKET_RIGHT) {
-            return err_func("Brackets found in text for an image link. They should have been removed.");
+        if text.contains(CT_BRACKETS_LEFT) || text.contains(CT_BRACKETS_RIGHT) {
+           return err_func("Brackets found in text for an image link. They should have been removed.");
         }
         if !text.starts_with(CT_PREFIX_IMAGE) {
             return err_func(&format!("Presumed image link doesn't start with {}.", CT_PREFIX_IMAGE));
         }
         let text = text[CT_PREFIX_IMAGE.len()..].trim().to_string();
         let splits = util::parse::split_trim(&text, CT_PIPE);
-        if splits.len() != 3 {
-            return err_func("There are not three pipe-delimited segments.");
-        }
+        // if splits.len() != 3 {
+        //     return err_func("There are not three pipe-delimited segments.");
+        // }
         let source = splits[0].trim();
         let size = splits[1].trim();
         if !source.starts_with(CT_PREFIX_IMAGE_FOLDER) {
@@ -407,9 +476,7 @@ impl BuildProcess {
         let size = match size {
             CT_IMAGE_SIZE_STD | CT_IMAGE_SIZE_LARGE => ImageSize::DokuLarge,
             CT_IMAGE_SIZE_100_PCT => ImageSize::Original,
-            _ => {
-                return err_func("Unexpected image size.");
-            }
+            _ => ImageSize::DokuLarge,
         };
         let source = ImageSource::new_internal(&self.namespace_main, &source);
         let link = Link::new_image(None, source, ImageAlignment::Left, size, ImageLinkType::Direct);
@@ -425,26 +492,46 @@ impl BuildProcess {
     fn print_errors(&self) {
         println!("\nErrors:");
         for topic_key in self.errors.keys() {
-            println!("\n\t{} -> {}", topic_key.0, topic_key.1);
+            println!("\n\t{}", Topic::topic_key_to_string(topic_key));
             for msg in self.errors[topic_key].iter() {
                 println!("\t\t{}", msg);
             }
         }
         println!();
     }
+
+    #[allow(dead_code)]
+    fn list_missing_topics(&self) {
+        let before = "Topic link [";
+        let after = "] not found.";
+        let mut map = BTreeMap::new();
+        for error_topic_key in self.errors.keys() {
+            for msg in self.errors[error_topic_key].iter() {
+                // Looking for something like "Topic link [mysql connector/j] not found."
+                if msg.starts_with(before) && msg.ends_with(after) {
+                    let topic_name = util::parse::between_trim(msg, before, after);
+                    let entry = map.entry(topic_name).or_insert(vec![]);
+                    entry.push(error_topic_key.1.clone());
+                }
+            }
+        }
+        for (ref_topic_name, error_topic_names) in map.iter() {
+            println!("{}\t[{}]", ref_topic_name, error_topic_names.iter().join(", "));
+        }
+    }
 }
 
 fn build_wiki(topic_limit: Option<usize>) {
-    let mut bp = BuildProcess::new("Tools",NAMESPACE_TOOLS,PATH_CONNECTEDTEXT_EXPORT,FILE_NAME_EXPORT_TOOLS, topic_limit);
+    let mut bp = BuildProcess::new("Tools",NAMESPACE_TOOLS,PATH_CT_EXPORT,FILE_NAME_EXPORT_TOOLS, topic_limit);
     bp.build();
 }
 
 fn remove_brackets_rc(text: &str, context: &str) -> Result<String, String> {
     let text = text.trim();
-    if !text.starts_with(CT_BRACKET_LEFT) || !text.ends_with(CT_BRACKET_RIGHT) {
+    if !text.starts_with(CT_BRACKETS_LEFT) || !text.ends_with(CT_BRACKETS_RIGHT) {
         Err(format!("{} Malformed bracketed string \"{}\"", context, text))
     } else {
-        Ok(util::parse::between_trim(text, CT_BRACKET_LEFT, CT_BRACKET_RIGHT).to_string())
+        Ok(util::parse::between_trim(text, CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT).to_string())
     }
 }
 

@@ -36,6 +36,10 @@ pub enum Paragraph {
 }
 
 impl Paragraph {
+    pub fn new_section_header(name: &str, depth: usize) -> Self {
+        Paragraph::SectionHeader { name: name.to_string(), depth }
+    }
+
     pub fn new_text(text_block: TextBlock) -> Self {
         Paragraph::Text { text_block }
     }
