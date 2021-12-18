@@ -3,6 +3,8 @@ use std::fs;
 
 use crate::*;
 use std::hash::{Hasher, Hash};
+use crate::model::Wiki;
+use crate::dokuwiki::WikiGenPage;
 
 pub const PATH_PAGES: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/pages";
 pub const PATH_MEDIA: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/media";
@@ -79,6 +81,7 @@ pub struct WikiAttributeRow {
 }
 
 pub struct WikiList {
+    pub label: Option<String>,
     pub items: Vec<String>,
 }
 
@@ -117,8 +120,9 @@ impl WikiAttributeRow {
 }
 
 impl WikiList {
-    pub fn new() -> Self {
+    pub fn new(label: Option<String>) -> Self {
         Self {
+            label,
             items: vec![],
         }
     }
@@ -131,13 +135,13 @@ impl WikiList {
         self.items.push(format!("{}* {}", "  ".repeat(depth + 1), markup));
     }
 
-    pub fn add_to_page(&self, page_text: &mut String, label: Option<&str>) {
-        page_text.push_str(&self.get_markup(label));
+    pub fn add_to_page(&self, page_text: &mut String) {
+        page_text.push_str(&self.get_markup());
     }
 
-    pub fn get_markup(&self, label: Option<&str>) -> String {
+    pub fn get_markup(&self) -> String {
         let mut markup = "".to_string();
-        if let Some(label) = label {
+        if let Some(label) = &self.label {
             markup.push_str(&format!("{}:\n", label));
         }
         for item in self.items.iter() {
@@ -233,12 +237,14 @@ pub fn namespace_prefix(namespace: &str) -> String {
 }
 
 pub fn page_link(namespace: &str, page_name: &str, label: Option<&str>) -> String {
-    format!("[[{}{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), label.map_or("".to_string(), |x| format!("|{}", x)))
+    // format!("[[{}{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), label.map_or("".to_string(), |x| format!("|{}", x)))
+    format!("[[{}{}|{}]]", namespace_prefix(namespace), legal_file_name(page_name), label.unwrap_or(page_name))
 }
 
 pub fn section_link(namespace: &str, page_name: &str, section_name: &str, label: Option<&str>) -> String {
     // Like "[[nav:categories#All|All Categories]]".
-    format!("[[{}{}#{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, label.map_or("".to_string(), |x| format!("|{}", x)))
+    // format!("[[{}{}#{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, label.map_or("".to_string(), |x| format!("|{}", x)))
+    format!("[[{}{}#{}|{}#{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, label.unwrap_or(page_name), section_name)
 }
 
 pub fn section_link_same_page(section_name: &str, label: Option<&str>) -> String {
@@ -296,4 +302,13 @@ pub fn bold(value: &str) -> String {
 
 pub fn italic(value: &str) -> String {
     format!("//{}//", value)
+}
+
+pub fn gen_from_model(wiki: &Wiki) {
+    for topic in wiki.topics.values() {
+        let mut page = WikiGenPage::new(&topic.namespace, &topic.name, None);
+        if let Some(category) = &topic.category {
+            page.add_category(category);
+        }
+    }
 }

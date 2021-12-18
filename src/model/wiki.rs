@@ -3,11 +3,13 @@ use std::cell::RefCell;
 
 use super::*;
 use std::collections::BTreeMap;
+// use crate::connectedtext::NAMESPACE_TOOLS;
 
 pub type WikiRc = Rc<RefCell<Wiki>>;
 
 pub struct Wiki {
     pub name: String,
+    pub main_namespace: String,
     pub namespaces: BTreeMap<String, String>,
     pub topics: BTreeMap<TopicKey, Topic>,
     pub categories: BTreeMap<String, Category>,
@@ -15,21 +17,31 @@ pub struct Wiki {
 }
 
 impl Wiki {
-    pub fn new(name: &str) -> Self {
-        let wiki = Self {
+    pub fn new(name: &str, main_namespace: &str) -> Self {
+        let mut wiki = Self {
             name: name.to_string(),
+            main_namespace: main_namespace.to_string(),
             namespaces: Default::default(),
             topics: Default::default(),
             categories: Default::default(),
             attributes: Default::default(),
         };
+        wiki.add_namespace(main_namespace);
         wiki
     }
 
     pub fn add_namespace(&mut self, name: &str) {
-        let key = name.to_lowercase();
+        let key = self.qualify_namespace(name);
         assert!(!self.namespaces.contains_key(&key));
         self.namespaces.insert(key, name.to_string());
+    }
+
+    pub fn qualify_namespace(&mut self, name: &str) -> String {
+        if name.starts_with(":") {
+            format!("{}{}", &self.main_namespace, name.to_lowercase())
+        } else {
+            name.to_lowercase()
+        }
     }
 
     pub fn add_topic(&mut self, topic: Topic) {
@@ -39,7 +51,7 @@ impl Wiki {
         self.topics.insert(key, topic);
     }
 
-    pub fn catalog_links(&mut self) -> BTreeMap<TopicKey, Vec<String>> {
+    pub fn catalog_links(&mut self) {
         for topic in self.topics.values_mut() {
             for paragraph in topic.paragraphs.iter() {
                 match paragraph {
@@ -81,27 +93,6 @@ impl Wiki {
             }
         }
 
-        let mut errors = BTreeMap::new();
-        for topic in self.topics.values() {
-            for link in topic.outbound_links.iter() {
-                match &link.type_ {
-                    LinkType::Topic { topic_key } => {
-                        if !self.has_topic(topic_key) {
-                            let entry = errors.entry(topic.get_key()).or_insert(vec![]);
-                            entry.push(format!("Topic link {} not found.", Topic::topic_key_to_string(topic_key)));
-                        }
-                    },
-                    LinkType::Section { section_key } => {
-                        if !self.has_section(section_key) {
-                            let entry = errors.entry(topic.get_key()).or_insert(vec![]);
-                            entry.push(format!("Section link {} not found.", Topic::section_key_to_string(section_key)));
-                        }
-                    },
-                    _ => {},
-                }
-            }
-        }
-
         // Set inbound links.
         let mut map = BTreeMap::new();
         for topic in self.topics.values() {
@@ -133,8 +124,6 @@ impl Wiki {
             topic.combo_subtopics.sort();
             topic.listed_topics.sort();
         }
-
-        errors
     }
 
     fn catalog_links_text_block(text_block: &TextBlock) -> Vec<Link> {
@@ -148,6 +137,46 @@ impl Wiki {
             }
         }
         links
+    }
+
+    pub fn check_links(&self) -> BTreeMap<TopicKey, Vec<String>> {
+        let mut errors = BTreeMap::new();
+        for topic in self.topics.values() {
+            for link in topic.outbound_links.iter() {
+                match &link.type_ {
+                    LinkType::Topic { topic_key } => {
+                        if !self.has_topic(topic_key) {
+                            let entry = errors.entry(topic.get_key()).or_insert(vec![]);
+                            entry.push(format!("Topic link {} not found.", Topic::topic_key_to_string(topic_key)));
+                        }
+                    },
+                    LinkType::Section { section_key } => {
+                        if !self.has_section(section_key) {
+                            let entry = errors.entry(topic.get_key()).or_insert(vec![]);
+                            entry.push(format!("Section link {} not found.", Topic::section_key_to_string(section_key)));
+                        }
+                    },
+                    _ => {},
+                }
+            }
+        }
+        errors
+    }
+
+    pub fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
+        for topic in self.topics.values_mut() {
+            for paragraph in topic.paragraphs.iter_mut() {
+                match paragraph {
+                    Paragraph::List { type_: _, header, .. } => {
+                        header.update_internal_links(keys);
+                    },
+                    Paragraph::Text { text_block} => {
+                        text_block.update_internal_links(keys);
+                    },
+                    _ => {},
+                }
+            }
+        }
     }
 
     pub fn check_subtopic_relatioships(&self) -> BTreeMap<TopicKey, Vec<String>> {
@@ -226,6 +255,58 @@ impl Wiki {
             return false;
         }
         self.topics[topic_key].has_section(section_name)
+    }
+
+    pub fn add_missing_category_topics(&mut self) {
+        // First make sure we have a category entry for each category referenced in a topic.
+        let mut category_names = self.topics.values()
+            .filter_map(|topic| topic.category.as_ref())
+            .map(|category_name| category_name.clone())
+            .collect::<Vec<_>>();
+        category_names.sort();
+        category_names.dedup();
+        for category_name in category_names.iter() {
+            if !self.categories.contains_key(category_name) {
+                self.categories.insert(category_name.to_string(), Category::new(None, category_name) );
+            }
+        }
+
+        // Make sure that there's a topic for each category, and where there's already a topic,
+        // change its namespace.
+        let category_names = self.categories.values()
+            .map(|category| category.name.clone())
+            .collect::<Vec<_>>();
+        let category_namespace = &self.qualify_namespace(NAMESPACE_CATEGORY);
+        for category_name in category_names.iter() {
+            let topic_key_old = Topic::make_key(&self.main_namespace, category_name);
+            let found = self.topics.contains_key(&topic_key_old);
+            if found {
+                // Move the topic from the main to the category namespace.
+                //rintln!("\t\t\tMoving topic {}", &category_name);
+                let mut topic = self.topics.remove(&topic_key_old).unwrap();
+                topic.namespace = category_namespace.to_string();
+                self.add_topic(topic);
+            } else {
+                //rintln!("Creating topic for {:?}.", &topic_key_new);
+                self.add_topic(Topic::new(&category_namespace, category_name));
+            }
+        }
+    }
+
+    pub fn move_topics_to_namespace_by_category(&mut self, category_name: &str, namespace_name: &str) {
+        let new_namespace = self.qualify_namespace(namespace_name);
+        let topic_names = self.topics.values()
+            .filter(|topic| topic.category.as_ref().map_or(false,|cat| cat.eq_ignore_ascii_case(category_name)))
+            .map(|topic| topic.name.clone())
+            .collect::<Vec<_>>();
+        dbg!(category_name, namespace_name, &topic_names);
+        for topic_name in topic_names {
+            println!("Moving topic {} to namespace {}.", &topic_name, &new_namespace);
+            let topic_key_old = Topic::make_key(&self.main_namespace, &topic_name);
+            let mut topic = self.topics.remove(&topic_key_old).unwrap();
+            topic.namespace = new_namespace.clone();
+            self.add_topic(topic);
+        }
     }
 
     /*

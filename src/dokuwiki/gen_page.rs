@@ -1,6 +1,7 @@
 use std::fs;
 
 use super::gen::*;
+use crate::model::NAMESPACE_CATEGORY;
 
 pub struct WikiGenPage {
     pub namespace: String,
@@ -9,22 +10,28 @@ pub struct WikiGenPage {
 }
 
 impl WikiGenPage {
-    pub fn new(namespace: &str, topic_name: &str) -> Self {
+    pub fn new(namespace: &str, topic_name: &str, headline: Option<&str>) -> Self {
         let mut page = Self {
             namespace: namespace.to_string(),
             topic_name: topic_name.to_string(),
             content: "".to_string()
         };
-        page.add_headline(topic_name, 1);
+        let headline = headline.unwrap_or(topic_name);
+        page.add_headline(headline, 1);
         page
     }
-    
+
     pub fn add_headline(&mut self, text: &str, level: usize) {
         // Like "----- Categories -----" where a level 1 (top) headline has five hyphens.
         debug_assert!(level >= 1);
         debug_assert!(level <= 5);
         let equal_signs = "=".repeat(6 - level);
         self.content.push_str(&format!("{}{}{}\n\n", equal_signs, text, equal_signs));
+    }
+
+    pub fn add_category(&mut self, category_name: &str) {
+        // Like "Category: [[APIs]]".
+        self.content.push_str(&format!("Category: {}\n\n", page_link(NAMESPACE_CATEGORY, category_name, None)));
     }
 
     /*
@@ -102,6 +109,10 @@ impl WikiGenPage {
 
     pub fn add_paragraph(&mut self, text: &str) {
         self.content.push_str(&format!("{}\n\n", text));
+    }
+
+    pub fn add_list(&mut self, list: &WikiList) {
+        self.content.push_str(&format!("{}\n\n", list.get_markup()));
     }
 
     pub fn write(self) {

@@ -22,6 +22,20 @@ impl TextBlock {
             items: vec![],
         }
     }
+
+    pub fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
+        for text_item in self.items.iter_mut() {
+            match text_item {
+                Link { label, type_} => {
+                    match link {
+                        
+                    }
+
+                },
+                _ => {},
+            }
+        }
+    }
 }
 
 impl TextItem {

@@ -3,7 +3,7 @@ use crate::connectedtext::NAMESPACE_TOOLS;
 use std::path::PathBuf;
 use std::fs;
 use super::*;
-use crate::model::report::WikiReport;
+// use crate::model::report::WikiReport;
 use util::parse::{split_3_two_delimiters_rc, split_trim, between};
 use std::collections::BTreeMap;
 use crate::Itertools;
@@ -67,23 +67,31 @@ impl BuildProcess {
         }
     }
 
-    pub fn build(&mut self) {
-        let mut wiki = Wiki::new(&self.wiki_name);
-        wiki.add_namespace(NAMESPACE_TOOLS);
+    pub fn build(&mut self) -> Wiki {
+        let mut wiki = Wiki::new(&self.wiki_name, NAMESPACE_TOOLS);
+        wiki.add_namespace(NAMESPACE_BOOK);
+        wiki.add_namespace(NAMESPACE_CATEGORY);
         self.parse_from_text_file(&mut wiki);
-        self.check_internal_links(&mut wiki);
+        wiki.add_missing_category_topics();
+        wiki.move_topics_to_namespace_by_category("Nonfiction Books", NAMESPACE_BOOK);
+        wiki.catalog_links();
+        self.check_links(&wiki);
         self.check_subtopic_relationships(&mut wiki);
         self.print_errors();
-        // self.list_missing_topics();
-        WikiReport::new().categories().paragraphs().attributes().lists().go(&wiki);
+        self.list_missing_topics();
+        // WikiReport::new().categories().paragraphs().attributes().lists().go(&wiki);
         // report_category_tree(&wiki);
         // wiki.catalog_possible_list_types().print_by_count(0, None);
+        // self.clear_errors();
+        // self.check_links(&wiki);
+        // self.print_errors();
+        wiki
     }
 
     fn parse_from_text_file(&mut self, wiki: &mut Wiki) {
         // Read the single topic file from disk and break it into topics, then break each topic
-        // each topic into paragraphs. At this point we don't care about whether the paragraphs are
-        // plain or mixed text, attribute tables, section headers, breadcrumbs, etc.
+        // into paragraphs. At this point we don't care about whether the paragraphs are plain or
+        // mixed text, attribute tables, section headers, breadcrumbs, etc.
         self.read_text_file_as_topics(wiki);
         // Figure out the real nature of each paragraph.
         self.refine_paragraphs(wiki);
@@ -383,8 +391,8 @@ impl BuildProcess {
         Paragraph::new_text_unresolved(text)
     }
 
-    fn check_internal_links(&mut self, wiki: &mut Wiki) {
-        let mut link_errors = wiki.catalog_links();
+    fn check_links(&mut self, wiki: &Wiki) {
+        let mut link_errors = wiki.check_links();
         self.errors.append(&mut link_errors);
     }
 
@@ -483,6 +491,10 @@ impl BuildProcess {
         Ok(link)
     }
 
+    fn clear_errors(&mut self) {
+        self.errors.clear();
+    }
+
     fn add_error(&mut self, topic_name: &str, msg: &str) {
         let topic_key = Topic::make_key(&self.namespace_main, topic_name);
         let entry = self.errors.entry(topic_key).or_insert(vec![]);
@@ -521,9 +533,10 @@ impl BuildProcess {
     }
 }
 
-fn build_wiki(topic_limit: Option<usize>) {
+pub fn build_wiki(topic_limit: Option<usize>) -> Wiki {
     let mut bp = BuildProcess::new("Tools",NAMESPACE_TOOLS,PATH_CT_EXPORT,FILE_NAME_EXPORT_TOOLS, topic_limit);
-    bp.build();
+    let wiki = bp.build();
+    wiki
 }
 
 fn remove_brackets_rc(text: &str, context: &str) -> Result<String, String> {

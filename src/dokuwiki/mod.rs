@@ -1,8 +1,12 @@
 pub mod gen;
 pub use gen::*;
 
+pub use gen_from_model;
+
 pub mod gen_page;
 pub use gen_page::*;
+
+pub mod gen_tools_wiki;
 
 pub mod parse;
 pub use parse::*;
