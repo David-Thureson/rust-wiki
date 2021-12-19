@@ -2,13 +2,13 @@
 
 use super::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Link {
     pub label: Option<String>,
     pub type_: LinkType,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum LinkType {
     Topic {
         topic_key: TopicKey,
@@ -30,7 +30,7 @@ pub enum LinkType {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ImageSource {
     Internal {
         namespace: String,
@@ -41,14 +41,14 @@ pub enum ImageSource {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ImageAlignment {
     Center,
     Left,
     Right,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ImageSize {
     DokuSmall,
     DokuMedium,
@@ -66,7 +66,7 @@ pub enum ImageSize {
     },
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ImageLinkType {
     // These are all based on Dokuwiki's terms and behavior: https://www.dokuwiki.org/images
     Detail, // Link to a detail page showing metadata for the image.
@@ -76,7 +76,7 @@ pub enum ImageLinkType {
 }
 
 impl Link {
-    fn new(label: Option<&str>, type_: LinkType) -> Self {
+    pub fn new(label: Option<&str>, type_: LinkType) -> Self {
         Self {
             label: label.map(|label| label.to_string()),
             type_,

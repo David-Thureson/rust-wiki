@@ -72,18 +72,20 @@ impl BuildProcess {
         wiki.add_namespace(NAMESPACE_BOOK);
         wiki.add_namespace(NAMESPACE_CATEGORY);
         self.parse_from_text_file(&mut wiki);
-        wiki.add_missing_category_topics();
-        wiki.move_topics_to_namespace_by_category("Nonfiction Books", NAMESPACE_BOOK);
         wiki.catalog_links();
         self.check_links(&wiki);
         self.check_subtopic_relationships(&mut wiki);
         self.print_errors();
         self.list_missing_topics();
+
         // WikiReport::new().categories().paragraphs().attributes().lists().go(&wiki);
         // report_category_tree(&wiki);
         // wiki.catalog_possible_list_types().print_by_count(0, None);
-        // self.clear_errors();
-        // self.check_links(&wiki);
+        wiki.add_missing_category_topics();
+        wiki.move_topics_to_namespace_by_category("Nonfiction Books", NAMESPACE_BOOK);
+        wiki.catalog_links();
+        self.clear_errors();
+        self.check_links(&wiki);
         // self.print_errors();
         wiki
     }

@@ -53,6 +53,13 @@ impl Wiki {
 
     pub fn catalog_links(&mut self) {
         for topic in self.topics.values_mut() {
+            topic.outbound_links.clear();
+            topic.inbound_topic_keys.clear();
+            topic.listed_topics.clear();
+            topic.subtopics.clear();
+            topic.combo_subtopics.clear();
+        }
+        for topic in self.topics.values_mut() {
             for paragraph in topic.paragraphs.iter() {
                 match paragraph {
                     Paragraph::List { type_, header, items } => {
@@ -277,6 +284,7 @@ impl Wiki {
             .map(|category| category.name.clone())
             .collect::<Vec<_>>();
         let category_namespace = &self.qualify_namespace(NAMESPACE_CATEGORY);
+        let mut topic_keys = vec![];
         for category_name in category_names.iter() {
             let topic_key_old = Topic::make_key(&self.main_namespace, category_name);
             let found = self.topics.contains_key(&topic_key_old);
@@ -284,6 +292,8 @@ impl Wiki {
                 // Move the topic from the main to the category namespace.
                 //rintln!("\t\t\tMoving topic {}", &category_name);
                 let mut topic = self.topics.remove(&topic_key_old).unwrap();
+                let topic_key_new = (category_namespace.to_string(), topic.name.clone());
+                topic_keys.push((topic_key_old, topic_key_new));
                 topic.namespace = category_namespace.to_string();
                 self.add_topic(topic);
             } else {
@@ -291,6 +301,7 @@ impl Wiki {
                 self.add_topic(Topic::new(&category_namespace, category_name));
             }
         }
+        self.update_internal_links(&topic_keys);
     }
 
     pub fn move_topics_to_namespace_by_category(&mut self, category_name: &str, namespace_name: &str) {
@@ -299,14 +310,18 @@ impl Wiki {
             .filter(|topic| topic.category.as_ref().map_or(false,|cat| cat.eq_ignore_ascii_case(category_name)))
             .map(|topic| topic.name.clone())
             .collect::<Vec<_>>();
-        dbg!(category_name, namespace_name, &topic_names);
+        //bg!(category_name, namespace_name, &topic_names);
+        let mut topic_keys = vec![];
         for topic_name in topic_names {
-            println!("Moving topic {} to namespace {}.", &topic_name, &new_namespace);
+            //rintln!("Moving topic {} to namespace {}.", &topic_name, &new_namespace);
             let topic_key_old = Topic::make_key(&self.main_namespace, &topic_name);
+            let topic_key_new = (new_namespace.clone(), topic_name.clone());
             let mut topic = self.topics.remove(&topic_key_old).unwrap();
             topic.namespace = new_namespace.clone();
             self.add_topic(topic);
+            topic_keys.push((topic_key_old, topic_key_new));
         }
+        self.update_internal_links(&topic_keys);
     }
 
     /*
