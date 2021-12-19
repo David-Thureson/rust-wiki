@@ -33,6 +33,9 @@ pub use textblock::*;
 pub mod topic;
 pub use topic::*;
 
+pub mod topic_error_list;
+pub use topic_error_list::*;
+
 pub mod wiki;
 pub use wiki::*;
 

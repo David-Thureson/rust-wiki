@@ -3,8 +3,6 @@ use std::fs;
 
 use crate::*;
 use std::hash::{Hasher, Hash};
-use crate::model::Wiki;
-use crate::dokuwiki::WikiGenPage;
 
 pub const PATH_PAGES: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/pages";
 pub const PATH_MEDIA: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/media";
@@ -304,11 +302,3 @@ pub fn italic(value: &str) -> String {
     format!("//{}//", value)
 }
 
-pub fn gen_from_model(wiki: &Wiki) {
-    for topic in wiki.topics.values() {
-        let mut page = WikiGenPage::new(&topic.namespace, &topic.name, None);
-        if let Some(category) = &topic.category {
-            page.add_category(category);
-        }
-    }
-}

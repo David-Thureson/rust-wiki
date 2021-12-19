@@ -51,7 +51,7 @@ struct BuildProcess {
     namespace_main: String,
     export_path: String,
     export_file_name: String,
-    errors: BTreeMap<TopicKey, Vec<String>>,
+    errors: TopicErrorList,
     topic_limit: Option<usize>,
 }
 
@@ -62,7 +62,7 @@ impl BuildProcess {
             namespace_main: namespace_main.to_string(),
             export_path: export_path.to_string(),
             export_file_name: export_file_name.to_string(),
-            errors: Default::default(),
+            errors: TopicErrorList::new(),
             topic_limit,
         }
     }
@@ -75,8 +75,8 @@ impl BuildProcess {
         wiki.catalog_links();
         self.check_links(&wiki);
         self.check_subtopic_relationships(&mut wiki);
-        self.print_errors();
-        self.list_missing_topics();
+        self.errors.print(Some("First pass"));
+        self.errors.list_missing_topics();
 
         // WikiReport::new().categories().paragraphs().attributes().lists().go(&wiki);
         // report_category_tree(&wiki);
@@ -84,9 +84,9 @@ impl BuildProcess {
         wiki.add_missing_category_topics();
         wiki.move_topics_to_namespace_by_category("Nonfiction Books", NAMESPACE_BOOK);
         wiki.catalog_links();
-        self.clear_errors();
+        self.errors.clear();
         self.check_links(&wiki);
-        // self.print_errors();
+        self.errors.print(Some("After moving category and book topics."));
         wiki
     }
 
@@ -128,7 +128,8 @@ impl BuildProcess {
             let mut topic = Topic::new(&self.namespace_main, &topic_name);
 
             if topic_name.chars().next().unwrap().is_ascii_lowercase() {
-                self.add_error(topic_name, "Starts with a lowercase letter.");
+                let topic_key = Topic::make_key(&self.namespace_main, &topic_name);
+                self.errors.add(&topic_key,"Starts with a lowercase letter.");
             }
 
             // Pull out the quoted sections ("{{{" and "}}}") before breaking into paragraphs.
@@ -154,7 +155,10 @@ impl BuildProcess {
                         }
                     }
                 },
-                Err(msg) => { self.add_error(topic_name, &msg); },
+                Err(msg) => {
+                    let topic_key = Topic::make_key(&self.namespace_main, &topic_name);
+                    self.errors.add(&topic_key, &msg);
+                },
             }
 
             //rintln!("{}: {}", topic_name, topic.paragraphs.len());
@@ -169,7 +173,10 @@ impl BuildProcess {
             let paragraph_count = topic.paragraphs.len();
             for paragraph_index in 0..paragraph_count {
                 match self.refine_one_paragraph_rc(topic, paragraph_index, &context) {
-                    Err(msg) => { self.add_error(&topic.name, &msg); },
+                    Err(msg) => {
+                        let topic_key = Topic::make_key(&self.namespace_main, &topic.name);
+                        self.errors.add(&topic_key, &msg);
+                    },
                     _ => (),
                 }
             }
@@ -493,6 +500,7 @@ impl BuildProcess {
         Ok(link)
     }
 
+    /*
     fn clear_errors(&mut self) {
         self.errors.clear();
     }
@@ -503,36 +511,8 @@ impl BuildProcess {
         entry.push(msg.to_string());
     }
 
-    fn print_errors(&self) {
-        println!("\nErrors:");
-        for topic_key in self.errors.keys() {
-            println!("\n\t{}", Topic::topic_key_to_string(topic_key));
-            for msg in self.errors[topic_key].iter() {
-                println!("\t\t{}", msg);
-            }
-        }
-        println!();
-    }
+     */
 
-    #[allow(dead_code)]
-    fn list_missing_topics(&self) {
-        let before = "Topic link [";
-        let after = "] not found.";
-        let mut map = BTreeMap::new();
-        for error_topic_key in self.errors.keys() {
-            for msg in self.errors[error_topic_key].iter() {
-                // Looking for something like "Topic link [mysql connector/j] not found."
-                if msg.starts_with(before) && msg.ends_with(after) {
-                    let topic_name = util::parse::between_trim(msg, before, after);
-                    let entry = map.entry(topic_name).or_insert(vec![]);
-                    entry.push(error_topic_key.1.clone());
-                }
-            }
-        }
-        for (ref_topic_name, error_topic_names) in map.iter() {
-            println!("{}\t[{}]", ref_topic_name, error_topic_names.iter().join(", "));
-        }
-    }
 }
 
 pub fn build_wiki(topic_limit: Option<usize>) -> Wiki {

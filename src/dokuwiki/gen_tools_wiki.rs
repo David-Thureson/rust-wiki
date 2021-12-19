@@ -18,7 +18,7 @@ fn gen_from_connectedtext(_copy_image_files_to_local_wiki: bool, topic_limit: Op
     // gen_recent_topics_page();
     // gen_categories_page();
     // gen_terms_page();
-    crate::dokuwiki::gen::gen_from_model(&wiki);
+    crate::dokuwiki::gen_from_model::gen(&wiki);
     println!("\nDone generating wiki.");
 }
 

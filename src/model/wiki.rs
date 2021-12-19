@@ -146,21 +146,19 @@ impl Wiki {
         links
     }
 
-    pub fn check_links(&self) -> BTreeMap<TopicKey, Vec<String>> {
-        let mut errors = BTreeMap::new();
+    pub fn check_links(&self) -> TopicErrorList {
+        let mut errors = TopicErrorList::new();
         for topic in self.topics.values() {
             for link in topic.outbound_links.iter() {
                 match &link.type_ {
                     LinkType::Topic { topic_key } => {
                         if !self.has_topic(topic_key) {
-                            let entry = errors.entry(topic.get_key()).or_insert(vec![]);
-                            entry.push(format!("Topic link {} not found.", Topic::topic_key_to_string(topic_key)));
+                            errors.add(&topic.get_key(),&format!("Topic link {} not found.", Topic::topic_key_to_string(topic_key)));
                         }
                     },
                     LinkType::Section { section_key } => {
                         if !self.has_section(section_key) {
-                            let entry = errors.entry(topic.get_key()).or_insert(vec![]);
-                            entry.push(format!("Section link {} not found.", Topic::section_key_to_string(section_key)));
+                            errors.add(&topic.get_key(), &format!("Section link {} not found.", Topic::section_key_to_string(section_key)));
                         }
                     },
                     _ => {},
@@ -186,8 +184,8 @@ impl Wiki {
         }
     }
 
-    pub fn check_subtopic_relatioships(&self) -> BTreeMap<TopicKey, Vec<String>> {
-        let mut errors = BTreeMap::new();
+    pub fn check_subtopic_relatioships(&self) -> TopicErrorList {
+        let mut errors = TopicErrorList::new();
         let err_msg_func = |msg: &str| format!("Wiki::check_subtopic_relatioships: {}", msg);
         let cat_combo = "Combinations".to_string();
         for topic in self.topics.values() {
@@ -196,27 +194,22 @@ impl Wiki {
             if topic.category.as_ref().is_none() || topic.category.as_ref().unwrap().to_string() != cat_combo {
                 // Not a combination topic.
                 if parent_count > 1 {
-                    let entry = errors.entry(topic_key.clone()).or_insert(vec![]);
-                    entry.push(err_msg_func(&format!("Non-combo category, so expected 0 or 1 parents, found {}.", parent_count)));
+                    errors.add(&topic_key, &format!("Non-combo category, so expected 0 or 1 parents, found {}.", parent_count));
                 } else {
                     for parent_topic_key in topic.parents.iter() {
                         if !self.topics[parent_topic_key].listed_topics.contains(&topic_key) {
-                            let entry = errors.entry(parent_topic_key.clone()).or_insert(vec![]);
-                            // entry.push(err_msg_func(&format!("No subtopic link to child {}.", Topic::topic_key_to_string(&topic_key))));
-                            entry.push(format!("[[{}]]", topic.name));
+                            errors.add(&parent_topic_key,&format!("[[{}]]", topic.name));
                         }
                     }
                 }
             } else {
                 // Combination topic.
                 if parent_count != 2 {
-                    let entry = errors.entry(topic_key.clone()).or_insert(vec![]);
-                    entry.push(err_msg_func(&format!("Combo category, so expected 2 parents, found {}.", parent_count)));
+                    errors.add(&topic_key,&format!("Combo category, so expected 2 parents, found {}.", parent_count));
                 } else {
                     for parent_topic_key in topic.parents.iter() {
                         if !self.topics[parent_topic_key].combo_subtopics.contains(&topic_key) {
-                            let entry = errors.entry(parent_topic_key.clone()).or_insert(vec![]);
-                            entry.push(err_msg_func(&format!("No combination link to child [[{}]].", topic.name)));
+                            errors.add(&parent_topic_key, &format!("No combination link to child [[{}]].", topic.name));
                         }
                     }
                 }
