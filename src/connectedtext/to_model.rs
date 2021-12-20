@@ -5,7 +5,6 @@ use std::fs;
 use super::*;
 // use crate::model::report::WikiReport;
 use util::parse::{split_3_two_delimiters_rc, split_trim, between};
-use std::collections::BTreeMap;
 use crate::Itertools;
 #[allow(unused_imports)]
 use crate::connectedtext::report::report_category_tree;
@@ -43,7 +42,7 @@ const CT_DELIM_QUOTE_END: &str = "}}}";
 
 pub fn main() {
     // build_wiki(Some(100));
-    build_wiki(None);
+    build_model(None);
 }
 
 struct BuildProcess {
@@ -71,6 +70,7 @@ impl BuildProcess {
         let mut wiki = Wiki::new(&self.wiki_name, NAMESPACE_TOOLS);
         wiki.add_namespace(NAMESPACE_BOOK);
         wiki.add_namespace(NAMESPACE_CATEGORY);
+        wiki.add_namespace(NAMESPACE_NAVIGATION);
         self.parse_from_text_file(&mut wiki);
         wiki.catalog_links();
         self.check_links(&wiki);
@@ -82,7 +82,8 @@ impl BuildProcess {
         // report_category_tree(&wiki);
         // wiki.catalog_possible_list_types().print_by_count(0, None);
         wiki.add_missing_category_topics();
-        wiki.move_topics_to_namespace_by_category("Nonfiction Books", NAMESPACE_BOOK);
+        wiki.move_topics_to_namespace_by_category("Navigation",NAMESPACE_NAVIGATION);
+        wiki.move_topics_to_namespace_by_category("Nonfiction Books",NAMESPACE_BOOK);
         wiki.catalog_links();
         self.errors.clear();
         self.check_links(&wiki);
@@ -123,6 +124,10 @@ impl BuildProcess {
                 .take(self.topic_limit.unwrap_or(usize::max_value())) {
             //bg!(&topic_text);
             let (topic_name, topic_text) = util::parse::split_2(topic_text, CT_LINE_BREAK);
+            let mut topic_name = topic_name.to_string();
+            if topic_name.starts_with("_") {
+                topic_name = topic_name[1..].to_string();
+            }
             //rintln!("{}", topic_name);
 
             let mut topic = Topic::new(&self.namespace_main, &topic_name);
@@ -444,6 +449,7 @@ impl BuildProcess {
         if text.starts_with(CT_PREFIX_URL) {
             // External link.
             let (url, label) = util::parse::split_1_or_2_trim(&text, CT_PIPE);
+            let url = util::parse::after(url, CT_PREFIX_URL);
             return Ok(Some(Link::new_external(label, url)));
         }
         // For now skip anything else starting with a "$" like $FILE.
@@ -515,10 +521,10 @@ impl BuildProcess {
 
 }
 
-pub fn build_wiki(topic_limit: Option<usize>) -> Wiki {
+pub fn build_model(topic_limit: Option<usize>) -> Wiki {
     let mut bp = BuildProcess::new("Tools",NAMESPACE_TOOLS,PATH_CT_EXPORT,FILE_NAME_EXPORT_TOOLS, topic_limit);
-    let wiki = bp.build();
-    wiki
+    let model = bp.build();
+    model
 }
 
 fn remove_brackets_rc(text: &str, context: &str) -> Result<String, String> {

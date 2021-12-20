@@ -15,7 +15,10 @@ impl TopicErrorList {
 
     pub(crate) fn add(&mut self, topic_key: &TopicKey, message: &str) {
         let entry = self.errors.entry(topic_key.clone()).or_insert(vec![]);
-        entry.push(message.to_string());
+        let message = message.to_string();
+        if !entry.contains(&message) {
+            entry.push(message);
+        }
     }
 
     pub(crate) fn append(&mut self, other: &mut TopicErrorList) {
@@ -28,14 +31,18 @@ impl TopicErrorList {
 
     pub(crate) fn print(&self, context: Option<&str>) {
         let context = context.map_or("".to_string(), |context| format!(" for context = \"{}\"", context));
-        println!("\nErrors{}:", context);
-        for topic_key in self.errors.keys() {
-            println!("\n\t{}", Topic::topic_key_to_string(topic_key));
-            for msg in self.errors[topic_key].iter() {
-                println!("\t\t{}", msg);
+        if self.errors.is_empty() {
+            println!("No errors{}:", context);
+        } else {
+            println!("\nErrors{}:", context);
+            for topic_key in self.errors.keys() {
+                println!("\n\t{}", Topic::topic_key_to_string(topic_key));
+                for msg in self.errors[topic_key].iter() {
+                    println!("\t\t{}", msg);
+                }
             }
+            println!();
         }
-        println!();
     }
 
     pub fn list_missing_topics(&self) {

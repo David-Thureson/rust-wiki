@@ -252,7 +252,7 @@ pub fn section_link_same_page(section_name: &str, label: Option<&str>) -> String
 
 pub fn external_link(url: &str, label: Option<&str>) -> String {
     // Like "[[https://github.com/|external link|GitHub]]".
-    format!("[[{}{}]]", url, label.map_or("".to_string(), |x| format!("|{}", x)))
+    format!("[[https://{}{}]]", url, label.map_or("".to_string(), |x| format!("|{}", x)))
 }
 
 pub fn legal_file_name(name: &str) -> String {

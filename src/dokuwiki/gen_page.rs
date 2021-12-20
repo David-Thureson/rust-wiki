@@ -1,7 +1,6 @@
 use std::fs;
 
 use super::gen::*;
-use crate::model::NAMESPACE_CATEGORY;
 
 pub struct WikiGenPage {
     pub namespace: String,
@@ -29,9 +28,9 @@ impl WikiGenPage {
         self.content.push_str(&format!("{}{}{}\n\n", equal_signs, text, equal_signs));
     }
 
-    pub fn add_category(&mut self, category_name: &str) {
+    pub fn add_category(&mut self, qualified_namespace: &str, category_name: &str) {
         // Like "Category: [[APIs]]".
-        self.content.push_str(&format!("Category: {}\n\n", page_link(NAMESPACE_CATEGORY, category_name, None)));
+        self.content.push_str(&format!("Category: {}\n\n", page_link(qualified_namespace, category_name, None)));
     }
 
     /*
@@ -89,8 +88,12 @@ impl WikiGenPage {
         self.content.push_str(&format!("{}\n\n", section_link_same_page(section_name, label)));
     }
 
-    pub fn add_blank_line(&mut self) {
+    pub fn add_linefeed(&mut self) {
         self.content.push_str("\n");
+    }
+
+    pub fn end_paragraph(&mut self) {
+        self.content.push_str("\n\n");
     }
 
     pub fn add(&mut self, text: &str) {
@@ -99,6 +102,10 @@ impl WikiGenPage {
 
     pub fn add_line(&mut self, text: &str) {
         self.content.push_str(&format!("{}\n", text));
+    }
+
+    pub fn add_text(&mut self, text: &str) {
+        self.content.push_str(text);
     }
 
     /*
@@ -116,7 +123,17 @@ impl WikiGenPage {
     }
 
     pub fn write(self) {
-        let full_file_name = format!("{}/{}/{}.txt", PATH_PAGES, namespace_to_path(&self.namespace), legal_file_name(&self.topic_name));
+        let mut namespace_path= namespace_to_path(&self.namespace);
+        if !namespace_path.is_empty() {
+            namespace_path = format!("/{}", namespace_path);
+        }
+        let legal_file_name = legal_file_name(&self.topic_name);
+        //bg!(PATH_PAGES, &namespace_path, &legal_file_name);
+        let full_file_name = format!("{}{}/{}.txt", PATH_PAGES, namespace_path, legal_file_name);
+        //bg!(&full_file_name);
+        if full_file_name.contains("//") {
+            panic!("File name has double slashes: \"{}\".", &full_file_name);
+        }
         fs::write(full_file_name, self.content).unwrap();
     }
 

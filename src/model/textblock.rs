@@ -26,8 +26,11 @@ impl TextBlock {
 
     pub fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
         for text_item in self.items.iter_mut() {
+            //bg!(&text_item);
             *text_item = text_item.clone().update_internal_link_optional(keys);
+            //bg!(&text_item);
         }
+        //bg!(&self.items);
     }
 }
 
@@ -62,7 +65,7 @@ impl TextItem {
                                     type_,
                                 };
                                 let text_item_new = Self::new_link(link_new);
-                                dbg!(&self, &text_item_new);
+                                //bg!(&self, &text_item_new);
                                 return text_item_new;
                             }
                         }

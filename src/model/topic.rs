@@ -57,13 +57,13 @@ impl Topic {
     }
 
     pub fn topic_key_to_string(topic_key: &TopicKey) -> String {
-        // format!("[{} | {}]", topic_key.0, topic_key.1)
-        format!("[{}]", topic_key.1)
+        format!("[{} | {}]", topic_key.0, topic_key.1)
+        // format!("[{}]", topic_key.1)
     }
 
     pub fn section_key_to_string(section_key: &SectionKey) -> String {
-        // format!("[{} | {} # {}]", &section_key.0.0, &section_key.0.1, &section_key.1)
-        format!("[{} # {}]", &section_key.0.1, &section_key.1)
+        format!("[{} | {} # {}]", &section_key.0.0, &section_key.0.1, &section_key.1)
+        // format!("[{} # {}]", &section_key.0.1, &section_key.1)
     }
 
     pub fn add_paragraph(&mut self, paragraph: Paragraph) {

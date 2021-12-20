@@ -36,7 +36,7 @@ impl Wiki {
         self.namespaces.insert(key, name.to_string());
     }
 
-    pub fn qualify_namespace(&mut self, name: &str) -> String {
+    pub fn qualify_namespace(&self, name: &str) -> String {
         if name.starts_with(":") {
             format!("{}{}", &self.main_namespace, name.to_lowercase())
         } else {
@@ -49,6 +49,11 @@ impl Wiki {
         let key = topic.get_key();
         assert!(!self.topics.contains_key(&key));
         self.topics.insert(key, topic);
+    }
+
+    pub fn topic_name(&self, topic_key: &TopicKey) -> String {
+        let topic = self.topics.get(topic_key).unwrap();
+        topic.name.clone()
     }
 
     pub fn catalog_links(&mut self) {
@@ -153,12 +158,12 @@ impl Wiki {
                 match &link.type_ {
                     LinkType::Topic { topic_key } => {
                         if !self.has_topic(topic_key) {
-                            errors.add(&topic.get_key(),&format!("Topic link {} not found.", Topic::topic_key_to_string(topic_key)));
+                            errors.add(&topic.get_key(),&format!("wiki::check_links(): Topic link {} not found.", Topic::topic_key_to_string(topic_key)));
                         }
                     },
                     LinkType::Section { section_key } => {
                         if !self.has_section(section_key) {
-                            errors.add(&topic.get_key(), &format!("Section link {} not found.", Topic::section_key_to_string(section_key)));
+                            errors.add(&topic.get_key(), &format!("wiki::check_links(): Section link {} not found.", Topic::section_key_to_string(section_key)));
                         }
                     },
                     _ => {},
@@ -172,8 +177,11 @@ impl Wiki {
         for topic in self.topics.values_mut() {
             for paragraph in topic.paragraphs.iter_mut() {
                 match paragraph {
-                    Paragraph::List { type_: _, header, .. } => {
+                    Paragraph::List { type_: _, header, items} => {
                         header.update_internal_links(keys);
+                        for item in items.iter_mut() {
+                            item.block.update_internal_links(keys);
+                        }
                     },
                     Paragraph::Text { text_block} => {
                         text_block.update_internal_links(keys);
@@ -198,18 +206,18 @@ impl Wiki {
                 } else {
                     for parent_topic_key in topic.parents.iter() {
                         if !self.topics[parent_topic_key].listed_topics.contains(&topic_key) {
-                            errors.add(&parent_topic_key,&format!("[[{}]]", topic.name));
+                            errors.add(&parent_topic_key,&err_msg_func(&format!("[[{}]]", topic.name)));
                         }
                     }
                 }
             } else {
                 // Combination topic.
                 if parent_count != 2 {
-                    errors.add(&topic_key,&format!("Combo category, so expected 2 parents, found {}.", parent_count));
+                    errors.add(&topic_key,&err_msg_func(&format!("Combo category, so expected 2 parents, found {}.", parent_count)));
                 } else {
                     for parent_topic_key in topic.parents.iter() {
                         if !self.topics[parent_topic_key].combo_subtopics.contains(&topic_key) {
-                            errors.add(&parent_topic_key, &format!("No combination link to child [[{}]].", topic.name));
+                            errors.add(&parent_topic_key, &err_msg_func(&format!("No combination link to child [[{}]].", topic.name)));
                         }
                     }
                 }
