@@ -1,6 +1,6 @@
 use crate::model;
 use crate::dokuwiki as wiki;
-use crate::model::NAMESPACE_CATEGORY;
+use crate::model::{NAMESPACE_CATEGORY, TextBlock};
 
 pub struct GenFromModel<'a> {
     model: &'a model::Wiki,
@@ -44,7 +44,9 @@ impl <'a> GenFromModel<'a> {
                 model::Paragraph::Category => {}, // This was already added to the page.
                 model::Paragraph::GenStart => {},
                 model::Paragraph::GenEnd => {},
-                model::Paragraph::List { .. } => {},
+                model::Paragraph::List { type_: _, header, items} => {
+                    self.add_list(page, header, items);
+                },
                 model::Paragraph::Placeholder => {
                     self.add_error(&msg_func_unexpected("Placeholder"));
                 },
@@ -52,8 +54,12 @@ impl <'a> GenFromModel<'a> {
                 model::Paragraph::SectionHeader { name, depth } => {
                     page.add_headline(name, *depth);
                 }
+                model::Paragraph::Table { has_header, rows} => {
+                    self.add_table(page, *has_header, rows);
+                }
                 model::Paragraph::Text { text_block } => {
-                    self.add_text_block(page, text_block);
+                    let markup = self.text_block_to_markup(text_block);
+                    page.add(&markup);
                     page.end_paragraph();
                 }
                 model::Paragraph::TextUnresolved { .. } => {
@@ -66,20 +72,42 @@ impl <'a> GenFromModel<'a> {
         }
     }
 
-    fn add_text_block(&mut self, page: &mut wiki::WikiGenPage, text_block: &model::TextBlock) {
+    fn text_block_to_markup(&mut self, text_block: &model::TextBlock) -> String {
+        let mut markup = "".to_string();
         for text_item in text_block.items.iter() {
             match text_item {
                 model::TextItem::Text { text } => {
-                    page.add_text(text);
+                    markup.push_str(text);
                 },
                 model::TextItem::Link { link } => {
-                    self.add_link(page, link);
+                    markup.push_str(&self.link_to_markup(link));
                 }
             }
         }
+        markup
     }
 
-    fn add_link(&mut self, page: &mut wiki::WikiGenPage, link: &model::Link) {
+    fn add_list(&mut self, page: &mut wiki::WikiGenPage, header: &model::TextBlock, items: &Vec<model::ListItem>) {
+        page.add(&self.text_block_to_markup(header));
+        page.add_linefeed();
+        for item in items.iter() {
+            let markup = &self.text_block_to_markup(&item.block);
+            page.add_list_item_unordered(item.depth,markup);
+        }
+    }
+
+    fn add_table(&mut self, page: &mut wiki::WikiGenPage, has_header: bool, rows:&Vec<Vec<TextBlock>>) {
+        for (index, cells) in rows.iter().enumerate() {
+            let cells_as_markup = cells.iter()
+                .map(|cell| self.text_block_to_markup(cell))
+                .collect::<Vec<_>>();
+            let is_header = has_header && index == 0;
+            page.add_table_row(is_header,&cells_as_markup);
+        }
+        page.end_paragraph();
+    }
+
+    fn link_to_markup(&mut self, link: &model::Link) -> String {
         let msg_func_unexpected = |type_, variant: &str| format!("In gen_from_model::add_link(), unexpected {} variant = \"{}\"", type_, variant);
         let label = match &link.label {
             Some(label) => Some(label.as_str()),
@@ -89,15 +117,15 @@ impl <'a> GenFromModel<'a> {
             model::LinkType::Topic { topic_key } => {
                 let page_name = self.model.topic_name(&topic_key);
                 let text = wiki::gen::page_link(&topic_key.0, &page_name, label);
-                page.add_text(&text);
+                text
             },
             model::LinkType::Section { section_key } => {
                 let text = wiki::gen::section_link(&section_key.0.0,&section_key.0.1,&section_key.1, label);
-                page.add_text(&text);
+                text
             },
             model::LinkType::External { url } => {
                 let text = wiki::gen::external_link(&url, label);
-                page.add_text(&text);
+                text
             },
             model::LinkType::Image { source, alignment: _, size: _, type_: _ } => {
                 // For now ignore alignment, size, and type (what happens when you click on the image).
@@ -105,15 +133,17 @@ impl <'a> GenFromModel<'a> {
                 match source {
                     model::ImageSource::Internal { namespace, file_name } => {
                         let text = wiki::gen::image_part(&namespace, &file_name, &wiki::gen::WikiImageLinkType::Direct, &wiki::gen::WikiImageSize::Large);
-                        page.add_text(&text);
+                        text
                     }
                     model::ImageSource::External {..} => {
                         self.add_error(&msg_func_unexpected("ImageSource", "External"));
+                        "".to_string()
                     }
                 }
             },
             model::LinkType::InternalUnresolved { .. } => {
                 self.add_error(&msg_func_unexpected("LinkType", "InternalUnresolved"));
+                "".to_string()
             }
         }
     }

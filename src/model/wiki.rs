@@ -183,6 +183,13 @@ impl Wiki {
                             item.block.update_internal_links(keys);
                         }
                     },
+                    Paragraph::Table { has_header: _, rows} => {
+                        for row in rows.iter_mut() {
+                            for cell in row.iter_mut() {
+                                cell.update_internal_links(keys);
+                            }
+                        }
+                    },
                     Paragraph::Text { text_block} => {
                         text_block.update_internal_links(keys);
                     },

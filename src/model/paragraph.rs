@@ -24,6 +24,10 @@ pub enum Paragraph {
         name: String,
         depth: usize,
     },
+    Table {
+        has_header: bool,
+        rows: Vec<Vec<TextBlock>>,
+    },
     Text {
         text_block: TextBlock,
     },
@@ -67,6 +71,7 @@ impl Paragraph {
             Paragraph::Placeholder { .. } => "Placeholder",
             Paragraph::Quote { .. } => "Quote",
             Paragraph::SectionHeader { .. } => "SectionHeader",
+            Paragraph::Table { .. } => "Table",
             Paragraph::Text { .. } => "Text",
             Paragraph::TextUnresolved { .. } => "TextUnresolved",
             Paragraph::Unknown { .. } => "Unknown",

@@ -1,6 +1,7 @@
 use std::fs;
 
 use super::gen::*;
+use crate::Itertools;
 
 pub struct WikiGenPage {
     pub namespace: String,
@@ -108,11 +109,11 @@ impl WikiGenPage {
         self.content.push_str(text);
     }
 
-    /*
-    pub fn add_list_item_unordered(&mut self, text: &str) {
-        self.content.push_str(&format!("  * {}\n", text));
+    pub fn add_list_item_unordered(&mut self, depth: usize, text: &str) {
+        //bg!(&depth, &text);
+        self.content.push_str(&format!("{}* {}\n", "  ".repeat(depth), text));
+        // self.content.push_str(&format!("  * {}\n", text));
     }
-    */
 
     pub fn add_paragraph(&mut self, text: &str) {
         self.content.push_str(&format!("{}\n\n", text));
@@ -120,6 +121,18 @@ impl WikiGenPage {
 
     pub fn add_list(&mut self, list: &WikiList) {
         self.content.push_str(&format!("{}\n\n", list.get_markup()));
+    }
+
+    pub fn add_table_row(&mut self, is_header: bool, cells: &Vec<String>) {
+        // A table header row should look something like:
+        //   ^ Color ^ Blue ^
+        // A regular table row should look something like:
+        //   | Color | Blue |
+        let delimiter = if is_header { "^" } else { "|" };
+        let markup = format!("{} {}\n", delimiter, cells.iter()
+            .map(|cell| format!(" {} {}", cell, delimiter))
+            .join(""));
+        self.content.push_str(&markup);
     }
 
     pub fn write(self) {

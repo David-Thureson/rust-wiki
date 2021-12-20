@@ -24,6 +24,9 @@ pub const _NAMESPACE_ATTRIBUTES: &str = "attr";
 
 const _ATTR_NAME_CATEGORY: &str = "Category";
 
+const CT_FORMAT_BOLD: &str = "**";
+const CT_ATTRIBUTE_ASSIGN: &str = ":=";
+
 // const TOPIC_LIMIT_TOOLS: Option<usize> = None;
 const _TOPIC_LIMIT_TOOLS: Option<usize> = Some(100);
 // const TOPIC_LIMIT_HOME: Option<usize> = None;

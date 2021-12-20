@@ -101,7 +101,7 @@ impl WikiAttributeTable {
     pub fn get_markup(&self) -> String {
         // The attributes table should look something like:
         //   ^ Color    | Blue |
-        //   ^ Tapes    | 4    |
+        //   ^ Count    | 4    |
         self.rows.iter()
             .map(|row| format!("^ {} | {} |\n", row.label, row.markup))
             .join("")

@@ -195,7 +195,7 @@ impl BuildProcess {
                 self.paragraph_as_category_rc(topic, &text, context)?
                     .or(self.paragraph_as_section_header_rc(topic, &text, context)?)
                     .or(self.paragraph_as_bookmark_rc(topic, &text, context)?)
-                    .or(self.paragraph_as_attributes_rc(topic, &text, context)?)
+                    .or(self.paragraph_as_table_rc(topic, &text, context)?)
                     .or(self.paragraph_as_list_rc(topic, &text, context)?)
                     .or(self.paragraph_as_text_rc(topic, &text, context)?)
                     .unwrap_or(self.paragraph_as_text_unresolved(&text))
@@ -300,6 +300,83 @@ impl BuildProcess {
         }
     }
 
+    fn paragraph_as_table_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
+        // A paragraph with a list of attributes will look something like this:
+        //   {|
+        //   ||Domain||[[Domain:=Serverless]], [[Domain:=Function as a Service / FaaS]]||
+        //   ||Added||[[Added:=20201204]]||
+        // A regular table will look like that but without things like [[Domain:=Serverless]].
+        // The Terms page has a large example of a regular table.
+        let context = &format!("{} Seems to be a table paragraph.", context);
+        let lines = text.lines().collect::<Vec<_>>();
+        if lines[0].trim().starts_with(CT_TABLE_START) {
+            // && lines.len() > 1
+            // && lines[1].starts_with(CT_TABLE_DELIM) {
+            // && split_trim(lines[1], CT_TABLE_DELIM).len() == 4 {
+            // We're going to guess that this is a table.
+            if lines.len() < 2 {
+                return Err(format!("{} Seems to be the start of a table but there are no rows.", context));
+            }
+            let is_attributes = lines[1].contains(CT_ATTRIBUTE_ASSIGN);
+            let mut rows = vec![];
+            for line_index in 1..lines.len() {
+                let line = lines[line_index].trim();
+                if line == CT_TABLE_END {
+                    break;
+                }
+                if !line.starts_with(CT_TABLE_DELIM) {
+                    return Err(format!("{} Seems to be a table but the line doesn't start with the delimiter.", context));
+                }
+                let line = between(line, CT_TABLE_DELIM, CT_TABLE_DELIM);
+                let split = split_trim(line, CT_TABLE_DELIM);
+                if is_attributes && split.len() != 2 {
+                    return Err(format!("{} Wrong number of table cells for an attribute row in \"{}\".", context, line));
+                }
+                rows.push(split);
+            }
+            if is_attributes {
+                for row in rows.iter_mut() {
+                    let name = row.remove(0);
+                    let values = row.remove(0);
+                    assert!(row.is_empty());
+                    let attribute = topic.attributes.entry(name.clone())
+                        .or_insert(vec![]);
+                    let values = between(&values, CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT);
+                    let bracket_delim_with_space = format!("{}, {}", CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT);
+                    let bracket_delim_no_space = format!("{},{}", CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT);
+                    let assignments = values.replace(&bracket_delim_with_space, &bracket_delim_no_space);
+                    for assignment in assignments.split(&bracket_delim_no_space) {
+                        let mut value = util::parse::after(assignment, CT_ATTRIBUTE_ASSIGN).trim().to_string();
+                        if value.contains("*") {
+                            value = "".to_string();
+                        }
+                        if attribute.contains(&value) {
+                            return Err(format!("{} In attribute \"{}\", duplicated value \"{}\".", context, name, value));
+                        }
+                        attribute.push(value);
+                    }
+                }
+                Ok(Some(Paragraph::Attributes))
+            } else {
+                // Normal (non-attribute) table.
+                let has_header = rows[0].iter().all(|cell| cell.contains(CT_FORMAT_BOLD));
+                let mut rows_as_text_blocks = vec![];
+                for cells in rows.iter() {
+                    let mut cells_as_text_blocks = vec![];
+                    for cell in cells.iter() {
+                        let text_block= self.make_text_block_rc(&topic.name, cell, context)?;
+                        cells_as_text_blocks.push(text_block);
+                    }
+                    rows_as_text_blocks.push(cells_as_text_blocks);
+                }
+                Ok(Some(Paragraph::Table { has_header, rows: rows_as_text_blocks }))
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    /*
     fn paragraph_as_attributes_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
         // A paragraph with a list of attributes will look something like this:
         //   {|
@@ -308,9 +385,9 @@ impl BuildProcess {
         let context = &format!("{} Seems to be an attributes paragraph.", context);
         let lines = text.lines().collect::<Vec<_>>();
         if lines[0].trim() == CT_TABLE_START
-                && lines.len() > 1
-                && lines[1].starts_with(CT_TABLE_DELIM)
-                && split_trim(lines[1], CT_TABLE_DELIM).len() == 4 {
+            && lines.len() > 1
+            && lines[1].starts_with(CT_TABLE_DELIM)
+            && split_trim(lines[1], CT_TABLE_DELIM).len() == 4 {
             // We're going to guess that this is a table of attributes.
             for line_index in 1..lines.len() {
                 let line = lines[line_index].trim();
@@ -345,6 +422,7 @@ impl BuildProcess {
             Ok(None)
         }
     }
+    */
 
     fn paragraph_as_list_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
         // Example with two levels (the first level has one space before the asterisk):
