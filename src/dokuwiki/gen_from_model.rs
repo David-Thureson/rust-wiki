@@ -1,6 +1,6 @@
 use crate::model;
 use crate::dokuwiki as wiki;
-use crate::model::{NAMESPACE_CATEGORY, TextBlock};
+use crate::model::{NAMESPACE_CATEGORY, TextBlock, TopicKey};
 
 pub struct GenFromModel<'a> {
     model: &'a model::Wiki,
@@ -150,5 +150,11 @@ impl <'a> GenFromModel<'a> {
 
     fn add_error(&mut self, msg: &str) {
         self.errors.add(&self.current_topic_key.as_ref().unwrap(),msg);
+    }
+
+    pub fn page_link(model: &model::Wiki, topic_key: &TopicKey) -> String {
+        let qual_namespace = model.qualify_namespace(&topic_key.0);
+        let link = wiki::page_link(&qual_namespace, &model.topics.get(topic_key).unwrap().name, None);
+        link
     }
 }

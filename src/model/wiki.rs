@@ -38,6 +38,7 @@ impl Wiki {
 
     pub fn qualify_namespace(&self, name: &str) -> String {
         if name.starts_with(":") {
+            //bg!(&name, format!("{}{}", &self.main_namespace, name.to_lowercase()));
             format!("{}{}", &self.main_namespace, name.to_lowercase())
         } else {
             name.to_lowercase()
@@ -262,6 +263,14 @@ impl Wiki {
 
     pub fn has_topic(&self, topic_key: &TopicKey) -> bool {
         self.topics.contains_key(topic_key)
+    }
+
+    pub fn topic_keys_alphabetical_by_topic_name(&self) -> Vec<TopicKey> {
+        let mut map = BTreeMap::new();
+        for topic_key in self.topics.keys() {
+            map.insert(topic_key.0.clone(), topic_key.clone());
+        }
+        map.values().map(|topic_key| topic_key.clone()).collect::<Vec<_>>()
     }
 
     pub fn has_section(&self, section_key: &SectionKey) -> bool {

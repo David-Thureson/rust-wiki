@@ -361,10 +361,13 @@ impl BuildProcess {
                 // Normal (non-attribute) table.
                 let has_header = rows[0].iter().all(|cell| cell.contains(CT_FORMAT_BOLD));
                 let mut rows_as_text_blocks = vec![];
-                for cells in rows.iter() {
+                for (index, cells) in rows.iter().enumerate() {
+                    let is_header = has_header && index == 0;
                     let mut cells_as_text_blocks = vec![];
                     for cell in cells.iter() {
-                        let text_block= self.make_text_block_rc(&topic.name, cell, context)?;
+                        // If this is the header row, remove the bold formatting.
+                        let cell_cleaned = if is_header { cell.replace(CT_FORMAT_BOLD, "").to_string() } else { cell.to_string() };
+                        let text_block= self.make_text_block_rc(&topic.name, &cell_cleaned, context)?;
                         cells_as_text_blocks.push(text_block);
                     }
                     rows_as_text_blocks.push(cells_as_text_blocks);

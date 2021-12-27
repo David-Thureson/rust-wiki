@@ -105,6 +105,10 @@ impl WikiGenPage {
         self.content.push_str(&format!("{}\n", text));
     }
 
+    pub fn add_line_with_break(&mut self, text: &str) {
+        self.content.push_str(&format!("{}\\\\\n", text));
+    }
+
     pub fn add_text(&mut self, text: &str) {
         self.content.push_str(text);
     }
@@ -129,7 +133,7 @@ impl WikiGenPage {
         // A regular table row should look something like:
         //   | Color | Blue |
         let delimiter = if is_header { "^" } else { "|" };
-        let markup = format!("{} {}\n", delimiter, cells.iter()
+        let markup = format!("{}{}\n", delimiter, cells.iter()
             .map(|cell| format!(" {} {}", cell, delimiter))
             .join(""));
         self.content.push_str(&markup);
@@ -137,8 +141,10 @@ impl WikiGenPage {
 
     pub fn write(self) {
         let mut namespace_path= namespace_to_path(&self.namespace);
+        //bg!(&namespace_path);
         if !namespace_path.is_empty() {
             namespace_path = format!("/{}", namespace_path);
+            //bg!(&namespace_path);
         }
         let legal_file_name = legal_file_name(&self.topic_name);
         //bg!(PATH_PAGES, &namespace_path, &legal_file_name);
@@ -149,5 +155,4 @@ impl WikiGenPage {
         }
         fs::write(full_file_name, self.content).unwrap();
     }
-
 }

@@ -15,7 +15,12 @@ pub use parse::*;
 //pub use model::*;
 
 pub const PAGE_NAME_SIDEBAR: &str = "Sidebar";
+pub const PAGE_NAME_MAIN: &str = "Main";
 pub const PAGE_NAME_START:   &str = "Start";
+pub const PAGE_NAME_RECENT_TOPICS: &str = "Recent Topics";
+pub const PAGE_NAME_ALL_TOPICS: &str = "All Topics";
+pub const PAGE_NAME_CATEGORIES: &str = "Categories";
+pub const PAGE_NAME_TERMS: &str = "Terms";
 
 /*
 pub fn back_up_from_live() {
