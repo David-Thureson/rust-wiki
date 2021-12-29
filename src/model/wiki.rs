@@ -153,14 +153,14 @@ impl Wiki {
     }
 
     pub fn check_links(&self) -> TopicErrorList {
+        //bg!(self.topics.keys());
         let mut errors = TopicErrorList::new();
         for topic in self.topics.values() {
+            let this_topic_key = topic.get_key();
             for link in topic.outbound_links.iter() {
                 match &link.type_ {
                     LinkType::Topic { topic_key } => {
-                        if !self.has_topic(topic_key) {
-                            errors.add(&topic.get_key(),&format!("wiki::check_links(): Topic link {} not found.", Topic::topic_key_to_string(topic_key)));
-                        }
+                        self.check_topic_link(&mut errors, "outbound_links", &this_topic_key, topic_key);
                     },
                     LinkType::Section { section_key } => {
                         if !self.has_section(section_key) {
@@ -170,11 +170,25 @@ impl Wiki {
                     _ => {},
                 }
             }
+            topic.parents.iter().for_each(|ref_topic_key| { self.check_topic_link(&mut errors, "parents", &this_topic_key, ref_topic_key); } );
+            topic.inbound_topic_keys.iter().for_each(|ref_topic_key| { self.check_topic_link(&mut errors, "inbound_topic_keys", &this_topic_key, ref_topic_key); } );
+            topic.subtopics.iter().for_each(|ref_topic_key| { self.check_topic_link(&mut errors, "subtopics", &this_topic_key, ref_topic_key); } );
+            topic.combo_subtopics.iter().for_each(|ref_topic_key| { self.check_topic_link(&mut errors, "combo_subtopics", &this_topic_key, ref_topic_key); } );
+            topic.listed_topics.iter().for_each(|ref_topic_key| { self.check_topic_link(&mut errors, "listed_topics", &this_topic_key, ref_topic_key); } );
         }
         errors
     }
 
+    fn check_topic_link(&self, errors: &mut TopicErrorList, list_name: &str, this_topic_key: &TopicKey, ref_topic_key: &TopicKey) {
+        if !self.has_topic(ref_topic_key) {
+            errors.add(this_topic_key,&format!("wiki::check_topic_link(): Topic link {} from {} list not found.", Topic::topic_key_to_string(ref_topic_key), list_name));
+        }
+    }
+
     pub fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
+        //bg!(&keys);
+        // For each entry in keys, the first TopicKey is the old value and the second is the new
+        // value.
         for topic in self.topics.values_mut() {
             for paragraph in topic.paragraphs.iter_mut() {
                 match paragraph {
@@ -197,12 +211,26 @@ impl Wiki {
                     _ => {},
                 }
             }
+            if !topic.parents.is_empty() {
+                let old_parents = topic.parents.clone();
+                topic.parents.clear();
+                for parent_topic_key in old_parents.iter() {
+                    let mut new_parent_topic_key = parent_topic_key.clone();
+                    for (topic_key_old, topic_key_new) in keys.iter() {
+                        if parent_topic_key.eq(&topic_key_old) {
+                            new_parent_topic_key = topic_key_new.clone();
+                            break;
+                        }
+                    }
+                    topic.parents.push(new_parent_topic_key);
+                }
+            }
         }
     }
 
-    pub fn check_subtopic_relatioships(&self) -> TopicErrorList {
+    pub fn check_subtopic_relationships(&self) -> TopicErrorList {
         let mut errors = TopicErrorList::new();
-        let err_msg_func = |msg: &str| format!("Wiki::check_subtopic_relatioships: {}", msg);
+        let err_msg_func = |msg: &str| format!("Wiki::check_subtopic_relationships: {}", msg);
         let cat_combo = "Combinations".to_string();
         for topic in self.topics.values() {
             let topic_key = topic.get_key();
@@ -213,6 +241,7 @@ impl Wiki {
                     errors.add(&topic_key, &format!("Non-combo category, so expected 0 or 1 parents, found {}.", parent_count));
                 } else {
                     for parent_topic_key in topic.parents.iter() {
+                        //bg!(&topic.name, parent_topic_key);
                         if !self.topics[parent_topic_key].listed_topics.contains(&topic_key) {
                             errors.add(&parent_topic_key,&err_msg_func(&format!("[[{}]]", topic.name)));
                         }
@@ -268,8 +297,10 @@ impl Wiki {
     pub fn topic_keys_alphabetical_by_topic_name(&self) -> Vec<TopicKey> {
         let mut map = BTreeMap::new();
         for topic_key in self.topics.keys() {
-            map.insert(topic_key.0.clone(), topic_key.clone());
+            //bg!(topic_key);
+            map.insert(topic_key.1.clone(), topic_key.clone());
         }
+        //bg!(&map);
         map.values().map(|topic_key| topic_key.clone()).collect::<Vec<_>>()
     }
 
@@ -309,7 +340,7 @@ impl Wiki {
                 // Move the topic from the main to the category namespace.
                 //rintln!("\t\t\tMoving topic {}", &category_name);
                 let mut topic = self.topics.remove(&topic_key_old).unwrap();
-                let topic_key_new = (category_namespace.to_string(), topic.name.clone());
+                let topic_key_new = Topic::make_key(category_namespace, &topic.name);
                 topic_keys.push((topic_key_old, topic_key_new));
                 topic.namespace = category_namespace.to_string();
                 self.add_topic(topic);
@@ -332,7 +363,7 @@ impl Wiki {
         for topic_name in topic_names {
             //rintln!("Moving topic {} to namespace {}.", &topic_name, &new_namespace);
             let topic_key_old = Topic::make_key(&self.main_namespace, &topic_name);
-            let topic_key_new = (new_namespace.clone(), topic_name.clone());
+            let topic_key_new = Topic::make_key(&new_namespace, &topic_name);
             let mut topic = self.topics.remove(&topic_key_old).unwrap();
             topic.namespace = new_namespace.clone();
             self.add_topic(topic);

@@ -22,8 +22,8 @@ pub const PAGE_NAME_ALL_TOPICS: &str = "All Topics";
 pub const PAGE_NAME_CATEGORIES: &str = "Categories";
 pub const PAGE_NAME_TERMS: &str = "Terms";
 
-pub const DELIM_BOOKMARK_RIGHT: &str = "»";
-pub const DELIM_BOOKMARK_LEFT: &str = "«";
+pub const DELIM_BOOKMARK_RIGHT: &str = "=>";
+pub const DELIM_BOOKMARK_LEFT: &str = "<=";
 pub const DELIM_BOLD: &str = "**";
 pub const DELIM_ITALIC: &str = "//";
 pub const DELIM_QUOTE_START: &str = "<WRAP round box>";

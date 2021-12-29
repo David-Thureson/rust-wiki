@@ -217,11 +217,18 @@ impl BuildProcess {
                     if !lines[line_table_start + 1].starts_with(CT_TABLE_DELIM) {
                         panic!("No first row table delimiter for topic \"{}\" at line {}.", topic_name, line_table_start + 1);
                     }
-                    // The rows in a table used for a quotation don't end with "||".
-                    for i in line_table_start + 1..line_table_end {
-                        if !lines[i].trim().ends_with(CT_TABLE_DELIM) {
-                            is_quotation = true;
-                            break;
+                    // There's a special case where the table is a bookmark block like
+                    //   {|
+                    //   ||**[[Main Topic]] » (($CURRENTTOPIC))**
+                    //   |}
+                    // We'll need to leave this case alone because it's handled later on.
+                    if !lines[line_table_start + 1].contains(CT_BOOKMARK_DELIM_RIGHT) {
+                        // The rows in a table used for a quotation don't end with "||".
+                        for i in line_table_start + 1..line_table_end {
+                            if !lines[i].trim().ends_with(CT_TABLE_DELIM) {
+                                is_quotation = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -371,7 +378,7 @@ impl BuildProcess {
                 let (left, _, right) = split_3_two_delimiters_rc(&line, CT_BOOKMARK_DELIM_RIGHT, CT_BOOKMARK_DELIM_LEFT, context)?;
                 vec![left, right]
             } else {
-                // The topic has one owner.
+                // The topic has one parent.
                 let splits = line.split(CT_BOOKMARK_DELIM_RIGHT).collect::<Vec<_>>();
                 // The second-to-last item should be the parent of the current topic.
                 let parent_split_index = splits.len() - 2;
@@ -381,6 +388,7 @@ impl BuildProcess {
                 let parent = remove_brackets_rc(parent, context)?;
                 topic.parents.push(Topic::make_key(NAMESPACE_TOOLS, &parent));
             }
+            //bg!(&topic.name, &parents, &topic.parents);
             Ok(Some(Paragraph::Breadcrumbs))
         } else {
             Ok(None)
@@ -593,7 +601,7 @@ impl BuildProcess {
     }
 
     fn check_subtopic_relationships(&mut self, wiki: &mut Wiki) {
-        let mut subtopic_errors = wiki.check_subtopic_relatioships();
+        let mut subtopic_errors = wiki.check_subtopic_relationships();
         self.errors.append(&mut subtopic_errors);
     }
 

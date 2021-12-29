@@ -74,6 +74,7 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Wiki, use_li
 
 fn add_all_topics(page: &mut wiki::WikiGenPage, model: &model::Wiki) {
     for topic_key in model.topic_keys_alphabetical_by_topic_name().iter() {
+        //bg!(topic_key);
         let link = GenFromModel::page_link(model, topic_key);
         page.add_line_with_break(&link);
     }

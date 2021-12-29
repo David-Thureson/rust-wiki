@@ -20,9 +20,10 @@ impl <'a> GenFromModel<'a> {
     pub fn gen(&mut self) {
         for topic in self.model.topics.values() {
             self.current_topic_key = Some(topic.get_key());
+            //bg!(&self.current_topic_key);
             let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(&topic.namespace), &topic.name, None);
-            self.add_category_optional(&mut page, &topic);
             self.add_breadcrumbs_optional(&mut page, &topic);
+            self.add_category_optional(&mut page, &topic);
             self.add_paragraphs(&mut page, &topic);
             page.write();
         }
@@ -36,32 +37,39 @@ impl <'a> GenFromModel<'a> {
     }
 
     fn add_breadcrumbs_optional(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
+        // if topic.name.starts_with("Test ") {
+        //     /bg!(&topic.name, &topic.parents);
+        // }
         match topic.parents.len() {
             0 => {},
             1 => {
+                //bg!(&topic.name, &topic.parents);
                 let mut topic_keys = vec![];
-                let mut parent_topic_key = &topic.parents[0];
+                let mut parent_topic_key = topic.parents[0].clone();
                 loop {
-                    topic_keys.push(parent_topic_key);
-                    let parent_topic = self.model.topics.get(parent_topic_key).unwrap();
+                    //bg!(&parent_topic_key);
+                    topic_keys.push(parent_topic_key.clone());
+                    let parent_topic = self.model.topics.get(&parent_topic_key).unwrap();
+                    //bg!(&parent_topic.name, &parent_topic.parents);
                     match parent_topic.parents.len() {
                         0 => {
                             break;
                         },
                         1 => {
-                            parent_topic_key = &parent_topic.parents[0];
+                            parent_topic_key = parent_topic.parents[0].clone();
                         },
                         _ => {
                             panic!("Unexpected number of parent topics for topic \"{}\".", parent_topic.name);
                         }
                     }
-                    topic_keys.reverse();
-                    let breadcrumbs = topic_keys.iter()
-                        .map(|topic_key| Self::page_link(self.model, topic_key))
-                        .join(&format!(" {} ", wiki::DELIM_BOOKMARK_RIGHT));
-                    let breadcrumbs = format!("{}{} {} {}{}", wiki::DELIM_BOLD, breadcrumbs, wiki::DELIM_BOOKMARK_RIGHT, topic.name, wiki::DELIM_BOLD);
-                    page.add_paragraph(&breadcrumbs);
                 }
+                //bg!(&topic_keys);
+                topic_keys.reverse();
+                let breadcrumbs = topic_keys.iter()
+                    .map(|topic_key| Self::page_link(self.model, topic_key))
+                    .join(&format!(" {} ", wiki::DELIM_BOOKMARK_RIGHT));
+                let breadcrumbs = format!("{}{} {} {}{}", wiki::DELIM_BOLD, breadcrumbs, wiki::DELIM_BOOKMARK_RIGHT, topic.name, wiki::DELIM_BOLD);
+                page.add_paragraph(&breadcrumbs);
             },
             2 => {
                 // Combination topic.
@@ -82,7 +90,7 @@ impl <'a> GenFromModel<'a> {
         for paragraph in topic.paragraphs.iter() {
             match paragraph {
                 model::Paragraph::Attributes => {},
-                model::Paragraph::Breadcrumbs => {},
+                model::Paragraph::Breadcrumbs => {}, // This was already added to the page.
                 model::Paragraph::Category => {}, // This was already added to the page.
                 model::Paragraph::Code { text} => {
                     self.add_code(page, text)
@@ -138,7 +146,7 @@ impl <'a> GenFromModel<'a> {
     }
 
     fn add_code(&mut self, page: &mut wiki::WikiGenPage, text: &str) {
-        dbg!(&text);
+        //bg!(&text);
         page.add_line(wiki::DELIM_CODE_START);
         page.add_line(text);
         page.add_paragraph(wiki::DELIM_CODE_END);
