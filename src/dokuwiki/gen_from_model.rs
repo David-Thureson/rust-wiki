@@ -84,7 +84,9 @@ impl <'a> GenFromModel<'a> {
                 model::Paragraph::Attributes => {},
                 model::Paragraph::Breadcrumbs => {},
                 model::Paragraph::Category => {}, // This was already added to the page.
-                model::Paragraph::Code { .. } => {}
+                model::Paragraph::Code { text} => {
+                    self.add_code(page, text)
+                }
                 model::Paragraph::GenStart => {},
                 model::Paragraph::GenEnd => {},
                 model::Paragraph::List { type_: _, header, items} => {
@@ -94,10 +96,10 @@ impl <'a> GenFromModel<'a> {
                     self.add_error(&msg_func_unexpected("Placeholder"));
                 },
                 model::Paragraph::QuoteEnd => {
-                    page.add_paragraph(wiki::DELIM_QUOTE_END);
+                    page.add(wiki::DELIM_QUOTE_END);
                 }
                 model::Paragraph::QuoteStart => {
-                    page.add_line(wiki::DELIM_QUOTE_START);
+                    page.add_paragraph(wiki::DELIM_QUOTE_START);
                 }
                 model::Paragraph::SectionHeader { name, depth } => {
                     page.add_headline(name, *depth);
@@ -135,6 +137,13 @@ impl <'a> GenFromModel<'a> {
         markup
     }
 
+    fn add_code(&mut self, page: &mut wiki::WikiGenPage, text: &str) {
+        dbg!(&text);
+        page.add_line(wiki::DELIM_CODE_START);
+        page.add_line(text);
+        page.add_paragraph(wiki::DELIM_CODE_END);
+    }
+
     fn add_list(&mut self, page: &mut wiki::WikiGenPage, header: &model::TextBlock, items: &Vec<model::ListItem>) {
         page.add(&self.text_block_to_markup(header));
         page.add_linefeed();
@@ -142,6 +151,7 @@ impl <'a> GenFromModel<'a> {
             let markup = &self.text_block_to_markup(&item.block);
             page.add_list_item_unordered(item.depth,markup);
         }
+        page.add_linefeed();
     }
 
     fn add_table(&mut self, page: &mut wiki::WikiGenPage, has_header: bool, rows:&Vec<Vec<TextBlock>>) {

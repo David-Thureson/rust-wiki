@@ -28,6 +28,8 @@ pub const DELIM_BOLD: &str = "**";
 pub const DELIM_ITALIC: &str = "//";
 pub const DELIM_QUOTE_START: &str = "<WRAP round box>";
 pub const DELIM_QUOTE_END: &str = "</WRAP>";
+pub const DELIM_CODE_START: &str = "<code>";
+pub const DELIM_CODE_END: &str = "</code>";
 
 /*
 pub fn back_up_from_live() {

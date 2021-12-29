@@ -147,6 +147,7 @@ impl BuildProcess {
                 Ok(code_splits) => {
                     for (is_code, entry_text) in code_splits.iter() {
                         if *is_code {
+                            let entry_text = entry_text.trim_start_matches("\n").trim_end_matches("\n");
                             topic.add_paragraph(Paragraph::new_code(entry_text));
                         } else {
                             // Break the topic into paragraphs.
