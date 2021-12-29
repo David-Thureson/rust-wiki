@@ -78,4 +78,3 @@ fn add_all_topics(page: &mut wiki::WikiGenPage, model: &model::Wiki) {
         page.add_line_with_break(&link);
     }
 }
-

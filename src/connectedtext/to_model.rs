@@ -37,8 +37,10 @@ const CT_PREFIX_IMAGE_FOLDER: &str = r"Images\";
 const CT_IMAGE_SIZE_STD: &str = "(($IMG_SIZE))";
 const CT_IMAGE_SIZE_LARGE: &str = "(($IMG_SIZE_LARGE))";
 const CT_IMAGE_SIZE_100_PCT: &str = "100%";
-const CT_DELIM_QUOTE_START: &str = "{{{";
-const CT_DELIM_QUOTE_END: &str = "}}}";
+const CT_DELIM_CODE_START: &str = "{{{";
+const CT_DELIM_CODE_END: &str = "}}}";
+const CT_TEMP_DELIM_QUOTE_START: &str = "{TEMP QUOTE START}";
+const CT_TEMP_DELIM_QUOTE_END: &str = "{TEMP QUOTE END}";
 
 pub fn main() {
     // build_wiki(Some(100));
@@ -115,7 +117,7 @@ impl BuildProcess {
         // things like list items depend on the number of spaces at the beginning.
         let export_text = export_text.lines()
             .map(|x| x.trim_end())
-            .filter(|x| x != &CT_TABLE_END)
+            //.filter(|x| x != &CT_TABLE_END)
             .join("\n");
         // Get rid of extra line breaks.
         let export_text = export_text.replace(&CT_LINE_BREAK.repeat(3), &CT_LINE_BREAK.repeat(2));
@@ -137,13 +139,15 @@ impl BuildProcess {
                 self.errors.add(&topic_key,"Starts with a lowercase letter.");
             }
 
-            // Pull out the quoted sections ("{{{" and "}}}") before breaking into paragraphs.
-            let context = format!("read_text_file_as_topics: quote splits for \"{}\".", topic_name);
-            match util::parse::split_delimited_and_normal_rc(topic_text, CT_DELIM_QUOTE_START, CT_DELIM_QUOTE_END, &context) {
-                Ok(quote_splits) => {
-                    for (is_quote, entry_text) in quote_splits.iter() {
-                        if *is_quote {
-                            topic.add_paragraph(Paragraph::new_quote(entry_text));
+            let topic_text = &Self::preprocess_topic_text_for_tables_as_quotes(&topic_name, topic_text);
+
+            // Pull out the code sections ("{{{" and "}}}") before breaking into paragraphs.
+            let context = format!("read_text_file_as_topics: code splits for \"{}\".", topic_name);
+            match util::parse::split_delimited_and_normal_rc(topic_text, CT_DELIM_CODE_START, CT_DELIM_CODE_END, &context) {
+                Ok(code_splits) => {
+                    for (is_code, entry_text) in code_splits.iter() {
+                        if *is_code {
+                            topic.add_paragraph(Paragraph::new_code(entry_text));
                         } else {
                             // Break the topic into paragraphs.
                             // First, though, find cases where there is a table start "{|" in the
@@ -172,6 +176,87 @@ impl BuildProcess {
         }
     }
 
+    fn preprocess_topic_text_for_tables_as_quotes(topic_name: &str, topic_text: &str) -> String {
+        // A ConnectedText table might be used for what will be a quotation in the generic model.
+        // It will look something like:
+        //   {|
+        //   ||This short, but packed demonstration will show you why tens of thousands of data analysts from more than 1,800 companies rely on Alteryx daily to prep, blend, and analyze data, to deliver deeper business insights in hours, not weeks. You’ll see how our drag-and-drop interface allows you to:
+        //     * Blend data from a wide variety of sources, including internal, third-party, and cloud-based data
+        //     * Analyze data with over 60 pre-built tools for predictive and spatial analytics, with no programming required
+        //
+        //    Second paragraph.
+        //   |}
+        // The key difference from a normal table or an attribute block is that there is at least
+        // one row within the start and end delimiters that does not end with "||".
+        let mut new_text = "".to_string();
+        let lines = topic_text.split("\n").collect::<Vec<_>>();
+        let mut line_index = 0;
+        while line_index < lines.len() {
+            if lines[line_index].trim().starts_with(CT_TABLE_START) {
+                // The line is "{|", so we're starting a table that may be a quote.
+                let line_table_start = line_index;
+                // Find the end of this table.
+                let mut line_table_end = line_index + 1;
+                loop {
+                    if line_table_end == lines.len() {
+                        //anic!("No table end for topic \"{}\".", topic_name);
+                        break;
+                    }
+                    //bg!(&line_table_end, lines[line_table_end]);
+                    if lines[line_table_end].trim().starts_with(CT_TABLE_END) {
+                        break;
+                    }
+                    line_table_end += 1;
+                }
+                let mut is_quotation = false;
+                // We know the lines on which the table starts and ends.
+                if line_table_end - line_table_start > 1 {
+                    // There's at least one row.
+                    // The first row in the table should start with "||".
+                    if !lines[line_table_start + 1].starts_with(CT_TABLE_DELIM) {
+                        panic!("No first row table delimiter for topic \"{}\" at line {}.", topic_name, line_table_start + 1);
+                    }
+                    // The rows in a table used for a quotation don't end with "||".
+                    for i in line_table_start + 1..line_table_end {
+                        if !lines[i].trim().ends_with(CT_TABLE_DELIM) {
+                            is_quotation = true;
+                            break;
+                        }
+                    }
+                }
+                if is_quotation {
+                    // Put a placeholder in the topic text that will later be replaced with a
+                    // Paragraph::QuoteStart.
+                    new_text.push_str(&format!("{}\n\n", CT_TEMP_DELIM_QUOTE_START));
+                    // Copy the row lines into the new topic text, removing any "||" at the
+                    // start of the line. These lines will then be interpreted as normal paragraphs
+                    // later in the process.
+                    for i in line_table_start+1..line_table_end {
+                        new_text.push_str(&format!("{}\n", lines[i].replace(CT_TABLE_DELIM, "")));
+                    }
+                    // Put a placeholder in the topic text that will later be replaced with a
+                    // Paragraph::QuoteEnd.
+                    new_text.push_str(&format!("\n\n{}\n\n", CT_TEMP_DELIM_QUOTE_END));
+                } else {
+                    // This is a table but not a quotation, so append the lines to the new output
+                    // topic text unchanged.
+                    line_table_end = line_table_end.min(lines.len() - 1);
+                    for i in line_table_start..=line_table_end {
+                        new_text.push_str(&format!("{}\n", lines[i]));
+                    }
+                }
+                line_index = line_table_end + 1;
+            } else {
+                // Nothing going on, so simply append this line to the new output topic text.
+                new_text.push_str(&format!("{}\n", lines[line_index]));
+                line_index += 1;
+            }
+        }
+        new_text = new_text.trim_end_matches("\n").to_string();
+        //bg!(&topic_name, &topic_text, &new_text);
+        new_text
+    }
+
     fn refine_paragraphs(&mut self, wiki: &mut Wiki) {
         for topic in wiki.topics.values_mut() {
             let context = format!("Refining paragraphs for \"{}\".", topic.name);
@@ -195,6 +280,7 @@ impl BuildProcess {
                 self.paragraph_as_category_rc(topic, &text, context)?
                     .or(self.paragraph_as_section_header_rc(topic, &text, context)?)
                     .or(self.paragraph_as_bookmark_rc(topic, &text, context)?)
+                    .or(self.paragraph_as_quote_start_or_end_rc(topic, &text, context)?)
                     .or(self.paragraph_as_table_rc(topic, &text, context)?)
                     .or(self.paragraph_as_list_rc(topic, &text, context)?)
                     .or(self.paragraph_as_text_rc(topic, &text, context)?)
@@ -300,6 +386,16 @@ impl BuildProcess {
         }
     }
 
+    fn paragraph_as_quote_start_or_end_rc(&mut self, _topic: &mut Topic, text: &str, _context: &str) -> Result<Option<Paragraph>, String> {
+        if text.trim().eq(CT_TEMP_DELIM_QUOTE_START) {
+            Ok(Some(Paragraph::QuoteStart))
+        } else if text.trim().eq(CT_TEMP_DELIM_QUOTE_END) {
+            Ok(Some(Paragraph::QuoteEnd))
+        } else {
+            Ok(None)
+        }
+    }
+
     fn paragraph_as_table_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
         // A paragraph with a list of attributes will look something like this:
         //   {|
@@ -313,7 +409,11 @@ impl BuildProcess {
             // && lines.len() > 1
             // && lines[1].starts_with(CT_TABLE_DELIM) {
             // && split_trim(lines[1], CT_TABLE_DELIM).len() == 4 {
-            // We're going to guess that this is a table.
+            // This is a table in ConnectedText. But it will be interpreted either as:
+            //  - A set of attributes.
+            //  - A regular table.
+            // If instead it was a quotation, it should have been detected earlier and should not
+            // reach this code.
             if lines.len() < 2 {
                 return Err(format!("{} Seems to be the start of a table but there are no rows.", context));
             }

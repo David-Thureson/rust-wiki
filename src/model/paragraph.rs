@@ -9,6 +9,9 @@ pub enum Paragraph {
     Attributes,
     Breadcrumbs,
     Category,
+    Code {
+        text: String,
+    },
     GenStart,
     GenEnd,
     List {
@@ -17,9 +20,8 @@ pub enum Paragraph {
         items: Vec<ListItem>,
     },
     Placeholder,
-    Quote {
-        text: String,
-    },
+    QuoteEnd,
+    QuoteStart,
     SectionHeader {
         name: String,
         depth: usize,
@@ -40,6 +42,10 @@ pub enum Paragraph {
 }
 
 impl Paragraph {
+    pub fn new_code(text: &str) -> Self {
+        Paragraph::Code { text: text.to_string() }
+    }
+
     pub fn new_section_header(name: &str, depth: usize) -> Self {
         Paragraph::SectionHeader { name: name.to_string(), depth }
     }
@@ -52,10 +58,6 @@ impl Paragraph {
         Paragraph::TextUnresolved { text: text.to_string() }
     }
 
-    pub fn new_quote(text: &str) -> Self {
-        Paragraph::Quote { text: text.to_string() }
-    }
-
     pub fn new_unknown(text: &str) -> Self {
         Paragraph::Unknown { text: text.to_string() }
     }
@@ -65,11 +67,13 @@ impl Paragraph {
             Paragraph::Attributes { .. } => "Attributes",
             Paragraph::Breadcrumbs { .. } => "Breadcrumbs",
             Paragraph::Category { .. } => "Category",
+            Paragraph::Code { .. } => "Code",
             Paragraph::GenStart { .. } => "GenStart",
             Paragraph::GenEnd { .. } => "GenEnd",
             Paragraph::List { .. } => "List",
             Paragraph::Placeholder { .. } => "Placeholder",
-            Paragraph::Quote { .. } => "Quote",
+            Paragraph::QuoteEnd { .. } => "QuoteEnd",
+            Paragraph::QuoteStart { .. } => "QuoteStart",
             Paragraph::SectionHeader { .. } => "SectionHeader",
             Paragraph::Table { .. } => "Table",
             Paragraph::Text { .. } => "Text",

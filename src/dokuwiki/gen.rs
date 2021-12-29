@@ -3,6 +3,7 @@ use std::fs;
 
 use crate::*;
 use std::hash::{Hasher, Hash};
+use super::*;
 
 pub const PATH_PAGES: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/pages";
 pub const PATH_MEDIA: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/media";
@@ -295,10 +296,10 @@ pub fn copy_image_file(from_path: &str, from_file_name: &str, to_path: &str, to_
 }
 
 pub fn bold(value: &str) -> String {
-    format!("**{}**", value)
+    format!("{}{}{}", DELIM_BOLD, value, DELIM_BOLD)
 }
 
 pub fn italic(value: &str) -> String {
-    format!("//{}//", value)
+    format!("{}{}{}", DELIM_ITALIC, value, DELIM_ITALIC)
 }
 
