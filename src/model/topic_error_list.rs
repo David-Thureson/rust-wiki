@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use crate::model::{TopicKey, Topic};
+use crate::model::TopicKey;
 use crate::Itertools;
 
 pub struct TopicErrorList {
@@ -36,7 +36,7 @@ impl TopicErrorList {
         } else {
             println!("\nErrors{}:", context);
             for topic_key in self.errors.keys() {
-                println!("\n\t{}", Topic::topic_key_to_string(topic_key));
+                println!("\n\t{}", topic_key);
                 for msg in self.errors[topic_key].iter() {
                     println!("\t\t{}", msg);
                 }
@@ -55,7 +55,7 @@ impl TopicErrorList {
                 if msg.starts_with(before) && msg.ends_with(after) {
                     let topic_name = util::parse::between_trim(msg, before, after);
                     let entry = map.entry(topic_name).or_insert(vec![]);
-                    entry.push(error_topic_key.1.clone());
+                    entry.push(error_topic_key.topic_name.clone());
                 }
             }
         }

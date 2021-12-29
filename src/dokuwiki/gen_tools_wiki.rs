@@ -3,6 +3,7 @@ use crate::model;
 use crate::connectedtext::to_model::build_model;
 use crate::model::NAMESPACE_NAVIGATION;
 use crate::dokuwiki::gen_from_model::GenFromModel;
+use crate::dokuwiki::CategoryTree;
 
 const PROJECT_NAME: &str = "Tools";
 
@@ -20,7 +21,12 @@ fn gen_from_connectedtext(_copy_image_files_to_local_wiki: bool, topic_limit: Op
     gen_start_page(&model);
     // gen_recent_topics_page();
     gen_all_topics_page(&model);
-    // gen_categories_page();
+    let category_tree = model.category_tree(&model.main_namespace);
+
+    // category_tree.report_by_node_count();
+    // panic!();
+
+    gen_categories_page(&model, &category_tree);
     // gen_terms_page();
     GenFromModel::new(&model).gen();
     println!("\nDone generating wiki.");
@@ -43,6 +49,15 @@ fn gen_start_page(model: &model::Wiki) {
 fn gen_all_topics_page(model: &model::Wiki) {
     let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_ALL_TOPICS,None);
     add_all_topics(&mut page, model);
+    page.write();
+}
+
+fn gen_categories_page(model: &model::Wiki, _category_tree: &CategoryTree) {
+    let page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_CATEGORIES,None);
+
+
+
+
     page.write();
 }
 

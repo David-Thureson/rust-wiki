@@ -22,7 +22,7 @@ pub fn report_category_tree(wiki: &Wiki) {
     // parent_child_pairs.sort();
     // parent_child_pairs.iter().for_each(|(parent, child)| { println!("\"{}\"\t\"{}\"", parent, child); });
 
-    let tree = util::tree::Tree::create(parent_child_pairs);
+    let tree = util::tree::Tree::create(parent_child_pairs, true);
     tree.report_by_node_count();
 }
 

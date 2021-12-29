@@ -71,7 +71,7 @@ impl BuildProcess {
     pub fn build(&mut self) -> Wiki {
         let mut wiki = Wiki::new(&self.wiki_name, NAMESPACE_TOOLS);
         wiki.add_namespace(NAMESPACE_BOOK);
-        wiki.add_namespace(NAMESPACE_CATEGORY);
+        // wiki.add_namespace(NAMESPACE_CATEGORY);
         wiki.add_namespace(NAMESPACE_NAVIGATION);
         self.parse_from_text_file(&mut wiki);
         wiki.catalog_links();
@@ -89,7 +89,7 @@ impl BuildProcess {
         wiki.catalog_links();
         self.errors.clear();
         self.check_links(&wiki);
-        self.errors.print(Some("After moving category and book topics."));
+        self.errors.print(Some("After moving navigation and book topics."));
         wiki
     }
 
@@ -135,7 +135,7 @@ impl BuildProcess {
             let mut topic = Topic::new(&self.namespace_main, &topic_name);
 
             if topic_name.chars().next().unwrap().is_ascii_lowercase() {
-                let topic_key = Topic::make_key(&self.namespace_main, &topic_name);
+                let topic_key = TopicKey::new(&self.namespace_main, &topic_name);
                 self.errors.add(&topic_key,"Starts with a lowercase letter.");
             }
 
@@ -166,7 +166,7 @@ impl BuildProcess {
                     }
                 },
                 Err(msg) => {
-                    let topic_key = Topic::make_key(&self.namespace_main, &topic_name);
+                    let topic_key = TopicKey::new(&self.namespace_main, &topic_name);
                     self.errors.add(&topic_key, &msg);
                 },
             }
@@ -272,7 +272,7 @@ impl BuildProcess {
             for paragraph_index in 0..paragraph_count {
                 match self.refine_one_paragraph_rc(topic, paragraph_index, &context) {
                     Err(msg) => {
-                        let topic_key = Topic::make_key(&self.namespace_main, &topic.name);
+                        let topic_key = TopicKey::new(&self.namespace_main, &topic.name);
                         self.errors.add(&topic_key, &msg);
                     },
                     _ => (),
@@ -386,7 +386,7 @@ impl BuildProcess {
             };
             for parent in parents.iter() {
                 let parent = remove_brackets_rc(parent, context)?;
-                topic.parents.push(Topic::make_key(NAMESPACE_TOOLS, &parent));
+                topic.parents.push(TopicKey::new(NAMESPACE_TOOLS, &parent));
             }
             //bg!(&topic.name, &parents, &topic.parents);
             Ok(Some(Paragraph::Breadcrumbs))
@@ -702,7 +702,7 @@ impl BuildProcess {
     }
 
     fn add_error(&mut self, topic_name: &str, msg: &str) {
-        let topic_key = Topic::make_key(&self.namespace_main, topic_name);
+        let topic_key = TopicKey::new(&self.namespace_main, topic_name);
         let entry = self.errors.entry(topic_key).or_insert(vec![]);
         entry.push(msg.to_string());
     }

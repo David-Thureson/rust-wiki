@@ -108,7 +108,7 @@ impl Link {
     }
 
     pub fn new_section(label: Option<&str>, namespace_name: &str, topic_name: &str, section_name: &str) -> Self {
-        let section_key = Topic::make_section_key(namespace_name, topic_name, section_name);
+        let section_key = SectionKey::new(namespace_name, topic_name, section_name);
         let type_ = LinkType::Section {
             section_key,
         };
@@ -116,7 +116,7 @@ impl Link {
     }
 
     pub fn new_topic(label: Option<&str>, namespace_name: &str, topic_name: &str) -> Self {
-        let topic_key = Topic::make_key(namespace_name, topic_name);
+        let topic_key = TopicKey::new(namespace_name, topic_name);
         let type_ = LinkType::Topic {
             topic_key,
         };

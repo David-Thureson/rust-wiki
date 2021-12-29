@@ -113,7 +113,7 @@ impl Wiki {
             for link in topic.outbound_links.iter() {
                 let outbound_topic_key = match &link.type_ {
                     LinkType::Topic { topic_key } => Some(topic_key.clone()),
-                    LinkType::Section { section_key } => Some(Topic::section_key_to_topic_key(section_key)),
+                    LinkType::Section { section_key } => Some(section_key.topic_key.clone()),
                     _ => None,
                 };
                 if let Some(outbound_topic_key) = outbound_topic_key {
@@ -164,7 +164,7 @@ impl Wiki {
                     },
                     LinkType::Section { section_key } => {
                         if !self.has_section(section_key) {
-                            errors.add(&topic.get_key(), &format!("wiki::check_links(): Section link {} not found.", Topic::section_key_to_string(section_key)));
+                            errors.add(&topic.get_key(), &format!("wiki::check_links(): Section link {} not found.", section_key));
                         }
                     },
                     _ => {},
@@ -181,7 +181,7 @@ impl Wiki {
 
     fn check_topic_link(&self, errors: &mut TopicErrorList, list_name: &str, this_topic_key: &TopicKey, ref_topic_key: &TopicKey) {
         if !self.has_topic(ref_topic_key) {
-            errors.add(this_topic_key,&format!("wiki::check_topic_link(): Topic link {} from {} list not found.", Topic::topic_key_to_string(ref_topic_key), list_name));
+            errors.add(this_topic_key,&format!("wiki::check_topic_link(): Topic link {} from {} list not found.", ref_topic_key, list_name));
         }
     }
 
@@ -298,18 +298,17 @@ impl Wiki {
         let mut map = BTreeMap::new();
         for topic_key in self.topics.keys() {
             //bg!(topic_key);
-            map.insert(topic_key.1.clone(), topic_key.clone());
+            map.insert(topic_key.topic_name.clone(), topic_key.clone());
         }
         //bg!(&map);
         map.values().map(|topic_key| topic_key.clone()).collect::<Vec<_>>()
     }
 
     pub fn has_section(&self, section_key: &SectionKey) -> bool {
-        let (topic_key, section_name) = section_key;
-        if !self.has_topic(topic_key) {
+        if !self.has_topic(&section_key.topic_key) {
             return false;
         }
-        self.topics[topic_key].has_section(section_name)
+        self.topics[&section_key.topic_key].has_section(&section_key.section_name)
     }
 
     pub fn add_missing_category_topics(&mut self) {
@@ -331,16 +330,16 @@ impl Wiki {
         let category_names = self.categories.values()
             .map(|category| category.name.clone())
             .collect::<Vec<_>>();
-        let category_namespace = &self.qualify_namespace(NAMESPACE_CATEGORY);
+        let category_namespace = &self.qualify_namespace(&self.main_namespace);
         let mut topic_keys = vec![];
         for category_name in category_names.iter() {
-            let topic_key_old = Topic::make_key(&self.main_namespace, category_name);
+            let topic_key_old = TopicKey::new(&self.main_namespace, category_name);
             let found = self.topics.contains_key(&topic_key_old);
             if found {
                 // Move the topic from the main to the category namespace.
                 //rintln!("\t\t\tMoving topic {}", &category_name);
                 let mut topic = self.topics.remove(&topic_key_old).unwrap();
-                let topic_key_new = Topic::make_key(category_namespace, &topic.name);
+                let topic_key_new = TopicKey::new(category_namespace, &topic.name);
                 topic_keys.push((topic_key_old, topic_key_new));
                 topic.namespace = category_namespace.to_string();
                 self.add_topic(topic);
@@ -362,8 +361,8 @@ impl Wiki {
         let mut topic_keys = vec![];
         for topic_name in topic_names {
             //rintln!("Moving topic {} to namespace {}.", &topic_name, &new_namespace);
-            let topic_key_old = Topic::make_key(&self.main_namespace, &topic_name);
-            let topic_key_new = Topic::make_key(&new_namespace, &topic_name);
+            let topic_key_old = TopicKey::new(&self.main_namespace, &topic_name);
+            let topic_key_new = TopicKey::new(&new_namespace, &topic_name);
             let mut topic = self.topics.remove(&topic_key_old).unwrap();
             topic.namespace = new_namespace.clone();
             self.add_topic(topic);
@@ -372,9 +371,21 @@ impl Wiki {
         self.update_internal_links(&topic_keys);
     }
 
+    pub fn category_tree(&self, namespace: &str) -> util::tree::Tree<TopicKey> {
+        let mut parent_child_pairs = vec![];
+        for topic in self.topics.values() {
+            if let Some(category_name) = &topic.category {
+                let category_topic_key = TopicKey::new(namespace, category_name);
+                parent_child_pairs.push((category_topic_key, topic.get_key()));
+            }
+        }
+        let tree = util::tree::Tree::create(parent_child_pairs, true);
+        tree
+    }
+    
     /*
     pub fn find_topic_rc(&self, namespace_name: &str, topic_name: &str, context: &str) -> Result<TopicRc, String> {
-        let key = Topic::make_key(namespace_name, topic_name);
+        let key = TopicKey::new(namespace_name, topic_name);
         match self.topics.get(&key) {
             Some(topic_rc) => Ok(topic_rc.clone()),
             None => Err(format!("{}: Unable to find topic \"{}\" -> \"{}\"", context, namespace_name, topic_name)),

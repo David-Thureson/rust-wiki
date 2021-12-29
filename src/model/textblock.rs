@@ -55,9 +55,8 @@ impl TextItem {
                         for (topic_key_old, topic_key_new) in keys.iter() {
                             if topic_key.eq(&topic_key_old) {
                                 // let text_item_new = Self::new_link(Link::new_topic(link.label.map(|label| label.as_str()), &topic_key_new.0, &topic_key_new.1));
-                                let topic_key = Topic::make_key(&topic_key_new.0, &topic_key_new.1);
                                 let type_ = LinkType::Topic {
-                                    topic_key,
+                                    topic_key: topic_key_new.clone(),
                                 };
                                 // let link_new = Link::new(link.label.map(|label| label.as_str()), type_);
                                 let link_new = Link {

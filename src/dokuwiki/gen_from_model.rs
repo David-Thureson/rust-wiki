@@ -1,6 +1,6 @@
 use crate::{model, Itertools};
 use crate::dokuwiki as wiki;
-use crate::model::{NAMESPACE_CATEGORY, TextBlock, TopicKey};
+use crate::model::{TextBlock, TopicKey};
 
 pub struct GenFromModel<'a> {
     model: &'a model::Wiki,
@@ -32,7 +32,7 @@ impl <'a> GenFromModel<'a> {
 
     fn add_category_optional(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
         if let Some(category) = topic.category.as_ref() {
-            page.add_category(&self.model.qualify_namespace(NAMESPACE_CATEGORY),category);
+            page.add_category(&self.model.qualify_namespace(&self.model.main_namespace),category);
         }
     }
 
@@ -182,11 +182,11 @@ impl <'a> GenFromModel<'a> {
         match &link.type_ {
             model::LinkType::Topic { topic_key } => {
                 let page_name = self.model.topic_name(&topic_key);
-                let text = wiki::gen::page_link(&topic_key.0, &page_name, label);
+                let text = wiki::gen::page_link(&topic_key.namespace, &page_name, label);
                 text
             },
             model::LinkType::Section { section_key } => {
-                let text = wiki::gen::section_link(&section_key.0.0,&section_key.0.1,&section_key.1, label);
+                let text = wiki::gen::section_link(section_key.namespace(),section_key.topic_name(), &section_key.section_name, label);
                 text
             },
             model::LinkType::External { url } => {
@@ -219,7 +219,7 @@ impl <'a> GenFromModel<'a> {
     }
 
     pub fn page_link(model: &model::Wiki, topic_key: &TopicKey) -> String {
-        let qual_namespace = model.qualify_namespace(&topic_key.0);
+        let qual_namespace = model.qualify_namespace(&topic_key.namespace);
         let link = wiki::page_link(&qual_namespace, &model.topics.get(topic_key).unwrap().name, None);
         link
     }

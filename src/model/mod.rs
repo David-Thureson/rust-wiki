@@ -42,7 +42,6 @@ pub use wiki::*;
 pub const NAMESPACE_ROOT: &str = "";
 pub const NAMESPACE_UNDECIDED: &str = "{undecided}";
 pub const NAMESPACE_BOOK: &str = ":book";
-pub const NAMESPACE_CATEGORY: &str = ":cat";
 pub const NAMESPACE_NAVIGATION: &str = ":nav";
 
 pub const ATTRIBUTE_VALUE_MISSING: &str = "{missing}";

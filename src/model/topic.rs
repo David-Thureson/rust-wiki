@@ -1,10 +1,7 @@
 use super::*;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
-
-// pub type TopicRc = Rc<RefCell<Topic>>;
-pub type TopicKey = (String, String);
-pub type SectionKey = (TopicKey, String);
+use std::fmt::{Display, Formatter};
 
 pub struct Topic {
     pub parents: Vec<TopicKey>,
@@ -20,6 +17,18 @@ pub struct Topic {
     pub listed_topics: Vec<TopicKey>,
     //pub sections: Vec<SectionRc>,
     // pub sections: BTreeMap<String, usize>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TopicKey {
+    pub namespace: String,
+    pub topic_name: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct SectionKey {
+    pub topic_key: TopicKey,
+    pub section_name: String,
 }
 
 impl Topic {
@@ -41,29 +50,7 @@ impl Topic {
     }
 
     pub fn get_key(&self) -> TopicKey {
-        Self::make_key(&self.namespace, &self.name)
-    }
-
-    pub fn make_key(namespace_name: &str, topic_name: &str) -> TopicKey {
-        (namespace_name.to_lowercase().to_string(), topic_name.to_lowercase().to_string())
-    }
-
-    pub fn make_section_key(namespace_name: &str, topic_name: &str, section_name: &str) -> SectionKey {
-        (Self::make_key(namespace_name, topic_name), section_name.to_lowercase().to_string())
-    }
-
-    pub fn section_key_to_topic_key(section_key: &SectionKey) -> TopicKey {
-        section_key.0.clone()
-    }
-
-    pub fn topic_key_to_string(topic_key: &TopicKey) -> String {
-        format!("[{} | {}]", topic_key.0, topic_key.1)
-        // format!("[{}]", topic_key.1)
-    }
-
-    pub fn section_key_to_string(section_key: &SectionKey) -> String {
-        format!("[{} | {} # {}]", &section_key.0.0, &section_key.0.1, &section_key.1)
-        // format!("[{} # {}]", &section_key.0.1, &section_key.1)
+        TopicKey::new(&self.namespace, &self.name)
     }
 
     pub fn add_paragraph(&mut self, paragraph: Paragraph) {
@@ -108,6 +95,65 @@ impl PartialOrd for Topic {
 impl Ord for Topic {
     fn cmp(&self, other: &Self) -> Ordering {
         self.get_key().cmp(&other.get_key())
+    }
+}
+
+impl TopicKey {
+    pub fn new(namespace: &str, topic_name: &str) -> Self {
+        Self {
+            namespace: namespace.to_lowercase().to_string(),
+            topic_name: topic_name.to_lowercase().to_string(),
+        }
+    }
+}
+
+impl Display for TopicKey {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{}:{}", self.namespace, self.topic_name)
+    }
+}
+
+impl PartialEq for TopicKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.to_string() == other.to_string()
+    }
+}
+
+impl Eq for TopicKey {
+}
+
+impl PartialOrd for TopicKey {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.to_string().partial_cmp(&other.to_string())
+    }
+}
+
+impl Ord for TopicKey {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.to_string().cmp(&other.to_string())
+    }
+}
+
+impl SectionKey {
+    pub fn new(namespace: &str, topic_name: &str, section_name: &str) -> Self {
+        Self {
+            topic_key: TopicKey::new(namespace, topic_name),
+            section_name: section_name.to_lowercase().to_string(),
+        }
+    }
+
+    pub fn namespace(&self) -> &str {
+        &self.topic_key.namespace
+    }
+
+    pub fn topic_name(&self) -> &str {
+        &self.topic_key.topic_name
+    }
+}
+
+impl Display for SectionKey {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{}#{}", self.topic_key, self.section_name)
     }
 }
 
