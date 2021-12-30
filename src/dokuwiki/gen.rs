@@ -223,6 +223,11 @@ pub fn add_list_item_unordered(page_text: &mut String, text: &str) {
     page_text.push_str(&format!("  * {}\n", text));
 }
 
+pub fn add_list_item_unordered_depth(page_text: &mut String, depth: usize, text: &str) {
+    let indent = "  ".repeat(depth);
+    page_text.push_str(&format!("  {}* {}\n", indent, text));
+}
+
 pub fn add_paragraph(page_text: &mut String, text: &str) {
     page_text.push_str(&format!("{}\n\n", text));
 }

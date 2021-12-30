@@ -59,19 +59,21 @@ impl Topic {
 
     pub fn has_section(&self, section_name: &str) -> bool {
         let section_name = section_name.to_lowercase();
-        // let debug = section_name == "runtime communication between a python and java app";
-        // if debug { dbg!(&self.name); }
+        let debug = section_name.contains("cognitive");
+        if debug { dbg!(&self.name, &section_name); }
         for paragraph in self.paragraphs.iter() {
             match paragraph {
                 Paragraph::SectionHeader { name, .. } => {
-                    // if debug { dbg!(&name); }
+                    if debug { dbg!(&name); }
                     if name.to_lowercase() == section_name {
+                        if debug { dbg!("found section"); }
                         return true;
                     }
                 },
                 _ => {},
             }
         }
+        if debug { dbg!("didn't find section"); }
         false
     }
 
@@ -100,22 +102,28 @@ impl Ord for Topic {
 
 impl TopicKey {
     pub fn new(namespace: &str, topic_name: &str) -> Self {
+        assert!(!topic_name.contains(":="), "Topic name \"{}\" has a \":=\"", topic_name);
+        assert!(!topic_name.starts_with("_"), "Topic name \"{}\" starts with \"_\"", topic_name);
         Self {
             namespace: namespace.to_lowercase().to_string(),
-            topic_name: topic_name.to_lowercase().to_string(),
+            topic_name: topic_name.to_string(),
         }
+    }
+
+    pub fn get_key(&self) -> String {
+        self.to_string().to_lowercase()
     }
 }
 
 impl Display for TopicKey {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{}:{}", self.namespace, self.topic_name)
+        write!(f, "[{}:{}]", self.namespace, self.topic_name)
     }
 }
 
 impl PartialEq for TopicKey {
     fn eq(&self, other: &Self) -> bool {
-        self.to_string() == other.to_string()
+        self.get_key() == other.get_key()
     }
 }
 
@@ -124,18 +132,21 @@ impl Eq for TopicKey {
 
 impl PartialOrd for TopicKey {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.to_string().partial_cmp(&other.to_string())
+        self.get_key().partial_cmp(&other.get_key())
     }
 }
 
 impl Ord for TopicKey {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.to_string().cmp(&other.to_string())
+        self.get_key().cmp(&other.get_key())
     }
 }
 
 impl SectionKey {
     pub fn new(namespace: &str, topic_name: &str, section_name: &str) -> Self {
+        assert!(!topic_name.contains(":="), "Topic name \"{}\" has a \":=\"", topic_name);
+        assert!(!topic_name.starts_with("_"), "Topic name \"{}\" starts with \"_\"", topic_name);
+
         Self {
             topic_key: TopicKey::new(namespace, topic_name),
             section_name: section_name.to_lowercase().to_string(),
@@ -153,7 +164,7 @@ impl SectionKey {
 
 impl Display for SectionKey {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{}#{}", self.topic_key, self.section_name)
+        write!(f, "[{}:{}#{}]", self.topic_key.namespace, self.topic_key.topic_name, self.section_name)
     }
 }
 

@@ -3,7 +3,9 @@ use crate::model;
 use crate::connectedtext::to_model::build_model;
 use crate::model::NAMESPACE_NAVIGATION;
 use crate::dokuwiki::gen_from_model::GenFromModel;
-use crate::dokuwiki::CategoryTree;
+use crate::dokuwiki::{CategoryTree, CategoryTreeNode, page_link};
+use util::*;
+use std::cell::Ref;
 
 const PROJECT_NAME: &str = "Tools";
 
@@ -52,13 +54,20 @@ fn gen_all_topics_page(model: &model::Wiki) {
     page.write();
 }
 
-fn gen_categories_page(model: &model::Wiki, _category_tree: &CategoryTree) {
-    let page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_CATEGORIES,None);
-
-
-
-
+fn gen_categories_page(model: &model::Wiki, category_tree: &CategoryTree) {
+    let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_CATEGORIES,None);
+    // Sort the top-level categories by name.
+    let mut top_nodes = category_tree.top_nodes.clone();
+    top_nodes.sort_by_cached_key(|node_rc| b!(node_rc).item.to_string());
+    for node in top_nodes.iter() {
+        gen_category_subtree(&mut page, b!(node));
+    }
     page.write();
+}
+
+fn gen_category_subtree(page: &mut wiki::WikiGenPage, node: Ref<CategoryTreeNode>) {
+    let line = format!("{}", page_link(&node.item.namespace, &node.item.topic_name, None));
+    page.add_list_item_unordered(node.depth() + 1, &line);
 }
 
 fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Wiki, use_list: bool, include_start_page: bool) {

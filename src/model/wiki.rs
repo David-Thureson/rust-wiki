@@ -53,6 +53,7 @@ impl Wiki {
     }
 
     pub fn topic_name(&self, topic_key: &TopicKey) -> String {
+        assert!(self.topics.contains_key(topic_key), "Topic key {} not found.", topic_key);
         let topic = self.topics.get(topic_key).unwrap();
         topic.name.clone()
     }
@@ -305,6 +306,9 @@ impl Wiki {
     }
 
     pub fn has_section(&self, section_key: &SectionKey) -> bool {
+        if section_key.section_name.to_lowercase().contains("cognitive") {
+            dbg!(section_key, self.has_topic(&section_key.topic_key));
+        }
         if !self.has_topic(&section_key.topic_key) {
             return false;
         }

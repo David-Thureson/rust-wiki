@@ -189,31 +189,45 @@ impl BuildProcess {
         //   |}
         // The key difference from a normal table or an attribute block is that there is at least
         // one row within the start and end delimiters that does not end with "||".
+        // let debug = topic_text.contains("||Card Type||MC||");
         let mut new_text = "".to_string();
         let lines = topic_text.split("\n").collect::<Vec<_>>();
         let mut line_index = 0;
         while line_index < lines.len() {
+            // if debug { dbg!(line_index, &lines[line_index]); }
             if lines[line_index].trim().starts_with(CT_TABLE_START) {
                 // The line is "{|", so we're starting a table that may be a quote.
                 let line_table_start = line_index;
+                // let debug = lines[line_table_start + 1].contains("||Card Type||MC||");
+                // if debug { //bg!(line_table_start); }
                 // Find the end of this table.
                 let mut line_table_end = line_index + 1;
-                loop {
-                    if line_table_end == lines.len() {
-                        //anic!("No table end for topic \"{}\".", topic_name);
-                        break;
+                // If this is an attributes block it will start like this and we need to ignore it:
+                // {|
+                // ||Added||[[Added:=20180524]]||
+                if !lines[line_table_start + 1].contains(CT_ATTRIBUTE_ASSIGN) && !lines[line_table_start + 1].trim().ends_with(CT_TABLE_DELIM) {
+                    loop {
+                        // if debug { //bg!(line_table_end, &lines[line_table_end]); }
+                        //if line_table_end == lines.len() || lines[line_table_end].trim().is_empty() {
+                        if line_table_end == lines.len() {
+                            //anic!("No table end for topic \"{}\".", topic_name);
+                            break;
+                        }
+                        //bg!(&line_table_end, lines[line_table_end]);
+                        if lines[line_table_end].trim().starts_with(CT_TABLE_END) {
+                            break;
+                        }
+                        line_table_end += 1;
                     }
-                    //bg!(&line_table_end, lines[line_table_end]);
-                    if lines[line_table_end].trim().starts_with(CT_TABLE_END) {
-                        break;
-                    }
-                    line_table_end += 1;
                 }
                 let mut is_quotation = false;
                 // We know the lines on which the table starts and ends.
+                // if debug { //bg!(line_table_start, line_table_end); }
                 if line_table_end - line_table_start > 1 {
                     // There's at least one row.
                     // The first row in the table should start with "||".
+                    // let debug = lines[line_table_start + 1].contains("This short, but packed demonstration");
+                    // if debug { //bg!(line_table_start, line_table_end, &lines[line_table_start], &lines[line_table_end]); }
                     if !lines[line_table_start + 1].starts_with(CT_TABLE_DELIM) {
                         panic!("No first row table delimiter for topic \"{}\" at line {}.", topic_name, line_table_start + 1);
                     }
@@ -221,10 +235,11 @@ impl BuildProcess {
                     //   {|
                     //   ||**[[Main Topic]] » (($CURRENTTOPIC))**
                     //   |}
-                    // We'll need to leave this case alone because it's handled later on.
+                    // We'll need to leave this cases alone because they're handled later on.
                     if !lines[line_table_start + 1].contains(CT_BOOKMARK_DELIM_RIGHT) {
                         // The rows in a table used for a quotation don't end with "||".
                         for i in line_table_start + 1..line_table_end {
+                            // if topic_name.contains("Zero") { //bg!(line_table_start, line_table_end, i, lines[i]); }
                             if !lines[i].trim().ends_with(CT_TABLE_DELIM) {
                                 is_quotation = true;
                                 break;
@@ -240,6 +255,7 @@ impl BuildProcess {
                     // start of the line. These lines will then be interpreted as normal paragraphs
                     // later in the process.
                     for i in line_table_start+1..line_table_end {
+
                         new_text.push_str(&format!("{}\n", lines[i].replace(CT_TABLE_DELIM, "")));
                     }
                     // Put a placeholder in the topic text that will later be replaced with a
@@ -283,7 +299,8 @@ impl BuildProcess {
 
     fn refine_one_paragraph_rc(&mut self, topic: &mut Topic, paragraph_index: usize, context: &str) -> Result<(), String> {
         let source_paragraph= std::mem::replace(&mut topic.paragraphs[paragraph_index], Paragraph::Placeholder);
-        let new_paragraph = match source_paragraph {
+        // if topic.name.contains("Zero") { //bg!("source_paragraph", &source_paragraph.get_variant_name()); }
+        /* let new_paragraph = match source_paragraph {
             Paragraph::Unknown { text } => {
                 self.paragraph_as_category_rc(topic, &text, context)?
                     .or(self.paragraph_as_section_header_rc(topic, &text, context)?)
@@ -296,7 +313,46 @@ impl BuildProcess {
             },
             _ => source_paragraph,
         };
-        topic.paragraphs[paragraph_index] = new_paragraph;
+         */
+        match source_paragraph {
+            Paragraph::Unknown { text } => {
+                if let Some(new_paragraph) = self.paragraph_as_category_rc(topic, &text, context)? {
+                    topic.paragraphs[paragraph_index] = new_paragraph;
+                    return Ok(());
+                }
+                if let Some(new_paragraph) = self.paragraph_as_section_header_rc(topic, &text, context)? {
+                    topic.paragraphs[paragraph_index] = new_paragraph;
+                    return Ok(());
+                }
+                if let Some(new_paragraph) = self.paragraph_as_bookmark_rc(topic, &text, context)? {
+                    topic.paragraphs[paragraph_index] = new_paragraph;
+                    return Ok(());
+                }
+                if let Some(new_paragraph) = self.paragraph_as_quote_start_or_end_rc(topic, &text, context)? {
+                    topic.paragraphs[paragraph_index] = new_paragraph;
+                    return Ok(());
+                }
+                if let Some(new_paragraph) = self.paragraph_as_table_rc(topic, &text, context)? {
+                    topic.paragraphs[paragraph_index] = new_paragraph;
+                    return Ok(());
+                }
+                if let Some(new_paragraph) = self.paragraph_as_list_rc(topic, &text, context)? {
+                    topic.paragraphs[paragraph_index] = new_paragraph;
+                    return Ok(());
+                }
+                if let Some(new_paragraph) = self.paragraph_as_text_rc(topic, &text, context)? {
+                    topic.paragraphs[paragraph_index] = new_paragraph;
+                    return Ok(());
+                }
+                let new_paragraph = self.paragraph_as_text_unresolved(&text);
+                topic.paragraphs[paragraph_index] = new_paragraph;
+                return Ok(());
+            },
+            _ => {},
+        };
+        // if topic.name.contains("Zero") { dbg!("new_paragraph", &new_paragraph.get_variant_name()); }
+        // topic.paragraphs[paragraph_index] = new_paragraph;
+        topic.paragraphs[paragraph_index] = source_paragraph;
         Ok(())
     }
 
@@ -406,6 +462,9 @@ impl BuildProcess {
     }
 
     fn paragraph_as_table_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
+        //if topic.name.contains("Zero") {
+            //bg!(&topic.name, text);
+        //}
         // A paragraph with a list of attributes will look something like this:
         //   {|
         //   ||Domain||[[Domain:=Serverless]], [[Domain:=Function as a Service / FaaS]]||
@@ -427,6 +486,8 @@ impl BuildProcess {
                 return Err(format!("{} Seems to be the start of a table but there are no rows.", context));
             }
             let is_attributes = lines[1].contains(CT_ATTRIBUTE_ASSIGN);
+            // if topic.name.contains("Zero") { //bg!(is_attributes); }
+
             let mut rows = vec![];
             for line_index in 1..lines.len() {
                 let line = lines[line_index].trim();
@@ -434,7 +495,7 @@ impl BuildProcess {
                     break;
                 }
                 if !line.starts_with(CT_TABLE_DELIM) {
-                    return Err(format!("{} Seems to be a table but the line doesn't start with the delimiter.", context));
+                    return Err(format!("{} Seems to be a table but the line doesn't start with the delimiter at line {}: \"{}\"", context, line_index, line));
                 }
                 let line = between(line, CT_TABLE_DELIM, CT_TABLE_DELIM);
                 let split = split_trim(line, CT_TABLE_DELIM);
@@ -465,6 +526,7 @@ impl BuildProcess {
                         attribute.push(value);
                     }
                 }
+                // if topic.name.contains("Zero") { //bg!(&topic.attributes); }
                 Ok(Some(Paragraph::Attributes))
             } else {
                 // Normal (non-attribute) table.
@@ -537,6 +599,9 @@ impl BuildProcess {
     */
 
     fn paragraph_as_list_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
+        // if text.contains("Determine if number of messages") {
+        //     dbg!(&text);
+        // }
         // Example with two levels (the first level has one space before the asterisk):
         // Projects:
         //   * [[Android]]
@@ -647,7 +712,7 @@ impl BuildProcess {
             return Ok(None);
         }
         // Assume it's an internal link, either to a topic or a section of a topic.
-        let (dest, label) = util::parse::split_1_or_2_trim(&text, CT_PIPE);
+        let (mut dest, label) = util::parse::split_1_or_2_trim(&text, CT_PIPE);
         if dest.contains(CT_DELIM_SECTION_IN_LINK) {
             // Link to a section of a topic.
             let (mut link_topic_name, link_section_name) = util::parse::split_2_trim(dest, CT_DELIM_SECTION_IN_LINK);
@@ -655,9 +720,15 @@ impl BuildProcess {
                 // This is a link to a section in the same topic.
                 link_topic_name = topic_name;
             }
+            if link_topic_name.starts_with("_") {
+                link_topic_name = &link_topic_name[1..];
+            }
             return Ok(Some(Link::new_section(label,&self.namespace_main, link_topic_name, link_section_name)));
         } else {
             // Link to a whole topic.
+            if dest.starts_with("_") {
+                dest = &dest[1..];
+            }
             return Ok(Some(Link::new_topic(label, &self.namespace_main, dest)));
         }
     }
