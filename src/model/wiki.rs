@@ -164,6 +164,7 @@ impl Wiki {
                         self.check_topic_link(&mut errors, "outbound_links", &this_topic_key, topic_key);
                     },
                     LinkType::Section { section_key } => {
+                        //bg!(&section_key);
                         if !self.has_section(section_key) {
                             errors.add(&topic.get_key(), &format!("wiki::check_links(): Section link {} not found.", section_key));
                         }
@@ -307,7 +308,7 @@ impl Wiki {
 
     pub fn has_section(&self, section_key: &SectionKey) -> bool {
         if section_key.section_name.to_lowercase().contains("cognitive") {
-            dbg!(section_key, self.has_topic(&section_key.topic_key));
+            //bg!(section_key, self.has_topic(&section_key.topic_key));
         }
         if !self.has_topic(&section_key.topic_key) {
             return false;

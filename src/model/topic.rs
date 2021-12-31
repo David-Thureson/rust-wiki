@@ -59,21 +59,21 @@ impl Topic {
 
     pub fn has_section(&self, section_name: &str) -> bool {
         let section_name = section_name.to_lowercase();
-        let debug = section_name.contains("cognitive");
-        if debug { dbg!(&self.name, &section_name); }
+        // let debug = section_name.contains("cognitive");
+        // if debug { //bg!(&self.name, &section_name); }
         for paragraph in self.paragraphs.iter() {
             match paragraph {
                 Paragraph::SectionHeader { name, .. } => {
-                    if debug { dbg!(&name); }
+                    // if debug { //bg!(&name); }
                     if name.to_lowercase() == section_name {
-                        if debug { dbg!("found section"); }
+                        // if debug { //bg!("found section"); }
                         return true;
                     }
                 },
                 _ => {},
             }
         }
-        if debug { dbg!("didn't find section"); }
+        // if debug { //bg!("didn't find section"); }
         false
     }
 
@@ -149,7 +149,7 @@ impl SectionKey {
 
         Self {
             topic_key: TopicKey::new(namespace, topic_name),
-            section_name: section_name.to_lowercase().to_string(),
+            section_name: section_name.to_string(),
         }
     }
 
