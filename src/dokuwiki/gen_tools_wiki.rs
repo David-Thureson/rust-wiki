@@ -3,7 +3,7 @@ use crate::model;
 use crate::connectedtext::to_model::build_model;
 use crate::model::NAMESPACE_NAVIGATION;
 use crate::dokuwiki::gen_from_model::GenFromModel;
-use crate::dokuwiki::{CategoryTree, CategoryTreeNode, page_link};
+use crate::dokuwiki::page_link;
 use util::*;
 use std::cell::Ref;
 
@@ -23,12 +23,11 @@ fn gen_from_connectedtext(_copy_image_files_to_local_wiki: bool, topic_limit: Op
     gen_start_page(&model);
     // gen_recent_topics_page();
     gen_all_topics_page(&model);
-    let category_tree = model.category_tree(&model.main_namespace);
 
     // category_tree.report_by_node_count();
     // panic!();
 
-    gen_categories_page(&model, &category_tree);
+    gen_categories_page(&model);
     // gen_terms_page();
     GenFromModel::new(&model).gen();
     println!("\nDone generating wiki.");
@@ -54,20 +53,26 @@ fn gen_all_topics_page(model: &model::Wiki) {
     page.write();
 }
 
-fn gen_categories_page(model: &model::Wiki, category_tree: &CategoryTree) {
+fn gen_categories_page(model: &model::Wiki) {
     let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_CATEGORIES,None);
     // Sort the top-level categories by name.
-    let mut top_nodes = category_tree.top_nodes.clone();
+    let mut top_nodes = model.category_tree().top_nodes.clone();
     top_nodes.sort_by_cached_key(|node_rc| b!(node_rc).item.to_string());
-    for node in top_nodes.iter() {
-        gen_category_subtree(&mut page, b!(node));
+    for node_rc in top_nodes.iter() {
+        gen_category_subtree(&mut page, 1, b!(node_rc));
     }
     page.write();
 }
 
-fn gen_category_subtree(page: &mut wiki::WikiGenPage, node: Ref<CategoryTreeNode>) {
-    let line = format!("{}", page_link(&node.item.namespace, &node.item.topic_name, None));
-    page.add_list_item_unordered(node.depth() + 1, &line);
+fn gen_category_subtree(page: &mut wiki::WikiGenPage, depth: usize, node: Ref<model::CategoryTreeNode>) {
+    let link = page_link(&node.item.namespace, &node.item.topic_name, None);
+    let topic_count = node.subtree_leaf_count();
+    let line = format!("{} ({})", link, util::format::format_count(topic_count));
+    page.add_list_item_unordered(depth + 1, &line);
+    for child_node_rc in node.child_nodes.iter()
+        .filter(|child_node_rc| !b!(child_node_rc).is_leaf()){
+        gen_category_subtree(page, depth + 1, b!(child_node_rc));
+    }
 }
 
 fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Wiki, use_list: bool, include_start_page: bool) {

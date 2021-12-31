@@ -2,6 +2,8 @@ use super::*;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
+use std::rc::Rc;
+use std::cell::RefCell;
 
 pub struct Topic {
     pub parents: Vec<TopicKey>,
@@ -12,6 +14,7 @@ pub struct Topic {
     pub paragraphs: Vec<Paragraph>,
     pub inbound_topic_keys: Vec<TopicKey>,
     pub outbound_links: Vec<Link>,
+    pub category_tree_node: Option<Rc<RefCell<CategoryTreeNode>>>,
     pub subtopics: Vec<TopicKey>,
     pub combo_subtopics: Vec<TopicKey>,
     pub listed_topics: Vec<TopicKey>,
@@ -42,6 +45,7 @@ impl Topic {
             paragraphs: vec![],
             inbound_topic_keys: vec![],
             outbound_links: vec![],
+            category_tree_node: None,
             subtopics: vec![],
             combo_subtopics: vec![],
             listed_topics: vec![],
@@ -55,6 +59,10 @@ impl Topic {
 
     pub fn add_paragraph(&mut self, paragraph: Paragraph) {
         self.paragraphs.push(paragraph);
+    }
+
+    pub fn is_category(&self) -> bool {
+        self.category_tree_node.is_some()
     }
 
     pub fn has_section(&self, section_name: &str) -> bool {

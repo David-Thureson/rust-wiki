@@ -39,6 +39,9 @@ pub use topic_error_list::*;
 pub mod wiki;
 pub use wiki::*;
 
+pub type CategoryTree = util::tree::Tree<TopicKey>;
+pub type CategoryTreeNode = util::tree::TreeNode<TopicKey>;
+
 pub const NAMESPACE_ROOT: &str = "";
 pub const NAMESPACE_UNDECIDED: &str = "{undecided}";
 pub const NAMESPACE_BOOK: &str = ":book";

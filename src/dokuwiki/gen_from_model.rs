@@ -87,7 +87,21 @@ impl <'a> GenFromModel<'a> {
     fn add_paragraphs(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
         let msg_func_unexpected = |variant_name: &str| format!("In gen_from_model::add_paragraph(), unexpected Paragraph variant = \"{}\"", variant_name);
         // let add_error_unexpected = |paragraph_variant: &str| self.add_error(&msg_func_unexpected(paragraph_variant));
+        let mut generated_navigation_paragraphs_added = false;
         for paragraph in topic.paragraphs.iter() {
+            // First see if it's necessary to add generated navigation paragraphs like subtopics
+            // and subcategories.
+            match paragraph {
+                model::Paragraph::List { .. } | model::Paragraph::SectionHeader { .. } => {
+                    // We've gotten past the initial text, if any, so it's a good place to add
+                    // the navigation paragraphs before getting into more detail.
+                    if !generated_navigation_paragraphs_added {
+                        self.add_generated_navigation_paragraphs(page, topic);
+                        generated_navigation_paragraphs_added = true;
+                    }
+                },
+                _ => {},
+            }
             match paragraph {
                 model::Paragraph::Attributes => {},
                 model::Paragraph::Breadcrumbs => {}, // This was already added to the page.
@@ -127,6 +141,20 @@ impl <'a> GenFromModel<'a> {
                     self.add_error(&msg_func_unexpected("Unknown"));
                 }
             }
+        }
+        // We've gotten to the end of the topic without running into the kind of paragraph that
+        // signals we're about to get into the detail parts of the page, so we haven't yet added
+        // the navigation paragraphs.
+        if !generated_navigation_paragraphs_added {
+            self.add_generated_navigation_paragraphs(page, topic);
+        }
+    }
+
+    fn add_generated_navigation_paragraphs(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
+        // These would be things like lists of subtopics, combinations, subcategories, and topics
+        // within a given category.
+        if topic.is_category() {
+
         }
     }
 

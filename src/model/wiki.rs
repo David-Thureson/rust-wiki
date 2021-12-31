@@ -13,6 +13,7 @@ pub struct Wiki {
     pub namespaces: BTreeMap<String, String>,
     pub topics: BTreeMap<TopicKey, Topic>,
     pub categories: BTreeMap<String, Category>,
+    category_tree: Option<CategoryTree>,
     pub attributes: BTreeMap<String, Attribute>,
 }
 
@@ -24,6 +25,7 @@ impl Wiki {
             namespaces: Default::default(),
             topics: Default::default(),
             categories: Default::default(),
+            category_tree: None,
             attributes: Default::default(),
         };
         wiki.add_namespace(main_namespace);
@@ -376,18 +378,29 @@ impl Wiki {
         self.update_internal_links(&topic_keys);
     }
 
-    pub fn category_tree(&self, namespace: &str) -> util::tree::Tree<TopicKey> {
+    pub fn make_category_tree(&mut self) {
         let mut parent_child_pairs = vec![];
         for topic in self.topics.values() {
             if let Some(category_name) = &topic.category {
-                let category_topic_key = TopicKey::new(namespace, category_name);
+                let category_topic_key = TopicKey::new(&self.main_namespace, category_name);
                 parent_child_pairs.push((category_topic_key, topic.get_key()));
             }
         }
         let tree = util::tree::Tree::create(parent_child_pairs, true);
-        tree
+        // Have each category topic point to its node in the category tree.
+        for topic in self.topics.values_mut() {
+            topic.category_tree_node = tree.get_node(&topic.get_key());
+        }
+        self.category_tree = Some(tree);
     }
-    
+
+    pub fn category_tree(&self) -> &CategoryTree {
+         match &self.category_tree {
+             Some(category_tree) => category_tree,
+             None => panic!("The wiki model has no category tree. Call make_category_tree() after loading all of the topics."),
+         }
+    }
+
     /*
     pub fn find_topic_rc(&self, namespace_name: &str, topic_name: &str, context: &str) -> Result<TopicRc, String> {
         let key = TopicKey::new(namespace_name, topic_name);

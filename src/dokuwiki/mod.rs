@@ -14,9 +14,6 @@ pub use parse::*;
 //pub mod model;
 //pub use model::*;
 
-pub type CategoryTree = util::tree::Tree<crate::model::TopicKey>;
-pub type CategoryTreeNode = util::tree::TreeNode<crate::model::TopicKey>;
-
 pub const PAGE_NAME_SIDEBAR: &str = "Sidebar";
 pub const PAGE_NAME_MAIN: &str = "Main";
 pub const PAGE_NAME_START:   &str = "Start";
