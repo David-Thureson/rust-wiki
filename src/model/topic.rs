@@ -1,9 +1,10 @@
+use crate::*;
 use super::*;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
-use std::cell::RefCell;
+use std::cell::{RefCell, Ref};
 
 pub struct Topic {
     pub parents: Vec<TopicKey>,
@@ -65,6 +66,50 @@ impl Topic {
         self.category_tree_node.is_some()
     }
 
+    pub fn direct_subcategory_nodes(&self) -> Vec<Rc<RefCell<CategoryTreeNode>>> {
+        // Get all of the topics corresponding to the non-leaf nodes directly under this one.
+        match &self.category_tree_node {
+            Some(node_rc) => {
+                let node = b!(node_rc);
+                // If the child topic is a category topic, it will have at least one child of its
+                // own in the category tree and thus will not be a leaf.
+                let filter_func = |found_node: Ref<CategoryTreeNode>| !found_node.is_leaf();
+                let mut child_nodes = node.get_direct_child_nodes(&filter_func);
+                child_nodes.sort_by_cached_key(|child_node_rc| b!(child_node_rc).item.topic_name.clone());
+                child_nodes
+            },
+            None => vec![],
+        }
+    }
+
+    pub fn direct_topics_in_category(&self) -> Vec<TopicKey> {
+        match &self.category_tree_node {
+            Some(node_rc) => {
+                let node = b!(node_rc);
+                // If the child topic is a category topic, it will have at least one child of its
+                // own in the category tree and thus will not be a leaf.
+                let filter_func = |found_node: Ref<CategoryTreeNode>| found_node.is_leaf();
+                let mut topic_keys = node.get_direct_child_items(&filter_func);
+                TopicKey::sort_list_by_topic_name(&mut topic_keys);
+                topic_keys
+            },
+            None => vec![],
+        }
+    }
+
+    pub fn indirect_topics_in_category(&self) -> Vec<TopicKey> {
+        match &self.category_tree_node {
+            Some(node_rc) => {
+                let node = b!(node_rc);
+                let filter_func = |found_node: Ref<CategoryTreeNode>| found_node.is_leaf();
+                let mut topic_keys = node.get_indirect_child_items(&filter_func);
+                TopicKey::sort_list_by_topic_name(&mut topic_keys);
+                topic_keys
+            },
+            None => vec![],
+        }
+    }
+
     pub fn has_section(&self, section_name: &str) -> bool {
         let section_name = section_name.to_lowercase();
         // let debug = section_name.contains("cognitive");
@@ -120,6 +165,10 @@ impl TopicKey {
 
     pub fn get_key(&self) -> String {
         self.to_string().to_lowercase()
+    }
+
+    pub fn sort_list_by_topic_name(list: &mut Vec<TopicKey>) {
+        list.sort_by_cached_key(|topic_key| topic_key.topic_name.to_lowercase());
     }
 }
 

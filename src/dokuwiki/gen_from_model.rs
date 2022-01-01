@@ -1,6 +1,10 @@
+use crate::*;
 use crate::{model, Itertools};
 use crate::dokuwiki as wiki;
-use crate::model::{TextBlock, TopicKey};
+use crate::dokuwiki::page_link;
+use crate::model::CategoryTreeNode;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 pub struct GenFromModel<'a> {
     model: &'a model::Wiki,
@@ -92,7 +96,8 @@ impl <'a> GenFromModel<'a> {
             // First see if it's necessary to add generated navigation paragraphs like subtopics
             // and subcategories.
             match paragraph {
-                model::Paragraph::List { .. } | model::Paragraph::SectionHeader { .. } => {
+                // model::Paragraph::List { .. } | model::Paragraph::SectionHeader { .. } => {
+                model::Paragraph::SectionHeader { .. } => {
                     // We've gotten past the initial text, if any, so it's a good place to add
                     // the navigation paragraphs before getting into more detail.
                     if !generated_navigation_paragraphs_added {
@@ -111,8 +116,8 @@ impl <'a> GenFromModel<'a> {
                 }
                 model::Paragraph::GenStart => {},
                 model::Paragraph::GenEnd => {},
-                model::Paragraph::List { type_: _, header, items} => {
-                    self.add_list(page, header, items);
+                model::Paragraph::List { type_, header, items} => {
+                    self.add_list(page, type_, header, items);
                 },
                 model::Paragraph::Placeholder => {
                     self.add_error(&msg_func_unexpected("Placeholder"));
@@ -154,7 +159,39 @@ impl <'a> GenFromModel<'a> {
         // These would be things like lists of subtopics, combinations, subcategories, and topics
         // within a given category.
         if topic.is_category() {
+            Self::add_category_list(page, &topic.direct_subcategory_nodes(), model::LIST_LABEL_SUBCATEGORIES);
+            let direct_topics = topic.direct_topics_in_category();
+            let indirect_topics = topic.indirect_topics_in_category();
+            Self::add_topic_list(page, &direct_topics, model::LIST_LABEL_CATEGORY_TOPICS);
+            if indirect_topics.len() > direct_topics.len() {
+                Self::add_topic_list(page, &indirect_topics, model::LIST_LABEL_CATEGORY_TOPICS_ALL);
+            }
+        }
+        Self::add_topic_list(page, &topic.subtopics,model::LIST_LABEL_SUBTOPICS);
+        Self::add_topic_list(page, &topic.combo_subtopics,model::LIST_LABEL_COMBINATIONS);
+    }
 
+    fn add_topic_list(page: &mut wiki::WikiGenPage, topic_keys: &Vec<model::TopicKey>, label: &str) {
+        if !topic_keys.is_empty() {
+            page.add_line(label);
+            for topic_key in topic_keys.iter() {
+                page.add_list_item_unordered(1, &page_link(&topic_key.namespace, &topic_key.topic_name, None));
+            }
+            page.add_linefeed();
+        }
+    }
+
+    fn add_category_list(page: &mut wiki::WikiGenPage, nodes: &Vec<Rc<RefCell<CategoryTreeNode>>>, label: &str) {
+        if !nodes.is_empty() {
+            page.add_line(label);
+            for node_rc in nodes.iter() {
+                let node = b!(node_rc);
+                let topic_count = node.subtree_leaf_count();
+                let topic_key = &node.item;
+                let page_link = page_link(&topic_key.namespace, &topic_key.topic_name, None);
+                page.add_list_item_unordered(1, &format!("{} ({})", &page_link, topic_count));
+            }
+            page.add_linefeed();
         }
     }
 
@@ -180,17 +217,22 @@ impl <'a> GenFromModel<'a> {
         page.add_paragraph(wiki::DELIM_CODE_END);
     }
 
-    fn add_list(&mut self, page: &mut wiki::WikiGenPage, header: &model::TextBlock, items: &Vec<model::ListItem>) {
-        page.add(&self.text_block_to_markup(header));
-        page.add_linefeed();
-        for item in items.iter() {
-            let markup = &self.text_block_to_markup(&item.block);
-            page.add_list_item_unordered(item.depth,markup);
+    fn add_list(&mut self, page: &mut wiki::WikiGenPage, type_: &model::ListType, header: &model::TextBlock, items: &Vec<model::ListItem>) {
+        match type_ {
+            model::ListType::Subtopics | model::ListType::Combinations => {}, // These are generated elsewhere.
+            _ => {
+                page.add(&self.text_block_to_markup(header));
+                page.add_linefeed();
+                for item in items.iter() {
+                    let markup = &self.text_block_to_markup(&item.block);
+                    page.add_list_item_unordered(item.depth, markup);
+                }
+                page.add_linefeed();
+            }
         }
-        page.add_linefeed();
     }
 
-    fn add_table(&mut self, page: &mut wiki::WikiGenPage, has_header: bool, rows:&Vec<Vec<TextBlock>>) {
+    fn add_table(&mut self, page: &mut wiki::WikiGenPage, has_header: bool, rows:&Vec<Vec<model::TextBlock>>) {
         for (index, cells) in rows.iter().enumerate() {
             let cells_as_markup = cells.iter()
                 .map(|cell| self.text_block_to_markup(cell))
@@ -215,6 +257,7 @@ impl <'a> GenFromModel<'a> {
             },
             model::LinkType::Section { section_key } => {
                 let text = wiki::gen::section_link(section_key.namespace(),section_key.topic_name(), &section_key.section_name, label);
+                //bg!(&text);
                 text
             },
             model::LinkType::External { url } => {
@@ -246,7 +289,7 @@ impl <'a> GenFromModel<'a> {
         self.errors.add(&self.current_topic_key.as_ref().unwrap(),msg);
     }
 
-    pub fn page_link(model: &model::Wiki, topic_key: &TopicKey) -> String {
+    pub fn page_link(model: &model::Wiki, topic_key: &model::TopicKey) -> String {
         let qual_namespace = model.qualify_namespace(&topic_key.namespace);
         let link = wiki::page_link(&qual_namespace, &model.topics.get(topic_key).unwrap().name, None);
         link

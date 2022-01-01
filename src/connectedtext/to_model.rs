@@ -90,6 +90,7 @@ impl BuildProcess {
         self.errors.clear();
         self.check_links(&wiki);
         self.errors.print(Some("After moving navigation and book topics."));
+        wiki.make_category_tree();
         wiki
     }
 

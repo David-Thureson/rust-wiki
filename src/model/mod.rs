@@ -48,3 +48,9 @@ pub const NAMESPACE_BOOK: &str = ":book";
 pub const NAMESPACE_NAVIGATION: &str = ":nav";
 
 pub const ATTRIBUTE_VALUE_MISSING: &str = "{missing}";
+
+pub const LIST_LABEL_SUBCATEGORIES: &str = "Subcategories:";
+pub const LIST_LABEL_CATEGORY_TOPICS: &str = "Topics:";
+pub const LIST_LABEL_CATEGORY_TOPICS_ALL: &str = "All Topics:";
+pub const LIST_LABEL_SUBTOPICS: &str = "Subtopics:";
+pub const LIST_LABEL_COMBINATIONS: &str = "Combinations:";

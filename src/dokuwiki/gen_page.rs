@@ -17,13 +17,12 @@ impl WikiGenPage {
             content: "".to_string()
         };
         let headline = headline.unwrap_or(topic_name);
-        page.add_headline(headline, 1);
+        page.add_headline(headline, 0);
         page
     }
 
     pub fn add_headline(&mut self, text: &str, level: usize) {
         // Like "----- Categories -----" where a level 1 (top) headline has five hyphens.
-        debug_assert!(level >= 1);
         debug_assert!(level <= 5);
         let equal_signs = "=".repeat(6 - level);
         self.content.push_str(&format!("{}{}{}\n\n", equal_signs, text, equal_signs));
