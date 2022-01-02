@@ -1,6 +1,7 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 
+use crate::*;
 use super::*;
 use std::collections::BTreeMap;
 // use crate::connectedtext::NAMESPACE_TOOLS;
@@ -386,7 +387,9 @@ impl Wiki {
                 parent_child_pairs.push((category_topic_key, topic.get_key()));
             }
         }
-        let tree = util::tree::Tree::create(parent_child_pairs, true);
+        let mut tree = util::tree::Tree::create(parent_child_pairs, true);
+        tree.sort_recursive(&|node: &Rc<RefCell<CategoryTreeNode>>| b!(node).item.topic_name.clone());
+        //tree.sort_recursive(&|node: &Rc<RefCell<CategoryTreeNode>>| util::format::format_zeros(b!(node).subtree_node_count(),4)); // Test: sort by subtree size.
         // Have each category topic point to its node in the category tree.
         for topic in self.topics.values_mut() {
             topic.category_tree_node = tree.get_node(&topic.get_key());

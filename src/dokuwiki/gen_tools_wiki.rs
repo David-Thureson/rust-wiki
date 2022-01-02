@@ -55,15 +55,22 @@ fn gen_all_topics_page(model: &model::Wiki) {
 
 fn gen_categories_page(model: &model::Wiki) {
     let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_CATEGORIES,None);
+    // model.category_tree().print_counts_to_depth();
+    // model.category_tree().print_with_items(None);
+    panic!();
+
+    /*
     // Sort the top-level categories by name.
     let mut top_nodes = model.category_tree().top_nodes.clone();
     top_nodes.sort_by_cached_key(|node_rc| b!(node_rc).item.to_string());
     for node_rc in top_nodes.iter() {
         gen_category_subtree(&mut page, 1, b!(node_rc));
     }
+     */
     page.write();
 }
 
+/*
 fn gen_category_subtree(page: &mut wiki::WikiGenPage, depth: usize, node: Ref<model::CategoryTreeNode>) {
     let link = page_link(&node.item.namespace, &node.item.topic_name, None);
     let topic_count = node.subtree_leaf_count();
@@ -74,6 +81,7 @@ fn gen_category_subtree(page: &mut wiki::WikiGenPage, depth: usize, node: Ref<mo
         gen_category_subtree(page, depth + 1, b!(child_node_rc));
     }
 }
+*/
 
 fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Wiki, use_list: bool, include_start_page: bool) {
     let mut links = vec![];
