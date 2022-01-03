@@ -24,9 +24,11 @@ fn gen_from_connectedtext(_copy_image_files_to_local_wiki: bool, topic_limit: Op
     // category_tree.report_by_node_count();
     // panic!();
 
-    gen_categories_page(&model);
+    let mut gen = GenFromModel::new(&model);
+    gen.gen_categories_page();
+    gen.gen_subtopics_page();
     // gen_terms_page();
-    GenFromModel::new(&model).gen();
+    gen.gen();
     println!("\nDone generating wiki.");
 }
 
@@ -47,20 +49,6 @@ fn gen_start_page(model: &model::Wiki) {
 fn gen_all_topics_page(model: &model::Wiki) {
     let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_ALL_TOPICS,None);
     add_all_topics(&mut page, model);
-    page.write();
-}
-
-fn gen_categories_page(model: &model::Wiki) {
-    let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_CATEGORIES,None);
-    // model.category_tree().print_counts_to_depth();
-    // model.category_tree().print_with_items(None);
-    // for node_rc in model.category_tree().top_nodes.iter() {
-    //     gen_category_subtree(&mut page, 1, b!(node_rc));
-    //}
-    // model.category_tree().print_with_items(None);
-    let nodes = model.category_tree().unroll_to_depth(None);
-    //bg!(nodes.len());
-    GenFromModel::gen_partial_topic_tree(&mut page, &nodes, 0, true, None);
     page.write();
 }
 
@@ -88,6 +76,7 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Wiki, use_li
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_RECENT_TOPICS, None),
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_ALL_TOPICS,None),
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_CATEGORIES, None),
+        wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_SUBTOPICS,None),
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_TERMS, None),
     ]);
     if use_list {

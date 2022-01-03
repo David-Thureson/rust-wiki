@@ -1,7 +1,6 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 
-use crate::*;
 use super::*;
 use std::collections::BTreeMap;
 // use crate::connectedtext::NAMESPACE_TOOLS;
@@ -15,6 +14,7 @@ pub struct Wiki {
     pub topics: BTreeMap<TopicKey, Topic>,
     pub categories: BTreeMap<String, Category>,
     category_tree: Option<TopicTree>,
+    subtopic_tree: Option<TopicTree>,
     pub attributes: BTreeMap<String, Attribute>,
 }
 
@@ -27,6 +27,7 @@ impl Wiki {
             topics: Default::default(),
             categories: Default::default(),
             category_tree: None,
+            subtopic_tree: None,
             attributes: Default::default(),
         };
         wiki.add_namespace(main_namespace);
@@ -388,8 +389,7 @@ impl Wiki {
             }
         }
         let mut tree = util::tree::Tree::create(parent_child_pairs, true);
-        tree.sort_recursive(&|node: &Rc<RefCell<TopicTreeNode>>| b!(node).item.topic_name.clone());
-        //tree.sort_recursive(&|node: &Rc<RefCell<CategoryTreeNode>>| util::format::format_zeros(b!(node).subtree_node_count(),4)); // Test: sort by subtree size.
+        sort_topic_tree(&mut tree);
         // Have each category topic point to its node in the category tree.
         for topic in self.topics.values_mut() {
             topic.category_tree_node = tree.get_node(&topic.get_key());
@@ -397,11 +397,38 @@ impl Wiki {
         self.category_tree = Some(tree);
     }
 
+    pub fn make_subtopic_tree(&mut self) {
+        let mut parent_child_pairs = vec![];
+        for topic in self.topics.values() {
+            // A combination topic will have two parents. Don't include these in the subcategory
+            // tree.
+            if topic.parents.len() == 1 {
+                parent_child_pairs.push((topic.parents[0].clone(), topic.get_key()));
+            }
+        }
+        let mut tree = util::tree::Tree::create(parent_child_pairs, true);
+        sort_topic_tree(&mut tree);
+        // Have each topic with a subtopic point to its node in the subtopic tree.
+        for topic in self.topics.values_mut() {
+            topic.subtopic_tree_node = tree.get_node(&topic.get_key());
+        }
+        // tree.print_counts_to_depth();
+        // tree.print_with_items(None);
+        self.subtopic_tree = Some(tree);
+    }
+
     pub fn category_tree(&self) -> &TopicTree {
-         match &self.category_tree {
-             Some(category_tree) => category_tree,
-             None => panic!("The wiki model has no category tree. Call make_category_tree() after loading all of the topics."),
-         }
+        match &self.category_tree {
+            Some(tree) => tree,
+            None => panic!("The wiki model has no category tree. Call make_category_tree() after loading all of the topics."),
+        }
+    }
+
+    pub fn subtopic_tree(&self) -> &TopicTree {
+        match &self.subtopic_tree {
+            Some(tree) => tree,
+            None => panic!("The wiki model has no subtopic tree. Call make_subtopic_tree() after loading all of the topics."),
+        }
     }
 
     /*

@@ -1,3 +1,5 @@
+use crate::*;
+
 pub mod attribute;
 pub use attribute::*;
 
@@ -38,6 +40,8 @@ pub use topic_error_list::*;
 
 pub mod wiki;
 pub use wiki::*;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 pub type TopicTree = util::tree::Tree<TopicKey>;
 pub type TopicTreeNode = util::tree::TreeNode<TopicKey>;
@@ -54,3 +58,7 @@ pub const LIST_LABEL_CATEGORY_TOPICS: &str = "Topics:";
 pub const LIST_LABEL_CATEGORY_TOPICS_ALL: &str = "All Topics:";
 pub const LIST_LABEL_SUBTOPICS: &str = "Subtopics:";
 pub const LIST_LABEL_COMBINATIONS: &str = "Combinations:";
+
+pub fn sort_topic_tree(tree: &mut TopicTree) {
+    tree.sort_recursive(&|node: &Rc<RefCell<TopicTreeNode>>| b!(node).item.topic_name.clone());
+}

@@ -3,10 +3,9 @@ use crate::{model, Itertools};
 use crate::dokuwiki as wiki;
 use crate::dokuwiki::page_link;
 use std::rc::Rc;
-use std::cell::{RefCell, Ref};
-use crate::model::{LIST_LABEL_SUBCATEGORIES, TopicTreeNode};
+use std::cell::RefCell;
 
-const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
+//const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
 
 pub struct GenFromModel<'a> {
     model: &'a model::Wiki,
@@ -15,12 +14,34 @@ pub struct GenFromModel<'a> {
 }
 
 impl <'a> GenFromModel<'a> {
+
     pub fn new(model: &'a model::Wiki) -> Self {
         Self {
             model: model,
             current_topic_key: None,
             errors: model::TopicErrorList::new(),
         }
+    }
+
+    pub fn gen_categories_page(&self) {
+        let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_CATEGORIES,None);
+        // model.category_tree().print_counts_to_depth();
+        // model.category_tree().print_with_items(None);
+        // for node_rc in model.category_tree().top_nodes.iter() {
+        //     gen_category_subtree(&mut page, 1, b!(node_rc));
+        //}
+        // model.category_tree().print_with_items(None);
+        let nodes = self.model.category_tree().unroll_to_depth(None);
+        //bg!(nodes.len());
+        Self::gen_partial_topic_tree(&mut page, &nodes, 0, true, None);
+        page.write();
+    }
+
+    pub fn gen_subtopics_page(&self) {
+        let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_SUBTOPICS,None);
+        let nodes = self.model.subtopic_tree().unroll_to_depth(None);
+        Self::gen_partial_topic_tree(&mut page, &nodes, 0, false, None);
+        page.write();
     }
 
     pub fn gen(&mut self) {
@@ -204,11 +225,11 @@ impl <'a> GenFromModel<'a> {
         let node_rc = topic.category_tree_node.as_ref().unwrap();
         let node = b!(&node_rc);
         if node.height() > 2 {
-            let filter_func = |node: Ref<TopicTreeNode>| node.height() > 1;
+            // let filter_func = |node: Ref<TopicTreeNode>| node.height() > 1;
             // let max_depth = node.max_depth_for_max_count_filtered(SUBCATEGORY_TREE_MAX_SIZE, &filter_func);
             let nodes = node.unroll_to_depth(None, None);
             //bg!(&topic.name, node.description_line(), max_depth, nodes.len());
-            Self::gen_partial_topic_tree(page, &nodes, node.depth(), true, Some(LIST_LABEL_SUBCATEGORIES));
+            Self::gen_partial_topic_tree(page, &nodes, node.depth(), true, Some(model::LIST_LABEL_SUBCATEGORIES));
         }
     }
 

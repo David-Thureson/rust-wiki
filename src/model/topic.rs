@@ -1,4 +1,3 @@
-use crate::*;
 use super::*;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
@@ -17,6 +16,7 @@ pub struct Topic {
     pub outbound_links: Vec<Link>,
     pub category_tree_node: Option<Rc<RefCell<TopicTreeNode>>>,
     pub subtopics: Vec<TopicKey>,
+    pub subtopic_tree_node: Option<Rc<RefCell<TopicTreeNode>>>,
     pub combo_subtopics: Vec<TopicKey>,
     pub listed_topics: Vec<TopicKey>,
     //pub sections: Vec<SectionRc>,
@@ -48,6 +48,7 @@ impl Topic {
             outbound_links: vec![],
             category_tree_node: None,
             subtopics: vec![],
+            subtopic_tree_node: None,
             combo_subtopics: vec![],
             listed_topics: vec![],
             // sections: Default::default(),

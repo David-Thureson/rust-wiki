@@ -91,6 +91,7 @@ impl BuildProcess {
         self.check_links(&wiki);
         self.errors.print(Some("After moving navigation and book topics."));
         wiki.make_category_tree();
+        wiki.make_subtopic_tree();
         wiki
     }
 
