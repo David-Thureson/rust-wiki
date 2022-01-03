@@ -398,13 +398,44 @@ impl Wiki {
     }
 
     pub fn make_subtopic_tree(&mut self) {
+        for topic in self.topics.values_mut() {
+            topic.subtopics.clear();
+            topic.combo_subtopics.clear();
+        }
         let mut parent_child_pairs = vec![];
+        let mut parent_combo_pairs = vec![];
         for topic in self.topics.values() {
-            // A combination topic will have two parents. Don't include these in the subcategory
-            // tree.
-            if topic.parents.len() == 1 {
-                parent_child_pairs.push((topic.parents[0].clone(), topic.get_key()));
+            let topic_key = topic.get_key();
+            match topic.parents.len() {
+                0 => {
+                    // This is not a subtopic.
+                },
+                1 => {
+                    // Normal (non-combo) subtopic.
+                    let parent_topic_key = topic.parents[0].clone();
+                    parent_child_pairs.push((parent_topic_key, topic_key));
+                },
+                2 => {
+                    // Combination topic.
+                    for parent_topic_key in topic.parents.iter() {
+                        parent_combo_pairs.push((parent_topic_key.clone(), topic_key.clone()))
+                    }
+                    // Don't include combination topics in the subcategory tree.
+                },
+                _ => {
+                    panic!("Found {} parent topics for topic \"{}\". Expected either 1 or 2.", topic.parents.len(), topic.name);
+                }
             }
+        }
+        for (parent_topic_key, child_topic_key) in parent_child_pairs.iter() {
+            self.topics.get_mut(&parent_topic_key).unwrap().subtopics.push(child_topic_key.clone());
+        }
+        for (parent_topic_key, combo_topic_key) in parent_combo_pairs.iter() {
+            self.topics.get_mut(&parent_topic_key).unwrap().combo_subtopics.push(combo_topic_key.clone());
+        }
+        for topic in self.topics.values_mut() {
+            topic.subtopics.sort_by_cached_key(|topic_key| topic_key.topic_name.clone());
+            topic.combo_subtopics.sort_by_cached_key(|topic_key| topic_key.topic_name.clone());
         }
         let mut tree = util::tree::Tree::create(parent_child_pairs, true);
         sort_topic_tree(&mut tree);

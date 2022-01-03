@@ -25,14 +25,7 @@ impl <'a> GenFromModel<'a> {
 
     pub fn gen_categories_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_CATEGORIES,None);
-        // model.category_tree().print_counts_to_depth();
-        // model.category_tree().print_with_items(None);
-        // for node_rc in model.category_tree().top_nodes.iter() {
-        //     gen_category_subtree(&mut page, 1, b!(node_rc));
-        //}
-        // model.category_tree().print_with_items(None);
         let nodes = self.model.category_tree().unroll_to_depth(None);
-        //bg!(nodes.len());
         Self::gen_partial_topic_tree(&mut page, &nodes, 0, true, None);
         page.write();
     }
@@ -191,8 +184,9 @@ impl <'a> GenFromModel<'a> {
                 Self::add_topic_list(page, &indirect_topics, model::LIST_LABEL_CATEGORY_TOPICS_ALL);
             }
         }
-        Self::add_topic_list(page, &topic.subtopics,model::LIST_LABEL_SUBTOPICS);
-        Self::add_topic_list(page, &topic.combo_subtopics,model::LIST_LABEL_COMBINATIONS);
+        // Self::add_topic_list(page, &topic.subtopics,model::LIST_LABEL_SUBTOPICS);
+        Self::add_subtopic_tree(page, topic);
+        Self::add_topic_list(page,&topic.combo_subtopics,model::LIST_LABEL_COMBINATIONS);
     }
 
     fn add_topic_list(page: &mut wiki::WikiGenPage, topic_keys: &Vec<model::TopicKey>, label: &str) {
@@ -230,6 +224,17 @@ impl <'a> GenFromModel<'a> {
             let nodes = node.unroll_to_depth(None, None);
             //bg!(&topic.name, node.description_line(), max_depth, nodes.len());
             Self::gen_partial_topic_tree(page, &nodes, node.depth(), true, Some(model::LIST_LABEL_SUBCATEGORIES));
+        }
+    }
+
+    fn add_subtopic_tree(page: &mut wiki::WikiGenPage, topic: &model::Topic) {
+        if let Some(node_rc) = &topic.subtopic_tree_node {
+            let node = b!(&node_rc);
+            if node.height() > 1 {
+                let nodes = node.unroll_to_depth(None, None);
+                //bg!(&topic.name, node.description_line(), max_depth, nodes.len());
+                Self::gen_partial_topic_tree(page, &nodes, node.depth(), false, Some(model::LIST_LABEL_SUBTOPICS));
+            }
         }
     }
 

@@ -90,6 +90,7 @@ impl BuildProcess {
         self.errors.clear();
         self.check_links(&wiki);
         self.errors.print(Some("After moving navigation and book topics."));
+        // Call the make tree functions after the last call to wiki.catalog_links().
         wiki.make_category_tree();
         wiki.make_subtopic_tree();
         wiki
