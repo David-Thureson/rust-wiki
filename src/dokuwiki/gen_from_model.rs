@@ -2,9 +2,11 @@ use crate::*;
 use crate::{model, Itertools};
 use crate::dokuwiki as wiki;
 use crate::dokuwiki::page_link;
-use crate::model::CategoryTreeNode;
 use std::rc::Rc;
-use std::cell::RefCell;
+use std::cell::{RefCell, Ref};
+use crate::model::{LIST_LABEL_SUBCATEGORIES, TopicTreeNode};
+
+const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
 
 pub struct GenFromModel<'a> {
     model: &'a model::Wiki,
@@ -159,7 +161,8 @@ impl <'a> GenFromModel<'a> {
         // These would be things like lists of subtopics, combinations, subcategories, and topics
         // within a given category.
         if topic.is_category() {
-            Self::add_category_list(page, &topic.direct_subcategory_nodes(), model::LIST_LABEL_SUBCATEGORIES);
+            // Self::add_category_list(page, &topic.direct_subcategory_nodes(), model::LIST_LABEL_SUBCATEGORIES);
+            Self::add_subcategory_tree(page, topic);
             let direct_topics = topic.direct_topics_in_category();
             let indirect_topics = topic.indirect_topics_in_category();
             Self::add_topic_list(page, &direct_topics, model::LIST_LABEL_CATEGORY_TOPICS);
@@ -181,7 +184,8 @@ impl <'a> GenFromModel<'a> {
         }
     }
 
-    fn add_category_list(page: &mut wiki::WikiGenPage, nodes: &Vec<Rc<RefCell<CategoryTreeNode>>>, label: &str) {
+    /*
+    fn add_category_list(page: &mut wiki::WikiGenPage, nodes: &Vec<Rc<RefCell<model::TopicTreeNode>>>, label: &str) {
         if !nodes.is_empty() {
             page.add_line(label);
             for node_rc in nodes.iter() {
@@ -192,6 +196,43 @@ impl <'a> GenFromModel<'a> {
                 page.add_list_item_unordered(1, &format!("{} ({})", &page_link, topic_count));
             }
             page.add_linefeed();
+        }
+    }
+     */
+
+    fn add_subcategory_tree(page: &mut wiki::WikiGenPage, topic: &model::Topic) {
+        let node_rc = topic.category_tree_node.as_ref().unwrap();
+        let node = b!(&node_rc);
+        if node.height() > 2 {
+            let filter_func = |node: Ref<TopicTreeNode>| node.height() > 1;
+            // let max_depth = node.max_depth_for_max_count_filtered(SUBCATEGORY_TREE_MAX_SIZE, &filter_func);
+            let nodes = node.unroll_to_depth(None, None);
+            //bg!(&topic.name, node.description_line(), max_depth, nodes.len());
+            Self::gen_partial_topic_tree(page, &nodes, node.depth(), true, Some(LIST_LABEL_SUBCATEGORIES));
+        }
+    }
+
+    pub fn gen_partial_topic_tree(page: &mut wiki::WikiGenPage, nodes: &Vec<Rc<RefCell<model::TopicTreeNode>>>, start_depth: usize, is_category: bool, label: Option<&str>) {
+        if !nodes.is_empty() {
+            if let Some(label) = label {
+                page.add_line(label);
+            }
+            for node_rc in nodes.iter() {
+                let node = b!(node_rc);
+                let use_this_node = if is_category { !node.is_leaf() } else { true };
+                if use_this_node {
+                    let depth = node.depth() - start_depth;
+                    let link = wiki::page_link(&node.item.namespace, &node.item.topic_name, None);
+                    let topic_count_label = if is_category {
+                        let topic_count = node.subtree_leaf_count();
+                        format!(" ({})", util::format::format_count(topic_count))
+                    } else {
+                        "".to_string()
+                    };
+                    let line = format!("{}{}", link, topic_count_label);
+                    page.add_list_item_unordered(depth + 1, &line);
+                }
+            }
         }
     }
 

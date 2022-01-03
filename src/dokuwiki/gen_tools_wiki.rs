@@ -3,9 +3,6 @@ use crate::model;
 use crate::connectedtext::to_model::build_model;
 use crate::model::NAMESPACE_NAVIGATION;
 use crate::dokuwiki::gen_from_model::GenFromModel;
-use crate::dokuwiki::page_link;
-use util::*;
-use std::cell::Ref;
 
 const PROJECT_NAME: &str = "Tools";
 
@@ -57,16 +54,13 @@ fn gen_categories_page(model: &model::Wiki) {
     let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_CATEGORIES,None);
     // model.category_tree().print_counts_to_depth();
     // model.category_tree().print_with_items(None);
-    panic!();
-
-    /*
-    // Sort the top-level categories by name.
-    let mut top_nodes = model.category_tree().top_nodes.clone();
-    top_nodes.sort_by_cached_key(|node_rc| b!(node_rc).item.to_string());
-    for node_rc in top_nodes.iter() {
-        gen_category_subtree(&mut page, 1, b!(node_rc));
-    }
-     */
+    // for node_rc in model.category_tree().top_nodes.iter() {
+    //     gen_category_subtree(&mut page, 1, b!(node_rc));
+    //}
+    // model.category_tree().print_with_items(None);
+    let nodes = model.category_tree().unroll_to_depth(None);
+    //bg!(nodes.len());
+    GenFromModel::gen_partial_topic_tree(&mut page, &nodes, 0, true, None);
     page.write();
 }
 

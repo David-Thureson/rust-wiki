@@ -14,7 +14,7 @@ pub struct Wiki {
     pub namespaces: BTreeMap<String, String>,
     pub topics: BTreeMap<TopicKey, Topic>,
     pub categories: BTreeMap<String, Category>,
-    category_tree: Option<CategoryTree>,
+    category_tree: Option<TopicTree>,
     pub attributes: BTreeMap<String, Attribute>,
 }
 
@@ -388,7 +388,7 @@ impl Wiki {
             }
         }
         let mut tree = util::tree::Tree::create(parent_child_pairs, true);
-        tree.sort_recursive(&|node: &Rc<RefCell<CategoryTreeNode>>| b!(node).item.topic_name.clone());
+        tree.sort_recursive(&|node: &Rc<RefCell<TopicTreeNode>>| b!(node).item.topic_name.clone());
         //tree.sort_recursive(&|node: &Rc<RefCell<CategoryTreeNode>>| util::format::format_zeros(b!(node).subtree_node_count(),4)); // Test: sort by subtree size.
         // Have each category topic point to its node in the category tree.
         for topic in self.topics.values_mut() {
@@ -397,7 +397,7 @@ impl Wiki {
         self.category_tree = Some(tree);
     }
 
-    pub fn category_tree(&self) -> &CategoryTree {
+    pub fn category_tree(&self) -> &TopicTree {
          match &self.category_tree {
              Some(category_tree) => category_tree,
              None => panic!("The wiki model has no category tree. Call make_category_tree() after loading all of the topics."),

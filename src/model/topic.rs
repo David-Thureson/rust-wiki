@@ -15,7 +15,7 @@ pub struct Topic {
     pub paragraphs: Vec<Paragraph>,
     pub inbound_topic_keys: Vec<TopicKey>,
     pub outbound_links: Vec<Link>,
-    pub category_tree_node: Option<Rc<RefCell<CategoryTreeNode>>>,
+    pub category_tree_node: Option<Rc<RefCell<TopicTreeNode>>>,
     pub subtopics: Vec<TopicKey>,
     pub combo_subtopics: Vec<TopicKey>,
     pub listed_topics: Vec<TopicKey>,
@@ -63,17 +63,17 @@ impl Topic {
     }
 
     pub fn is_category(&self) -> bool {
-        self.category_tree_node.is_some()
+        self.category_tree_node.as_ref().map_or(false, |node| b!(&node).height() > 1)
     }
 
-    pub fn direct_subcategory_nodes(&self) -> Vec<Rc<RefCell<CategoryTreeNode>>> {
+    pub fn direct_subcategory_nodes(&self) -> Vec<Rc<RefCell<TopicTreeNode>>> {
         // Get all of the topics corresponding to the non-leaf nodes directly under this one.
         match &self.category_tree_node {
             Some(node_rc) => {
                 let node = b!(node_rc);
                 // If the child topic is a category topic, it will have at least one child of its
                 // own in the category tree and thus will not be a leaf.
-                let filter_func = |found_node: Ref<CategoryTreeNode>| !found_node.is_leaf();
+                let filter_func = |found_node: Ref<TopicTreeNode>| !found_node.is_leaf();
                 let mut child_nodes = node.get_direct_child_nodes(&filter_func);
                 child_nodes.sort_by_cached_key(|child_node_rc| b!(child_node_rc).item.topic_name.clone());
                 child_nodes
@@ -88,7 +88,7 @@ impl Topic {
                 let node = b!(node_rc);
                 // If the child topic is a category topic, it will have at least one child of its
                 // own in the category tree and thus will not be a leaf.
-                let filter_func = |found_node: Ref<CategoryTreeNode>| found_node.is_leaf();
+                let filter_func = |found_node: Ref<TopicTreeNode>| found_node.is_leaf();
                 let mut topic_keys = node.get_direct_child_items(&filter_func);
                 TopicKey::sort_list_by_topic_name(&mut topic_keys);
                 topic_keys
@@ -101,7 +101,7 @@ impl Topic {
         match &self.category_tree_node {
             Some(node_rc) => {
                 let node = b!(node_rc);
-                let filter_func = |found_node: Ref<CategoryTreeNode>| found_node.is_leaf();
+                let filter_func = |found_node: Ref<TopicTreeNode>| found_node.is_leaf();
                 let mut topic_keys = node.get_indirect_child_items(&filter_func);
                 TopicKey::sort_list_by_topic_name(&mut topic_keys);
                 topic_keys
