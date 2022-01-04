@@ -82,7 +82,7 @@ impl WikiReport {
     fn attribute_breakdown(&self, wiki: &Wiki, depth: usize) {
         let mut groups = util::group::Grouper::new("Attributes");
         for topic in wiki.topics.values() {
-            for (name, values) in topic.attributes.iter() {
+            for (name, values) in topic.temp_attributes.iter() {
                 groups.record_entry_with_count(name, values.len());
             }
         }
@@ -104,5 +104,15 @@ impl WikiReport {
         groups.print_by_count(depth, Some(5));
     }
 
+}
+
+pub fn report_attributes(wiki: &Wiki) {
+    for attribute_type in wiki.attributes.values() {
+        println!("\n{}: {} ({})", attribute_type.name, attribute_type.value_type.get_variant_name(), attribute_type.get_topic_count());
+        for (value, topics) in attribute_type.values.iter() {
+            let topic_list = topics.iter().map(|topic_key| format!("\"{}\"", topic_key.topic_name)).join(", ");
+            println!("\t{} ({}) in {}", value, topics.len(), topic_list);
+        }
+    }
 }
 

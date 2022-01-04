@@ -29,6 +29,14 @@ impl TopicErrorList {
         self.errors.clear();
     }
 
+    pub fn len(&self) -> usize {
+        self.errors.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.errors.is_empty()
+    }
+
     pub(crate) fn print(&self, context: Option<&str>) {
         let context = context.map_or("".to_string(), |context| format!(" for context = \"{}\"", context));
         if self.errors.is_empty() {

@@ -8,6 +8,7 @@ use util::parse::{split_3_two_delimiters_rc, split_trim, between};
 use crate::Itertools;
 #[allow(unused_imports)]
 use crate::connectedtext::report::report_category_tree;
+use crate::model::report::report_attributes;
 
 const CT_BRACKETS_LEFT: &str = "[[";
 const CT_BRACKETS_RIGHT: &str = "]]";
@@ -93,6 +94,12 @@ impl BuildProcess {
         // Call the make tree functions after the last call to wiki.catalog_links().
         wiki.make_category_tree();
         wiki.make_subtopic_tree();
+        //bg!(&wiki.attributes);
+        let attr_errors = wiki.catalog_attributes();
+        attr_errors.print(Some("wiki.catalog_attributes()"));
+        if attr_errors.is_empty() {
+            report_attributes(&wiki);
+        }
         wiki
     }
 
@@ -511,22 +518,24 @@ impl BuildProcess {
                 for row in rows.iter_mut() {
                     let name = row.remove(0);
                     let values = row.remove(0);
+                    // let debug = name.eq("Date") && values.eq("[[Date:=20160824]], [[Date:=20160505]]");
                     assert!(row.is_empty());
-                    let attribute = topic.attributes.entry(name.clone())
+                    let attribute = topic.temp_attributes.entry(name.clone())
                         .or_insert(vec![]);
                     let values = between(&values, CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT);
-                    let bracket_delim_with_space = format!("{}, {}", CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT);
-                    let bracket_delim_no_space = format!("{},{}", CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT);
+                    let bracket_delim_with_space = format!("{}, {}", CT_BRACKETS_RIGHT, CT_BRACKETS_LEFT);
+                    let bracket_delim_no_space = format!("{},{}", CT_BRACKETS_RIGHT, CT_BRACKETS_LEFT);
                     let assignments = values.replace(&bracket_delim_with_space, &bracket_delim_no_space);
+                    // if debug { //bg!(values, &bracket_delim_with_space, &bracket_delim_no_space, &assignments); };
                     for assignment in assignments.split(&bracket_delim_no_space) {
-                        let mut value = util::parse::after(assignment, CT_ATTRIBUTE_ASSIGN).trim().to_string();
-                        if value.contains("*") {
-                            value = "".to_string();
+                        let value = util::parse::after(assignment, CT_ATTRIBUTE_ASSIGN).trim().to_string();
+                        // if debug { //bg!(&value); }
+                        if !value.contains("*") && !value.is_empty() {
+                            if attribute.contains(&value) {
+                                return Err(format!("{} In attribute \"{}\", duplicated value \"{}\".", context, name, value));
+                            }
+                            attribute.push(value);
                         }
-                        if attribute.contains(&value) {
-                            return Err(format!("{} In attribute \"{}\", duplicated value \"{}\".", context, name, value));
-                        }
-                        attribute.push(value);
                     }
                 }
                 // if topic.name.contains("Zero") { //bg!(&topic.attributes); }

@@ -15,7 +15,7 @@ pub struct Wiki {
     pub categories: BTreeMap<String, Category>,
     category_tree: Option<TopicTree>,
     subtopic_tree: Option<TopicTree>,
-    pub attributes: BTreeMap<String, Attribute>,
+    pub attributes: BTreeMap<String, AttributeType>,
 }
 
 impl Wiki {
@@ -294,6 +294,31 @@ impl Wiki {
             }
         }
         group
+    }
+
+    pub fn catalog_attributes(&mut self) -> TopicErrorList {
+        let mut errors = TopicErrorList::new();
+        self.attributes.clear();
+        for topic in self.topics.values_mut() {
+            topic.attributes.clear();
+            for (temp_attr_name, temp_attr_values) in topic.temp_attributes.iter()
+                    .filter(|(_name, values)| !values.is_empty()) {
+                let attribute_type = self.attributes.entry(temp_attr_name.clone())
+                    .or_insert({
+                        let value_type = AttributeType::value_to_presumed_type(temp_attr_name,&*temp_attr_values[0]);
+                        AttributeType::new(temp_attr_name, &value_type)
+                    });
+                let mut values_for_topic = vec![];
+                for temp_value in temp_attr_values.iter() {
+                    match attribute_type.add_value(temp_value,&topic.get_key()) {
+                        Ok(canonical_value) => { values_for_topic.push(canonical_value) },
+                        Err(msg) => { errors.add(&topic.get_key(), &msg)}
+                    };
+                }
+                topic.attributes.push(AttributeInstance::new(temp_attr_name, values_for_topic));
+            }
+        }
+        errors
     }
 
     pub fn has_topic(&self, topic_key: &TopicKey) -> bool {
