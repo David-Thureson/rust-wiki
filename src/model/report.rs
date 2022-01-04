@@ -119,8 +119,8 @@ pub fn report_attributes(wiki: &Wiki) {
     // Print the names of the string attribute types as a list of quoted strings.
     // println!("{}", wiki.attributes.iter().filter(|(_name, type_)| type_.value_type == AttributeValueType::String).map(|(name, _type_)| format!("\"{}\"", name)).join(", "));
     // Print the names of the date attribute types as a list of quoted strings.
-    // println!("{}", wiki.attributes.iter().filter(|(_name, type_)| type_.value_type == AttributeValueType::Date).map(|(name, _type_)| format!("\"{}\"", name)).join(", "));
+    println!("{}", wiki.attributes.iter().filter(|(_name, type_)| type_.value_type == AttributeValueType::Date).map(|(name, _type_)| format!("\"{}\"", name)).join(", "));
     // Print the names of the year attribute types as a list of quoted strings.
-    println!("{}", wiki.attributes.iter().filter(|(_name, type_)| type_.value_type == AttributeValueType::Year).map(|(name, _type_)| format!("\"{}\"", name)).join(", "));
+    // println!("{}", wiki.attributes.iter().filter(|(_name, type_)| type_.value_type == AttributeValueType::Year).map(|(name, _type_)| format!("\"{}\"", name)).join(", "));
 }
 

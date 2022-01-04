@@ -53,21 +53,49 @@ impl <'a> GenFromModel<'a> {
     }
 
     pub fn gen_attr_date_page(&self) {
-        /*
-        let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_ATTR_YEAR,None);
-        let values = self.model.get_distinct_attr_values(&AttributeValueType::Year);
-        for value in values.iter() {
-            let display_value = model::AttributeType::value_to_display_string(&AttributeValueType::Date, value);
-            page.add_headline(&display_value,1);
-            for topic_key in self.model.get_topics_for_attr_value(&AttributeValueType::Year, &value, None) {
-                let link = wiki::page_link(&self.model.qualify_namespace(&topic_key.namespace), &topic_key.topic_name, None);
-                page.add_list_item_unordered(1, &link);
+        let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_ATTR_DATE,None);
+        let values = self.model.get_distinct_attr_values(&AttributeValueType::Date);
+        let dates = values.iter().map(|value| model::AttributeType::value_to_date(value)).collect::<Vec<_>>();
+        let year_month_map = util::date_time::year_month_map(dates);
+        for (year, month_map) in year_month_map.iter() {
+            page.add_headline(&year.to_string(),1);
+            for (month, dates) in month_map.iter() {
+                page.add_headline(&util::date_time::year_month_to_doc_format(*year, *month), 2);
+                for date in dates.iter() {
+                    let display_value = model::AttributeType::date_to_display_string(&date);
+                    page.add_line(&format!("{}:", display_value));
+                    let match_value = model::AttributeType::date_to_canonical_value(date);
+                    for (attribute_type_name, topic_key) in self.model.get_typed_topics_for_attr_value(&AttributeValueType::Date, &match_value, None) {
+                        let link = wiki::page_link(&self.model.qualify_namespace(&topic_key.namespace), &topic_key.topic_name, None);
+                        page.add_list_item_unordered(1, &format!("{} {}", attribute_type_name, link));
+                    }
+                }
             }
         }
         page.write();
-
-         */
     }
+
+    /*
+    pub fn gen_attr_date_page(&self) {
+        let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_ATTR_DATE,None);
+        let values = self.model.get_distinct_attr_values(&AttributeValueType::Date);
+        let dates = values.iter().map(|value| model::AttributeType::value_to_date(value)).collect::<Vec<_>>();
+        let year_map = util::date_time::year_map(dates);
+        for (year, values) in year_map.iter() {
+            page.add_headline(&year.to_string(), 1);
+            for date in values.iter() {
+                let display_value = model::AttributeType::date_to_display_string(&date);
+                page.add_headline(&display_value, 2);
+                let match_value = model::AttributeType::date_to_canonical_value(date);
+                for topic_key in self.model.get_topics_for_attr_value(&AttributeValueType::Date, &match_value, None) {
+                    let link = wiki::page_link(&self.model.qualify_namespace(&topic_key.namespace), &topic_key.topic_name, None);
+                    page.add_list_item_unordered(1, &link);
+                }
+            }
+        }
+        page.write();
+    }
+    */
 
     pub fn gen(&mut self) {
         for topic in self.model.topics.values() {

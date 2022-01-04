@@ -503,10 +503,10 @@ impl Wiki {
     pub fn get_topics_for_attr_value(&self, value_type: &AttributeValueType, match_value: &str, included_attr_names: Option<Vec<&str>>) -> Vec<TopicKey> {
         let mut topic_keys = vec![];
         for attribute_type in self.attributes.values()
-                .filter(|attribute_type| attribute_type.value_type.eq(value_type))
-                .filter(|attribute_type| included_attr_names.as_ref().map_or(true, |included| included.contains(&&*attribute_type.name))) {
+            .filter(|attribute_type| attribute_type.value_type.eq(value_type))
+            .filter(|attribute_type| included_attr_names.as_ref().map_or(true, |included| included.contains(&&*attribute_type.name))) {
             for (_found_value, found_topic_keys) in attribute_type.values.iter()
-                    .filter(|(found_value, _found_topic_keys)| found_value.as_str() == match_value) {
+                .filter(|(found_value, _found_topic_keys)| found_value.as_str() == match_value) {
                 for found_topic_key in found_topic_keys.iter() {
                     topic_keys.push(found_topic_key.clone());
                 }
@@ -516,6 +516,23 @@ impl Wiki {
         topic_keys.dedup();
         sort_topic_keys_by_name(&mut topic_keys);
         topic_keys
+    }
+
+    // Create a list of pairs of the attribute type name and the topic key.
+    pub fn get_typed_topics_for_attr_value(&self, value_type: &AttributeValueType, match_value: &str, included_attr_names: Option<Vec<&str>>) -> Vec<(String, TopicKey)> {
+        let mut list = vec![];
+        for attribute_type in self.attributes.values()
+            .filter(|attribute_type| attribute_type.value_type.eq(value_type))
+            .filter(|attribute_type| included_attr_names.as_ref().map_or(true, |included| included.contains(&&*attribute_type.name))) {
+            for (_found_value, found_topic_keys) in attribute_type.values.iter()
+                .filter(|(found_value, _found_topic_keys)| found_value.as_str() == match_value) {
+                for found_topic_key in found_topic_keys.iter() {
+                    list.push((attribute_type.name.clone(), found_topic_key.clone()));
+                }
+            }
+        }
+        list.sort_by(|a, b| a.1.cmp(&b.1).then(a.0.cmp(&b.0)));
+        list
     }
 
     /*

@@ -1,5 +1,6 @@
 use super::*;
 use std::collections::BTreeMap;
+use chrono::NaiveDate;
 
 // pub type AttributeRc = Rc<RefCell<Attribute>>;
 // pub type AttributeValueRc = Rc<RefCell<AttributeValue>>;
@@ -107,10 +108,22 @@ impl AttributeType {
         // string stored as the value. For dates, though, the value is something like "2022-01-03"
         // so that it sorts correctly, while the display string is something like "2022-Jan-03".
         match value_type {
-            AttributeValueType::Date => util::date_time::naive_date_to_doc_format(&util::date_time::naive_date_from_sortable_format(value).unwrap()),
+            AttributeValueType::Date => Self::date_to_display_string(&Self::value_to_date(value)),
             AttributeValueType::Year => value.parse::<usize>().unwrap().to_string(),
             _ => value.to_string(),
         }
+    }
+
+    pub fn date_to_display_string(value: &NaiveDate) -> String {
+        util::date_time::naive_date_to_doc_format(&value)
+    }
+
+    pub fn date_to_canonical_value(value: &NaiveDate) -> String {
+        util::date_time::naive_date_to_sortable_format(value)
+    }
+
+    pub fn value_to_date(value: &str) -> NaiveDate {
+        util::date_time::naive_date_from_sortable_format(value).unwrap()
     }
 
     pub fn get_topic_count(&self) -> usize {

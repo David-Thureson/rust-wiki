@@ -100,7 +100,7 @@ impl BuildProcess {
         let attr_errors = wiki.catalog_attributes();
         attr_errors.print(Some("wiki.catalog_attributes()"));
         if attr_errors.is_empty() {
-            // report_attributes(&wiki);
+            //report_attributes(&wiki);
         }
         wiki
     }
