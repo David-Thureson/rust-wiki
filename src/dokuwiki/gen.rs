@@ -288,7 +288,8 @@ pub fn legal_file_name(name: &str) -> String {
         })
         .join("");
     let page_name = format::remove_repeated(&page_name, "_");
-    let page_name = page_name.replace("_.", ".");
+    let page_name = page_name.trim_end_matches("_").to_string();
+    // if name.contains("Disrupt") { //bg!(name, &page_name); }
     page_name
 }
 

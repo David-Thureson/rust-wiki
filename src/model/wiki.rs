@@ -409,6 +409,7 @@ impl Wiki {
         let mut parent_child_pairs = vec![];
         for topic in self.topics.values() {
             if let Some(category_name) = &topic.category {
+                debug_assert!(!category_name.eq("Terms"), "Topic is {}", topic.name);
                 let category_topic_key = TopicKey::new(&self.main_namespace, category_name);
                 parent_child_pairs.push((category_topic_key, topic.get_key()));
             }

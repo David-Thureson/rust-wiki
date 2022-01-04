@@ -5,7 +5,6 @@ use crate::model::NAMESPACE_NAVIGATION;
 use crate::dokuwiki::gen_from_model::GenFromModel;
 
 const PROJECT_NAME: &str = "Tools";
-//const ATTRIBUTES_TO_INDEX: [&str; 23] = ["Author", "Book", "Company", "Context", "Course", "Domain", "Domains", "Format", "Founder", "IDE", "Language", "License Type", "LinkedIn", "Narrator", "Operating System", "Organization", "PC Name", "Paradigm", "Platform", "School", "Series", "Status", "Translator"];
 
 pub fn main() {
     gen_from_connectedtext(true, None);
@@ -13,6 +12,7 @@ pub fn main() {
 
 fn gen_from_connectedtext(_copy_image_files_to_local_wiki: bool, topic_limit: Option<usize>) {
     println!("\nGenerating wiki from ConnectedText...");
+    let attr_to_index = vec!["Author", "Book", "Company", "Context", "Course", "Domain", "Domains", "Format", "Founder", "IDE", "Language", "License Type", "LinkedIn", "Narrator", "Operating System", "Organization", "PC Name", "Paradigm", "Platform", "School", "Series", "Status", "Translator"];
     let model = build_model(topic_limit);
     // if copy_image_files_to_local_wiki {
     //     copy_image_files(db, NaiveDate::from_ymd(1900, 3, 20), true);
@@ -30,6 +30,7 @@ fn gen_from_connectedtext(_copy_image_files_to_local_wiki: bool, topic_limit: Op
     gen.gen_subtopics_page();
     gen.gen_attr_year_page();
     gen.gen_attr_date_page();
+    gen.gen_attr_page(&attr_to_index);
     // gen_terms_page();
     gen.gen();
     println!("\nDone generating wiki.");
@@ -80,6 +81,7 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Wiki, use_li
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_ALL_TOPICS,None),
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_CATEGORIES, None),
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_SUBTOPICS,None),
+        wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_ATTR,None),
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_ATTR_YEAR,None),
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_ATTR_DATE,None),
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_TERMS, None),
