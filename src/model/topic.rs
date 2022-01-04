@@ -227,4 +227,3 @@ impl Display for SectionKey {
         write!(f, "[{}:{}#{}]", self.topic_key.namespace, self.topic_key.topic_name, self.section_name)
     }
 }
-

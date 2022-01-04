@@ -76,7 +76,7 @@ impl AttributeType {
                 if value > 2_100 {
                     Err(format!("Expected a year attribute value, but the value is \"{}\".", value))
                 } else {
-                    Ok(value.to_string())
+                    Ok(util::format::format_zeros(value, 4))
                 }
             }
         }
@@ -99,11 +99,16 @@ impl AttributeType {
     }
 
     pub fn get_value_display_string(&self, value: &str) -> String {
+        Self::value_to_display_string(&self.value_type, value)
+    }
+
+    pub fn value_to_display_string(value_type: &AttributeValueType, value: &str) -> String {
         // In most cases the display string, which will be used on wiki pages, is the same as the
         // string stored as the value. For dates, though, the value is something like "2022-01-03"
         // so that it sorts correctly, while the display string is something like "2022-Jan-03".
-        match self.value_type {
+        match value_type {
             AttributeValueType::Date => util::date_time::naive_date_to_doc_format(&util::date_time::naive_date_from_sortable_format(value).unwrap()),
+            AttributeValueType::Year => value.parse::<usize>().unwrap().to_string(),
             _ => value.to_string(),
         }
     }
@@ -149,6 +154,14 @@ impl AttributeValueType {
         }
     }
 }
+
+impl PartialEq for AttributeValueType {
+    fn eq(&self, other: &Self) -> bool {
+        self.get_variant_name() == other.get_variant_name()
+    }
+}
+
+impl Eq for AttributeValueType {}
 
 
 /*

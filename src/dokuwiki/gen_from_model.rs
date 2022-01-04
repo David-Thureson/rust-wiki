@@ -4,6 +4,7 @@ use crate::dokuwiki as wiki;
 use crate::dokuwiki::page_link;
 use std::rc::Rc;
 use std::cell::RefCell;
+use crate::model::AttributeValueType;
 
 //const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
 
@@ -35,6 +36,37 @@ impl <'a> GenFromModel<'a> {
         let nodes = self.model.subtopic_tree().unroll_to_depth(None);
         Self::gen_partial_topic_tree(&mut page, &nodes, 0, false, None);
         page.write();
+    }
+
+    pub fn gen_attr_year_page(&self) {
+        let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_ATTR_YEAR,None);
+        let values = self.model.get_distinct_attr_values(&AttributeValueType::Year);
+        for value in values.iter() {
+            let display_value = model::AttributeType::value_to_display_string(&AttributeValueType::Year, value);
+            page.add_headline(&display_value,1);
+            for topic_key in self.model.get_topics_for_attr_value(&AttributeValueType::Year, &value, None) {
+                let link = wiki::page_link(&self.model.qualify_namespace(&topic_key.namespace), &topic_key.topic_name, None);
+                page.add_list_item_unordered(1, &link);
+            }
+        }
+        page.write();
+    }
+
+    pub fn gen_attr_date_page(&self) {
+        /*
+        let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_ATTR_YEAR,None);
+        let values = self.model.get_distinct_attr_values(&AttributeValueType::Year);
+        for value in values.iter() {
+            let display_value = model::AttributeType::value_to_display_string(&AttributeValueType::Date, value);
+            page.add_headline(&display_value,1);
+            for topic_key in self.model.get_topics_for_attr_value(&AttributeValueType::Year, &value, None) {
+                let link = wiki::page_link(&self.model.qualify_namespace(&topic_key.namespace), &topic_key.topic_name, None);
+                page.add_list_item_unordered(1, &link);
+            }
+        }
+        page.write();
+
+         */
     }
 
     pub fn gen(&mut self) {

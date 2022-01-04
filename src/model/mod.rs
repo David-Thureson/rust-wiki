@@ -50,6 +50,7 @@ pub const NAMESPACE_ROOT: &str = "";
 pub const NAMESPACE_UNDECIDED: &str = "{undecided}";
 pub const NAMESPACE_BOOK: &str = ":book";
 pub const NAMESPACE_NAVIGATION: &str = ":nav";
+pub const NAMESPACE_ATTRIBUTE: &str = ":attr";
 
 pub const ATTRIBUTE_VALUE_MISSING: &str = "{missing}";
 
@@ -61,4 +62,8 @@ pub const LIST_LABEL_COMBINATIONS: &str = "Combinations:";
 
 pub fn sort_topic_tree(tree: &mut TopicTree) {
     tree.sort_recursive(&|node: &Rc<RefCell<TopicTreeNode>>| b!(node).item.topic_name.clone());
+}
+
+pub fn sort_topic_keys_by_name(vec: &mut Vec<TopicKey>) {
+    vec.sort_by_cached_key(|topic_key| topic_key.topic_name.clone());
 }

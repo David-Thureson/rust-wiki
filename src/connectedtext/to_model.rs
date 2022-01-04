@@ -8,6 +8,7 @@ use util::parse::{split_3_two_delimiters_rc, split_trim, between};
 use crate::Itertools;
 #[allow(unused_imports)]
 use crate::connectedtext::report::report_category_tree;
+#[allow(unused_imports)]
 use crate::model::report::report_attributes;
 
 const CT_BRACKETS_LEFT: &str = "[[";
@@ -74,6 +75,7 @@ impl BuildProcess {
         wiki.add_namespace(NAMESPACE_BOOK);
         // wiki.add_namespace(NAMESPACE_CATEGORY);
         wiki.add_namespace(NAMESPACE_NAVIGATION);
+        wiki.add_namespace(NAMESPACE_ATTRIBUTE);
         self.parse_from_text_file(&mut wiki);
         wiki.catalog_links();
         self.check_links(&wiki);
@@ -98,7 +100,7 @@ impl BuildProcess {
         let attr_errors = wiki.catalog_attributes();
         attr_errors.print(Some("wiki.catalog_attributes()"));
         if attr_errors.is_empty() {
-            report_attributes(&wiki);
+            // report_attributes(&wiki);
         }
         wiki
     }
@@ -516,7 +518,10 @@ impl BuildProcess {
             }
             if is_attributes {
                 for row in rows.iter_mut() {
-                    let name = row.remove(0);
+                    let mut name = row.remove(0);
+                    if name.eq("Subject") {
+                        name = "Domain".to_string();
+                    }
                     let values = row.remove(0);
                     // let debug = name.eq("Date") && values.eq("[[Date:=20160824]], [[Date:=20160505]]");
                     assert!(row.is_empty());

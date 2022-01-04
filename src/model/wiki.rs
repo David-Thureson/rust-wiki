@@ -487,6 +487,37 @@ impl Wiki {
         }
     }
 
+    pub fn get_distinct_attr_values(&self, value_type: &AttributeValueType) -> Vec<String> {
+        let mut values = vec![];
+        for attribute_type in self.attributes.values()
+                .filter(|attribute_type| attribute_type.value_type.eq(value_type)) {
+            for value in attribute_type.values.keys() {
+                values.push(value.clone());
+            }
+        }
+        values.sort();
+        values.dedup();
+        values
+    }
+
+    pub fn get_topics_for_attr_value(&self, value_type: &AttributeValueType, match_value: &str, included_attr_names: Option<Vec<&str>>) -> Vec<TopicKey> {
+        let mut topic_keys = vec![];
+        for attribute_type in self.attributes.values()
+                .filter(|attribute_type| attribute_type.value_type.eq(value_type))
+                .filter(|attribute_type| included_attr_names.as_ref().map_or(true, |included| included.contains(&&*attribute_type.name))) {
+            for (_found_value, found_topic_keys) in attribute_type.values.iter()
+                    .filter(|(found_value, _found_topic_keys)| found_value.as_str() == match_value) {
+                for found_topic_key in found_topic_keys.iter() {
+                    topic_keys.push(found_topic_key.clone());
+                }
+            }
+        }
+        topic_keys.sort();
+        topic_keys.dedup();
+        sort_topic_keys_by_name(&mut topic_keys);
+        topic_keys
+    }
+
     /*
     pub fn find_topic_rc(&self, namespace_name: &str, topic_name: &str, context: &str) -> Result<TopicRc, String> {
         let key = TopicKey::new(namespace_name, topic_name);
