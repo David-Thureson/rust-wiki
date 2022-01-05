@@ -4,6 +4,7 @@ use crate::dokuwiki as wiki;
 use std::rc::Rc;
 use std::cell::RefCell;
 use crate::model::{AttributeValueType, TopicKey};
+use std::collections::BTreeMap;
 
 //const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
 
@@ -47,20 +48,46 @@ impl <'a> GenFromModel<'a> {
     pub fn gen_attr_page(&self, attr_to_index: &Vec<&str>) {
         let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_ATTR,None);
         for attribute_type in self.model.attributes.values()
-                .filter(|attribute_type| attribute_type.value_type != AttributeValueType::Date && attribute_type.value_type != AttributeValueType::Year)
+            .filter(|attribute_type| attribute_type.value_type != AttributeValueType::Date && attribute_type.value_type != AttributeValueType::Year)
             .filter(|attribute_type| attr_to_index.contains(&attribute_type.name.as_str())) {
             page.add_headline(&attribute_type.name,1);
             for (value, topic_keys) in attribute_type.values.iter() {
                 page.add_headline(&attribute_type.get_value_display_string(value), 2);
-                let possible_topic_key = TopicKey::new(&self.model.main_namespace, value);
-                if self.model.has_topic(&possible_topic_key) {
-                    let link = self.page_link_simple(&possible_topic_key);
+                if let Some(link) = self.page_link_if_exists(value) {
                     page.add_line(&link);
                 }
                 for topic_key in topic_keys.iter() {
                     let link = self.page_link_simple(&topic_key);
                     page.add_list_item_unordered(1, &link);
                 }
+            }
+        }
+        page.write();
+    }
+
+    pub fn gen_attr_value_page(&self, attr_to_index: &Vec<&str>) {
+        let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_ATTR_VALUE,None);
+        let mut map = BTreeMap::new();
+        for attribute_type in self.model.attributes.values()
+                .filter(|attribute_type| attr_to_index.contains(&attribute_type.name.as_str())) {
+            for (value, topic_keys) in attribute_type.values.iter() {
+                let entry = map.entry(value).or_insert(vec![]);
+                for topic_key in topic_keys.iter() {
+                    entry.push((attribute_type.name.clone(), topic_key.clone()));
+                }
+            }
+        }
+        for (value, mut list) in map.drain_filter(|_value, _list| true) {
+            page.add_headline(value,1);
+            if let Some(link) = self.page_link_if_exists(value) {
+                page.add_line(&link);
+            }
+            // Sort by topic name, then attribute type name.
+            list.sort_by(|a, b| a.1.topic_name.cmp(&b.1.topic_name).then(a.0.cmp(&b.0)));
+            for (attribute_type_name, topic_key) in list.drain(..) {
+                let link = self.page_link_simple(&topic_key);
+                let line = format!("{}: {}", attribute_type_name, link);
+                page.add_list_item_unordered(1, &line);
             }
         }
         page.write();
@@ -101,6 +128,15 @@ impl <'a> GenFromModel<'a> {
             }
         }
         page.write();
+    }
+
+    fn page_link_if_exists(&self, topic_name: &str) -> Option<String> {
+        let possible_topic_key = TopicKey::new(&self.model.main_namespace, topic_name);
+        if self.model.has_topic(&possible_topic_key) {
+            Some(self.page_link_simple(&possible_topic_key))
+        } else {
+            None
+        }
     }
 
     /*

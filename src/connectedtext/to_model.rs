@@ -522,6 +522,10 @@ impl BuildProcess {
                     if name.eq("Subject") {
                         name = "Domain".to_string();
                     }
+                    if name.eq("Date") {
+                        name = "Added".to_string();
+                    }
+                    let max_value_count = if name.eq("Added") { Some(1) } else { None };
                     let values = row.remove(0);
                     // let debug = name.eq("Date") && values.eq("[[Date:=20160824]], [[Date:=20160505]]");
                     assert!(row.is_empty());
@@ -533,13 +537,15 @@ impl BuildProcess {
                     let assignments = values.replace(&bracket_delim_with_space, &bracket_delim_no_space);
                     // if debug { //bg!(values, &bracket_delim_with_space, &bracket_delim_no_space, &assignments); };
                     for assignment in assignments.split(&bracket_delim_no_space) {
-                        let value = util::parse::after(assignment, CT_ATTRIBUTE_ASSIGN).trim().to_string();
-                        // if debug { //bg!(&value); }
-                        if !value.contains("*") && !value.is_empty() {
-                            if attribute.contains(&value) {
-                                return Err(format!("{} In attribute \"{}\", duplicated value \"{}\".", context, name, value));
+                        if max_value_count.map_or(true, |max_value_count| max_value_count > attribute.len()) {
+                            let value = util::parse::after(assignment, CT_ATTRIBUTE_ASSIGN).trim().to_string();
+                            // if debug { //bg!(&value); }
+                            if !value.contains("*") && !value.is_empty() {
+                                if attribute.contains(&value) {
+                                    return Err(format!("{} In attribute \"{}\", duplicated value \"{}\".", context, name, value));
+                                }
+                                attribute.push(value);
                             }
-                            attribute.push(value);
                         }
                     }
                 }

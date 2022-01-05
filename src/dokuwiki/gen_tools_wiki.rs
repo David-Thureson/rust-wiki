@@ -31,6 +31,7 @@ fn gen_from_connectedtext(_copy_image_files_to_local_wiki: bool, topic_limit: Op
     gen.gen_attr_year_page();
     gen.gen_attr_date_page();
     gen.gen_attr_page(&attr_to_index);
+    gen.gen_attr_value_page(&attr_to_index);
     // gen_terms_page();
     gen.gen();
     println!("\nDone generating wiki.");
@@ -82,6 +83,7 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Wiki, use_li
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_CATEGORIES, None),
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_SUBTOPICS,None),
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_ATTR,None),
+        wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_ATTR_VALUE,None),
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_ATTR_YEAR,None),
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_ATTR_DATE,None),
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_TERMS, None),
