@@ -1,7 +1,7 @@
 use crate::dokuwiki as wiki;
 use crate::model;
 use crate::connectedtext::to_model::build_model;
-use crate::model::NAMESPACE_NAVIGATION;
+use crate::model::ATTRIBUTE_NAME_DOMAIN;
 use crate::dokuwiki::gen_from_model::GenFromModel;
 
 const PROJECT_NAME: &str = "Tools";
@@ -12,7 +12,7 @@ pub fn main() {
 
 fn gen_from_connectedtext(_copy_image_files_to_local_wiki: bool, topic_limit: Option<usize>) {
     println!("\nGenerating wiki from ConnectedText...");
-    let attr_to_index = vec!["Author", "Book", "Company", "Context", "Course", "Domain", "Domains", "Format", "Founder", "IDE", "Language", "License Type", "LinkedIn", "Narrator", "Operating System", "Organization", "PC Name", "Paradigm", "Platform", "School", "Series", "Status", "Translator"];
+    let attr_to_index = vec!["Author", "Book", "Company", "Context", "Course", ATTRIBUTE_NAME_DOMAIN, "Domains", "Format", "Founder", "IDE", "Language", "License Type", "LinkedIn", "Narrator", "Operating System", "Organization", "PC Name", "Paradigm", "Platform", "School", "Series", "Status", "Translator"];
     let model = build_model(topic_limit);
     // if copy_image_files_to_local_wiki {
     //     copy_image_files(db, NaiveDate::from_ymd(1900, 3, 20), true);
@@ -52,7 +52,7 @@ fn gen_start_page(model: &model::Wiki) {
 }
 
 fn gen_all_topics_page(model: &model::Wiki) {
-    let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_ALL_TOPICS,None);
+    let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(&model.namespace_navigation()), wiki::PAGE_NAME_ALL_TOPICS,None);
     add_all_topics(&mut page, model);
     page.write();
 }
@@ -75,7 +75,7 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Wiki, use_li
     if include_start_page {
         links.push(wiki::page_link(model::NAMESPACE_ROOT, wiki::PAGE_NAME_START, None));
     };
-    let qualified_namespace = model.qualify_namespace(NAMESPACE_NAVIGATION);
+    let qualified_namespace = model.qualify_namespace(&model.namespace_navigation());
     links.append(&mut vec![
         wiki::page_link(&qualified_namespace,wiki::PAGE_NAME_MAIN, None),
         wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_RECENT_TOPICS, None),
@@ -104,7 +104,7 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Wiki, use_li
 fn add_all_topics(page: &mut wiki::WikiGenPage, model: &model::Wiki) {
     for topic_key in model.topic_keys_alphabetical_by_topic_name().iter() {
         //bg!(topic_key);
-        let link = GenFromModel::page_link(model, topic_key);
+        let link = GenFromModel::page_link(topic_key);
         page.add_line_with_break(&link);
     }
 }

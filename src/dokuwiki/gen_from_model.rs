@@ -5,6 +5,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use crate::model::{AttributeValueType, TopicKey};
 use std::collections::BTreeMap;
+use crate::dokuwiki::PAGE_NAME_ATTR_VALUE;
 
 //const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
 
@@ -25,7 +26,7 @@ impl <'a> GenFromModel<'a> {
     }
 
     pub fn gen_categories_page(&self) {
-        let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_CATEGORIES,None);
+        let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_CATEGORIES,None);
         let nodes = self.model.category_tree().unroll_to_depth(None);
 
         // Debugging:
@@ -39,14 +40,14 @@ impl <'a> GenFromModel<'a> {
     }
 
     pub fn gen_subtopics_page(&self) {
-        let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_SUBTOPICS,None);
+        let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_SUBTOPICS,None);
         let nodes = self.model.subtopic_tree().unroll_to_depth(None);
         self.gen_partial_topic_tree(&mut page, &nodes, 0, false, None);
         page.write();
     }
 
     pub fn gen_attr_page(&self, attr_to_index: &Vec<&str>) {
-        let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_ATTR,None);
+        let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR,None);
         for attribute_type in self.model.attributes.values()
             .filter(|attribute_type| attribute_type.value_type != AttributeValueType::Date && attribute_type.value_type != AttributeValueType::Year)
             .filter(|attribute_type| attr_to_index.contains(&attribute_type.name.as_str())) {
@@ -54,8 +55,10 @@ impl <'a> GenFromModel<'a> {
             for (value, topic_keys) in attribute_type.values.iter() {
                 page.add_headline(&attribute_type.get_value_display_string(value), 2);
                 if let Some(link) = self.page_link_if_exists(value) {
-                    page.add_line(&link);
+                    page.add_paragraph(&link);
                 }
+                self.add_related_domains_optional(&mut page,value, false);
+                page.add_line("Topics:");
                 for topic_key in topic_keys.iter() {
                     let link = self.page_link_simple(&topic_key);
                     page.add_list_item_unordered(1, &link);
@@ -66,7 +69,7 @@ impl <'a> GenFromModel<'a> {
     }
 
     pub fn gen_attr_value_page(&self, attr_to_index: &Vec<&str>) {
-        let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_ATTR_VALUE,None);
+        let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR_VALUE,None);
         let mut map = BTreeMap::new();
         for attribute_type in self.model.attributes.values()
                 .filter(|attribute_type| attr_to_index.contains(&attribute_type.name.as_str())) {
@@ -80,21 +83,35 @@ impl <'a> GenFromModel<'a> {
         for (value, mut list) in map.drain_filter(|_value, _list| true) {
             page.add_headline(value,1);
             if let Some(link) = self.page_link_if_exists(value) {
-                page.add_line(&link);
+                page.add_paragraph(&link);
             }
+            self.add_related_domains_optional(&mut page,value, true);
             // Sort by topic name, then attribute type name.
             list.sort_by(|a, b| a.1.topic_name.cmp(&b.1.topic_name).then(a.0.cmp(&b.0)));
+            page.add_line("Topics:");
             for (attribute_type_name, topic_key) in list.drain(..) {
                 let link = self.page_link_simple(&topic_key);
-                let line = format!("{}: {}", attribute_type_name, link);
+                let line = format!("({}) {}", attribute_type_name.to_lowercase(), link);
                 page.add_list_item_unordered(1, &line);
             }
         }
         page.write();
     }
 
+    fn add_related_domains_optional(&self, page: &mut wiki::WikiGenPage, attribute_value_name: &str, on_attribute_value_page: bool) {
+        if let Some(domain) = self.model.domains.domains.get(attribute_value_name) {
+            if !domain.related_by_count.is_empty() {
+                let related_link_list = domain.related_by_count.iter()
+                    .map(|related_name| self.domain_link(related_name, on_attribute_value_page))
+                    .join(", ");
+                let line = format!("Related: {}", related_link_list);
+                page.add_paragraph(&line);
+            }
+        }
+    }
+
     pub fn gen_attr_year_page(&self) {
-        let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_ATTR_YEAR,None);
+        let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR_YEAR,None);
         let values = self.model.get_distinct_attr_values(&AttributeValueType::Year);
         for value in values.iter() {
             let display_value = model::AttributeType::value_to_display_string(&AttributeValueType::Year, value);
@@ -108,7 +125,7 @@ impl <'a> GenFromModel<'a> {
     }
 
     pub fn gen_attr_date_page(&self) {
-        let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_ATTR_DATE,None);
+        let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR_DATE,None);
         let values = self.model.get_distinct_attr_values(&AttributeValueType::Date);
         let dates = values.iter().map(|value| model::AttributeType::value_to_date(value)).collect::<Vec<_>>();
         let year_month_map = util::date_time::year_month_map(dates);
@@ -176,7 +193,7 @@ impl <'a> GenFromModel<'a> {
 
     fn add_category_optional(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
         if let Some(category) = topic.category.as_ref() {
-            page.add_category(&self.model.qualify_namespace(&self.model.main_namespace),category);
+            page.add_category(&self.model.main_namespace,category);
         }
     }
 
@@ -481,15 +498,30 @@ impl <'a> GenFromModel<'a> {
     }
 
     pub fn page_link_simple(&self, topic_key: &model::TopicKey) -> String {
-        debug_assert!(self.model.has_topic(topic_key), "Topic key not found: {}", topic_key.to_string());
-        Self::page_link(&self.model, topic_key)
+        //ebug_assert!(self.model.has_topic(topic_key), "Topic key not found: {}", topic_key.to_string());
+        Self::page_link(topic_key)
     }
 
-    pub fn page_link(model: &model::Wiki, topic_key: &model::TopicKey) -> String {
-        //bg!(topic_key);
-        let qual_namespace = model.qualify_namespace(&topic_key.namespace);
-        // let link = wiki::page_link(&qual_namespace, &model.topics.get(topic_key).unwrap().name, None);
-        let link = wiki::page_link(&qual_namespace, &topic_key.topic_name, None);
+    pub fn section_link_simple(&self, topic_key: &model::TopicKey, section_name: &str) -> String {
+        //ebug_assert!(self.model.has_topic(topic_key), "Topic key not found: {}", topic_key.to_string());
+        Self::section_link(topic_key, section_name)
+    }
+
+    pub fn domain_link(&self, domain_name: &str, on_attribute_value_page: bool) -> String {
+        if on_attribute_value_page {
+            wiki::section_link_same_page(&domain_name, None)
+        } else {
+            wiki::section_link(&self.model.namespace_navigation(), PAGE_NAME_ATTR_VALUE, domain_name, Some(domain_name))
+        }
+    }
+
+    pub fn page_link(topic_key: &model::TopicKey) -> String {
+        let link = wiki::page_link(&topic_key.namespace, &topic_key.topic_name, None);
+        link
+    }
+
+    pub fn section_link(topic_key: &model::TopicKey, section_name: &str) -> String {
+        let link = wiki::section_link(&topic_key.namespace, &topic_key.topic_name, section_name, None);
         link
     }
 }

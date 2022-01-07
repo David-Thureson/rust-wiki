@@ -72,10 +72,10 @@ impl BuildProcess {
 
     pub fn build(&mut self) -> Wiki {
         let mut wiki = Wiki::new(&self.wiki_name, NAMESPACE_TOOLS);
-        wiki.add_namespace(NAMESPACE_BOOK);
+        wiki.add_namespace(&wiki.namespace_book());
         // wiki.add_namespace(NAMESPACE_CATEGORY);
-        wiki.add_namespace(NAMESPACE_NAVIGATION);
-        wiki.add_namespace(NAMESPACE_ATTRIBUTE);
+        wiki.add_namespace(&wiki.namespace_navigation());
+        wiki.add_namespace(&wiki.namespace_attribute());
         self.parse_from_text_file(&mut wiki);
         wiki.catalog_links();
         self.check_links(&wiki);
@@ -87,8 +87,8 @@ impl BuildProcess {
         // report_category_tree(&wiki);
         // wiki.catalog_possible_list_types().print_by_count(0, None);
         wiki.add_missing_category_topics();
-        wiki.move_topics_to_namespace_by_category("Navigation",NAMESPACE_NAVIGATION);
-        wiki.move_topics_to_namespace_by_category("Nonfiction Books",NAMESPACE_BOOK);
+        wiki.move_topics_to_namespace_by_category("Navigation",&wiki.namespace_navigation());
+        wiki.move_topics_to_namespace_by_category("Nonfiction Books",&wiki.namespace_book());
         wiki.catalog_links();
         self.errors.clear();
         self.check_links(&wiki);
@@ -102,6 +102,7 @@ impl BuildProcess {
         if attr_errors.is_empty() {
             //report_attributes(&wiki);
         }
+        wiki.catalog_domains();
         wiki
     }
 
@@ -520,10 +521,10 @@ impl BuildProcess {
                 for row in rows.iter_mut() {
                     let mut name = row.remove(0);
                     if name.eq("Subject") {
-                        name = "Domain".to_string();
+                        name = ATTRIBUTE_NAME_DOMAIN.to_string();
                     }
                     if name.eq("Date") {
-                        name = "Added".to_string();
+                        name = ATTRIBUTE_NAME_ADDED.to_string();
                     }
                     let max_value_count = if name.eq("Added") { Some(1) } else { None };
                     let values = row.remove(0);

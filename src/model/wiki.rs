@@ -16,6 +16,7 @@ pub struct Wiki {
     category_tree: Option<TopicTree>,
     subtopic_tree: Option<TopicTree>,
     pub attributes: BTreeMap<String, AttributeType>,
+    pub domains: DomainList,
 }
 
 impl Wiki {
@@ -29,17 +30,18 @@ impl Wiki {
             category_tree: None,
             subtopic_tree: None,
             attributes: Default::default(),
+            domains: DomainList::new(),
         };
         wiki.add_namespace(main_namespace);
         wiki
     }
 
     pub fn add_namespace(&mut self, name: &str) {
-        let key = self.qualify_namespace(name);
-        assert!(!self.namespaces.contains_key(&key));
-        self.namespaces.insert(key, name.to_string());
+        assert!(!self.namespaces.contains_key(name));
+        self.namespaces.insert(name.to_string(), name.to_string());
     }
 
+    #[inline]
     pub fn qualify_namespace(&self, name: &str) -> String {
         if name.starts_with(":") {
             //bg!(&name, format!("{}{}", &self.main_namespace, name.to_lowercase()));
@@ -47,6 +49,18 @@ impl Wiki {
         } else {
             name.to_lowercase()
         }
+    }
+
+    pub fn namespace_attribute(&self) -> String {
+        self.qualify_namespace(NAMESPACE_ATTRIBUTE)
+    }
+
+    pub fn namespace_book(&self) -> String {
+        self.qualify_namespace(NAMESPACE_BOOK)
+    }
+
+    pub fn namespace_navigation(&self) -> String {
+        self.qualify_namespace(NAMESPACE_NAVIGATION)
     }
 
     pub fn add_topic(&mut self, topic: Topic) {
@@ -302,7 +316,7 @@ impl Wiki {
         for topic in self.topics.values_mut() {
             topic.attributes.clear();
             for (temp_attr_name, temp_attr_values) in topic.temp_attributes.iter()
-                    .filter(|(_name, values)| !values.is_empty()) {
+                .filter(|(_name, values)| !values.is_empty()) {
                 let attribute_type = self.attributes.entry(temp_attr_name.clone())
                     .or_insert({
                         let value_type = AttributeType::value_to_presumed_type(temp_attr_name,&*temp_attr_values[0]);
@@ -315,10 +329,14 @@ impl Wiki {
                         Err(msg) => { errors.add(&topic.get_key(), &msg)}
                     };
                 }
-                topic.attributes.push(AttributeInstance::new(temp_attr_name, values_for_topic));
+                topic.attributes.insert(temp_attr_name.clone(),AttributeInstance::new(temp_attr_name, values_for_topic));
             }
         }
         errors
+    }
+
+    pub fn catalog_domains(&mut self) -> TopicErrorList {
+        DomainList::catalog_domains(self)
     }
 
     pub fn has_topic(&self, topic_key: &TopicKey) -> bool {
@@ -364,7 +382,7 @@ impl Wiki {
         let category_names = self.categories.values()
             .map(|category| category.name.clone())
             .collect::<Vec<_>>();
-        let category_namespace = &self.qualify_namespace(&self.main_namespace);
+        let category_namespace = self.main_namespace.clone();
         let mut topic_keys = vec![];
         for category_name in category_names.iter() {
             let topic_key_old = TopicKey::new(&self.main_namespace, category_name);
@@ -373,7 +391,7 @@ impl Wiki {
                 // Move the topic from the main to the category namespace.
                 //rintln!("\t\t\tMoving topic {}", &category_name);
                 let mut topic = self.topics.remove(&topic_key_old).unwrap();
-                let topic_key_new = TopicKey::new(category_namespace, &topic.name);
+                let topic_key_new = TopicKey::new(&category_namespace, &topic.name);
                 topic_keys.push((topic_key_old, topic_key_new));
                 topic.namespace = category_namespace.to_string();
                 self.add_topic(topic);
@@ -386,7 +404,6 @@ impl Wiki {
     }
 
     pub fn move_topics_to_namespace_by_category(&mut self, category_name: &str, namespace_name: &str) {
-        let new_namespace = self.qualify_namespace(namespace_name);
         let topic_names = self.topics.values()
             .filter(|topic| topic.category.as_ref().map_or(false,|cat| cat.eq_ignore_ascii_case(category_name)))
             .map(|topic| topic.name.clone())
@@ -396,9 +413,9 @@ impl Wiki {
         for topic_name in topic_names {
             //rintln!("Moving topic {} to namespace {}.", &topic_name, &new_namespace);
             let topic_key_old = TopicKey::new(&self.main_namespace, &topic_name);
-            let topic_key_new = TopicKey::new(&new_namespace, &topic_name);
+            let topic_key_new = TopicKey::new(namespace_name, &topic_name);
             let mut topic = self.topics.remove(&topic_key_old).unwrap();
-            topic.namespace = new_namespace.clone();
+            topic.namespace = namespace_name.to_string();
             self.add_topic(topic);
             topic_keys.push((topic_key_old, topic_key_new));
         }

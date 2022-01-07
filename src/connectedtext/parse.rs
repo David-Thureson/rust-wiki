@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use crate::*;
 use super::*;
 use std::time::Instant;
-use crate::model::{ATTRIBUTE_VALUE_MISSING, TopicReference};
+use crate::model::{ATTRIBUTE_NAME_DOMAIN, ATTRIBUTE_VALUE_MISSING, TopicReference};
 use crate::connectedtext::{NAMESPACE_TOOLS, NAMESPACE_HOME};
 
 pub fn get_topic_text_both_namespaces(topic_limit_tools: Option<usize>, topic_limit_home: Option<usize>) -> BTreeMap<TopicReference, Vec<String>> {
@@ -115,7 +115,7 @@ pub fn parse_line_as_attribute(line: &str) -> Result<Option<(String, Vec<String>
 
 fn fix_attribute_name(name: &str) -> &str {
     match name {
-        "Subject" => "Domain",
+        "Subject" => ATTRIBUTE_NAME_DOMAIN,
         _ => name,
     }
 }

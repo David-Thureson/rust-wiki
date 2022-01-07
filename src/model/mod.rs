@@ -9,6 +9,9 @@ pub use attribute::*;
 pub mod category;
 pub use category::*;
 
+pub mod domain;
+pub use domain::*;
+
 pub mod link;
 pub use link::*;
 
@@ -48,11 +51,14 @@ pub type TopicTreeNode = util::tree::TreeNode<TopicKey>;
 
 pub const NAMESPACE_ROOT: &str = "";
 pub const NAMESPACE_UNDECIDED: &str = "{undecided}";
-pub const NAMESPACE_BOOK: &str = ":book";
-pub const NAMESPACE_NAVIGATION: &str = ":nav";
-pub const NAMESPACE_ATTRIBUTE: &str = ":attr";
+const NAMESPACE_BOOK: &str = ":book";
+const NAMESPACE_NAVIGATION: &str = ":nav";
+const NAMESPACE_ATTRIBUTE: &str = ":attr";
 
 pub const ATTRIBUTE_VALUE_MISSING: &str = "{missing}";
+
+pub const ATTRIBUTE_NAME_ADDED: &str = "Added";
+pub const ATTRIBUTE_NAME_DOMAIN: &str = "Domain";
 
 pub const LIST_LABEL_SUBCATEGORIES: &str = "Subcategories:";
 pub const LIST_LABEL_CATEGORY_TOPICS: &str = "Topics:";

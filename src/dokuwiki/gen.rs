@@ -245,7 +245,7 @@ pub fn page_link(namespace: &str, page_name: &str, label: Option<&str>) -> Strin
     format!("[[{}{}|{}]]", namespace_prefix(namespace), legal_file_name(page_name), label.unwrap_or(page_name))
 }
 
-pub fn section_link(namespace: &str, page_name: &str, section_name: &str, _label: Option<&str>) -> String {
+pub fn section_link(namespace: &str, page_name: &str, section_name: &str, label: Option<&str>) -> String {
     // Like "[[nav:categories#All|All Categories]]".
     // format!("[[{}{}#{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, label.map_or("".to_string(), |x| format!("|{}", x)))
     // if label.map_or(false, |label| label.contains("#")) {
@@ -254,13 +254,17 @@ pub fn section_link(namespace: &str, page_name: &str, section_name: &str, _label
     // let label = label.unwrap_or(format!({}: {}))
     //format!("[[{}{}#{}|{}#{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, label.unwrap_or(page_name), section_name)
     //format!("[[{}{}#{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name)
-    format!("[[{}{}#{}|{}: {}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, page_name, section_name)
+    let label = label.map_or(format!("{}: {}", page_name, section_name), |label| label.to_string());
+    // format!("[[{}{}#{}|{}: {}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, page_name, section_name)
+    format!("[[{}{}#{}|{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, label)
 }
 
-pub fn section_link_same_page(section_name: &str, _label: Option<&str>) -> String {
+pub fn section_link_same_page(section_name: &str, label: Option<&str>) -> String {
     // Like "[[#All|All Categories]]".
     // format!("[[#{}{}]]", section_name, label.map_or("".to_string(), |x| format!("|{}", x)))
-    format!("[[#{}|: {}]]", section_name, section_name)
+    let label = label.unwrap_or(section_name);
+    // format!("[[#{}|: {}]]", section_name, section_name)
+    format!("[[#{}|{}]]", section_name, label)
 }
 
 pub fn external_link(url: &str, label: Option<&str>) -> String {
