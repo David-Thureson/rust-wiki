@@ -1,6 +1,7 @@
 // https://www.dokuwiki.org/images
 
 use super::*;
+use std::collections::BTreeMap;
 
 #[derive(Clone, Debug)]
 pub struct Link {
@@ -123,6 +124,172 @@ impl Link {
         Self::new(label, type_)
     }
 
+    pub fn catalog_links(model: &mut Wiki) {
+        for topic in model.topics.values_mut() {
+            topic.outbound_links.clear();
+            topic.inbound_topic_keys.clear();
+            topic.listed_topics.clear();
+            topic.subtopics.clear();
+            topic.combo_subtopics.clear();
+        }
+        for topic in model.topics.values_mut() {
+            for paragraph in topic.paragraphs.iter() {
+                match paragraph {
+                    Paragraph::List { type_, header, items } => {
+                        let (is_combos, is_subtopics) = match type_ {
+                            ListType::Combinations => (true, false),
+                            ListType::Subtopics => (false, true),
+                            _ => (false, false),
+                        };
+                        topic.outbound_links.append(&mut Self::catalog_links_text_block(header));
+                        for list_item in items.iter() {
+                            if list_item.depth == 1 {
+                                let mut links = Self::catalog_links_text_block(&list_item.block);
+                                for link in links.iter() {
+                                    match &link.type_ {
+                                        LinkType::Topic { topic_key } => {
+                                            if !topic.listed_topics.contains(&topic_key) {
+                                                topic.listed_topics.push(topic_key.clone());
+                                            }
+                                            if is_combos {
+                                                topic.combo_subtopics.push(topic_key.clone());
+                                            } else if is_subtopics {
+                                                topic.subtopics.push(topic_key.clone());
+                                            }
+                                            break;
+                                        },
+                                        _ => {},
+                                    }
+                                }
+                                topic.outbound_links.append(&mut links);
+                            }
+                        }
+                    },
+                    Paragraph::Text { text_block} => {
+                        topic.outbound_links.append(&mut Self::catalog_links_text_block(text_block));
+                    },
+                    _ => {},
+                }
+            }
+        }
+
+        // Set inbound links.
+        let mut map = BTreeMap::new();
+        for topic in model.topics.values() {
+            let topic_key = topic.get_key();
+            for link in topic.outbound_links.iter() {
+                let outbound_topic_key = match &link.type_ {
+                    LinkType::Topic { topic_key } => Some(topic_key.clone()),
+                    LinkType::Section { section_key } => Some(section_key.topic_key.clone()),
+                    _ => None,
+                };
+                if let Some(outbound_topic_key) = outbound_topic_key {
+                    let entry = map.entry(outbound_topic_key.clone()).or_insert(vec![]);
+                    if !entry.contains(&topic_key) {
+                        entry.push(topic_key.clone());
+                    }
+                }
+            }
+        }
+        for (topic_key, mut inbound_topic_keys) in map.drain_filter(|_k, _v| true) {
+            if let Some(topic) = model.topics.get_mut(&topic_key) {
+                topic.inbound_topic_keys.append(&mut inbound_topic_keys);
+            }
+        }
+
+        // Sort all of the vectors of TopicKeys.
+        for topic in model.topics.values_mut() {
+            topic.inbound_topic_keys.sort();
+            topic.subtopics.sort();
+            topic.combo_subtopics.sort();
+            topic.listed_topics.sort();
+        }
+    }
+
+    fn catalog_links_text_block(text_block: &TextBlock) -> Vec<Link> {
+        let mut links = vec![];
+        for item in text_block.items.iter() {
+            match item {
+                TextItem::Link { link } => {
+                    links.push(link.clone());
+                },
+                _ => {},
+            }
+        }
+        links
+    }
+
+    pub fn check_links(model: &Wiki) -> TopicErrorList {
+        //bg!(model.topics.keys());
+        let mut errors = TopicErrorList::new();
+        for topic in model.topics.values() {
+            let this_topic_key = topic.get_key();
+            for link in topic.outbound_links.iter() {
+                match &link.type_ {
+                    LinkType::Topic { topic_key } => {
+                        model.check_topic_link(&mut errors, "outbound_links", &this_topic_key, topic_key);
+                    },
+                    LinkType::Section { section_key } => {
+                        //bg!(&section_key);
+                        if !model.has_section(section_key) {
+                            errors.add(&topic.get_key(), &format!("wiki::check_links(): Section link {} not found.", section_key));
+                        }
+                    },
+                    _ => {},
+                }
+            }
+            topic.parents.iter().for_each(|ref_topic_key| { model.check_topic_link(&mut errors, "parents", &this_topic_key, ref_topic_key); } );
+            topic.inbound_topic_keys.iter().for_each(|ref_topic_key| { model.check_topic_link(&mut errors, "inbound_topic_keys", &this_topic_key, ref_topic_key); } );
+            topic.subtopics.iter().for_each(|ref_topic_key| { model.check_topic_link(&mut errors, "subtopics", &this_topic_key, ref_topic_key); } );
+            topic.combo_subtopics.iter().for_each(|ref_topic_key| { model.check_topic_link(&mut errors, "combo_subtopics", &this_topic_key, ref_topic_key); } );
+            topic.listed_topics.iter().for_each(|ref_topic_key| { model.check_topic_link(&mut errors, "listed_topics", &this_topic_key, ref_topic_key); } );
+        }
+        errors
+    }
+
+    pub fn update_internal_links(model: &mut Wiki, keys: &Vec<(TopicKey, TopicKey)>) {
+        //bg!(&keys);
+        // For each entry in keys, the first TopicKey is the old value and the second is the new
+        // value.
+        for topic in model.topics.values_mut() {
+            for paragraph in topic.paragraphs.iter_mut() {
+                match paragraph {
+                    Paragraph::List { type_: _, header, items} => {
+                        header.update_internal_links(keys);
+                        for item in items.iter_mut() {
+                            item.block.update_internal_links(keys);
+                        }
+                    },
+                    Paragraph::Table { has_header: _, rows} => {
+                        for row in rows.iter_mut() {
+                            for cell in row.iter_mut() {
+                                cell.update_internal_links(keys);
+                            }
+                        }
+                    },
+                    Paragraph::Text { text_block} => {
+                        text_block.update_internal_links(keys);
+                    },
+                    _ => {},
+                }
+            }
+            if !topic.parents.is_empty() {
+                let old_parents = topic.parents.clone();
+                topic.parents.clear();
+                for parent_topic_key in old_parents.iter() {
+                    let mut new_parent_topic_key = parent_topic_key.clone();
+                    for (topic_key_old, topic_key_new) in keys.iter() {
+                        if parent_topic_key.eq(&topic_key_old) {
+                            new_parent_topic_key = topic_key_new.clone();
+                            break;
+                        }
+                    }
+                    topic.parents.push(new_parent_topic_key);
+                }
+            }
+        }
+    }
+    
 }
 
 impl ImageSource {

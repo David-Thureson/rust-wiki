@@ -133,6 +133,98 @@ impl Topic {
         false
     }
 
+    pub fn sort_topic_tree(tree: &mut TopicTree) {
+        tree.sort_recursive(&|node: &Rc<RefCell<TopicTreeNode>>| b!(node).item.topic_name.clone());
+    }
+
+    pub fn check_subtopic_relationships(model: &Wiki) -> TopicErrorList {
+        let mut errors = TopicErrorList::new();
+        let err_msg_func = |msg: &str| format!("Wiki::check_subtopic_relationships: {}", msg);
+        let cat_combo = "Combinations".to_string();
+        for topic in model.topics.values() {
+            let topic_key = topic.get_key();
+            let parent_count = topic.parents.len();
+            if topic.category.as_ref().is_none() || topic.category.as_ref().unwrap().to_string() != cat_combo {
+                // Not a combination topic.
+                if parent_count > 1 {
+                    errors.add(&topic_key, &format!("Non-combo category, so expected 0 or 1 parents, found {}.", parent_count));
+                } else {
+                    for parent_topic_key in topic.parents.iter() {
+                        //bg!(&topic.name, parent_topic_key);
+                        if !model.topics[parent_topic_key].listed_topics.contains(&topic_key) {
+                            errors.add(&parent_topic_key,&err_msg_func(&format!("[[{}]]", topic.name)));
+                        }
+                    }
+                }
+            } else {
+                // Combination topic.
+                if parent_count != 2 {
+                    errors.add(&topic_key,&err_msg_func(&format!("Combo category, so expected 2 parents, found {}.", parent_count)));
+                } else {
+                    for parent_topic_key in topic.parents.iter() {
+                        if !model.topics[parent_topic_key].combo_subtopics.contains(&topic_key) {
+                            errors.add(&parent_topic_key, &err_msg_func(&format!("No combination link to child [[{}]].", topic.name)));
+                        }
+                    }
+                }
+            }
+        }
+        errors
+    }
+
+    pub fn make_subtopic_tree(model: &mut Wiki) -> TopicTree {
+        for topic in model.topics.values_mut() {
+            topic.subtopics.clear();
+            topic.combo_subtopics.clear();
+        }
+        let mut parent_child_pairs = vec![];
+        let mut parent_combo_pairs = vec![];
+        for topic in model.topics.values() {
+            let topic_key = topic.get_key();
+            match topic.parents.len() {
+                0 => {
+                    // This is not a subtopic.
+                },
+                1 => {
+                    // Normal (non-combo) subtopic.
+                    let parent_topic_key = topic.parents[0].clone();
+                    parent_child_pairs.push((parent_topic_key, topic_key));
+                },
+                2 => {
+                    // Combination topic.
+                    for parent_topic_key in topic.parents.iter() {
+                        parent_combo_pairs.push((parent_topic_key.clone(), topic_key.clone()))
+                    }
+                    // Don't include combination topics in the subcategory tree.
+                },
+                _ => {
+                    panic!("Found {} parent topics for topic \"{}\". Expected either 1 or 2.", topic.parents.len(), topic.name);
+                }
+            }
+        }
+        for (parent_topic_key, child_topic_key) in parent_child_pairs.iter() {
+            model.topics.get_mut(&parent_topic_key).unwrap().subtopics.push(child_topic_key.clone());
+        }
+        for (parent_topic_key, combo_topic_key) in parent_combo_pairs.iter() {
+            model.topics.get_mut(&parent_topic_key).unwrap().combo_subtopics.push(combo_topic_key.clone());
+        }
+        for topic in model.topics.values_mut() {
+            topic.subtopics.sort_by_cached_key(|topic_key| topic_key.topic_name.clone());
+            topic.combo_subtopics.sort_by_cached_key(|topic_key| topic_key.topic_name.clone());
+        }
+        let mut tree = util::tree::Tree::create(parent_child_pairs, true);
+        Topic::sort_topic_tree(&mut tree);
+        // Have each topic with a subtopic point to its node in the subtopic tree.
+        for topic in model.topics.values_mut() {
+            topic.subtopic_tree_node = tree.get_node(&topic.get_key());
+        }
+        // tree.print_counts_to_depth();
+        // tree.print_with_items(None);
+        tree
+    }
+
+
+
 }
 
 impl PartialEq for Topic {
@@ -172,6 +264,10 @@ impl TopicKey {
 
     pub fn sort_list_by_topic_name(list: &mut Vec<TopicKey>) {
         list.sort_by_cached_key(|topic_key| topic_key.topic_name.to_lowercase());
+    }
+
+    pub fn sort_topic_keys_by_name(vec: &mut Vec<TopicKey>) {
+        vec.sort_by_cached_key(|topic_key| topic_key.topic_name.clone());
     }
 }
 

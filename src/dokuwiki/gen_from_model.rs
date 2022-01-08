@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use crate::model::{AttributeValueType, TopicKey};
 use std::collections::BTreeMap;
-use crate::dokuwiki::PAGE_NAME_ATTR_VALUE;
+use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable};
 
 //const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
 
@@ -185,16 +185,11 @@ impl <'a> GenFromModel<'a> {
             let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(&topic.namespace), &topic.name, None);
             self.add_breadcrumbs_optional(&mut page, &topic);
             self.add_category_optional(&mut page, &topic);
+            self.add_attributes_optional(&mut page, &topic);
             self.add_paragraphs(&mut page, &topic);
             page.write();
         }
         self.errors.print(Some("GenFromModel::gen()"));
-    }
-
-    fn add_category_optional(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
-        if let Some(category) = topic.category.as_ref() {
-            page.add_category(&self.model.main_namespace,category);
-        }
     }
 
     fn add_breadcrumbs_optional(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
@@ -245,6 +240,27 @@ impl <'a> GenFromModel<'a> {
         }
     }
 
+    fn add_category_optional(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
+        if let Some(category) = topic.category.as_ref() {
+            page.add_category(&self.model.main_namespace,category);
+        }
+    }
+
+    fn add_attributes_optional(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
+        if !topic.attributes.is_empty() {
+            let mut table = WikiAttributeTable::new();
+            for attr_instance in topic.attributes.values()
+                    .sorted_by_key(|attr_instance| attr_instance.sequence) {
+                let attr_type = self.model.attributes.get(&attr_instance.attribute_type_name).unwrap();
+                let value_list = attr_instance.values.iter()
+                    .map(|value| attr_type.get_value_display_string(value))
+                    .join(", ");
+                table.add_row(&attr_instance.attribute_type_name, &value_list);
+            }
+            page.add_text(&table.get_markup());
+        }
+    }
+
     fn add_paragraphs(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
         let msg_func_unexpected = |variant_name: &str| format!("In gen_from_model::add_paragraph(), unexpected Paragraph variant = \"{}\"", variant_name);
         // let add_error_unexpected = |paragraph_variant: &str| self.add_error(&msg_func_unexpected(paragraph_variant));
@@ -265,7 +281,7 @@ impl <'a> GenFromModel<'a> {
                 _ => {},
             }
             match paragraph {
-                model::Paragraph::Attributes => {},
+                model::Paragraph::Attributes => {}, // This was already added to the page.
                 model::Paragraph::Breadcrumbs => {}, // This was already added to the page.
                 model::Paragraph::Category => {}, // This was already added to the page.
                 model::Paragraph::Code { text} => {

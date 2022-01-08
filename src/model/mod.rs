@@ -43,8 +43,6 @@ pub use topic_error_list::*;
 
 pub mod wiki;
 pub use wiki::*;
-use std::rc::Rc;
-use std::cell::RefCell;
 
 pub type TopicTree = util::tree::Tree<TopicKey>;
 pub type TopicTreeNode = util::tree::TreeNode<TopicKey>;
@@ -66,10 +64,4 @@ pub const LIST_LABEL_CATEGORY_TOPICS_ALL: &str = "All Topics:";
 pub const LIST_LABEL_SUBTOPICS: &str = "Subtopics:";
 pub const LIST_LABEL_COMBINATIONS: &str = "Combinations:";
 
-pub fn sort_topic_tree(tree: &mut TopicTree) {
-    tree.sort_recursive(&|node: &Rc<RefCell<TopicTreeNode>>| b!(node).item.topic_name.clone());
-}
-
-pub fn sort_topic_keys_by_name(vec: &mut Vec<TopicKey>) {
-    vec.sort_by_cached_key(|topic_key| topic_key.topic_name.clone());
-}
+pub const ATTRIBUTE_ORDER: [&str; 52] = ["School", "Title", "Series", "Course", "Author", "Narrator", "Translator", "Year", "Language", "Domain", "Paradigm", "Format", "Location", "Acquired", "Read", "Started", "Completed", "Abandoned", "Repeat", "Platform", "IDE", "GitHub", "Book", "Context", "License Type", "Name", "Operating System", "PC Name", "Priority", "Status", "Organization", "Founder", "Company", "Email", "Phone", "Twitter", "Skype", "Facebook", "Slack", "LinkedIn", "Meetup", "Operation Code", "Address", "Pricing", "Signed Up", "Downloaded", "Installed", "Used Online", "Used Locally", "Presented", "Created", "Added"];

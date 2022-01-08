@@ -40,7 +40,7 @@ fn gen_from_connectedtext(_copy_image_files_to_local_wiki: bool, topic_limit: Op
 fn gen_sidebar_page(model: &model::Wiki) {
     let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_ROOT), wiki::PAGE_NAME_SIDEBAR, None);
     add_main_page_links(&mut page, model,false, true);
-    add_all_topics(&mut page, &model);
+    add_links_to_all_topics(&mut page, &model);
     page.write();
 }
 
@@ -53,7 +53,7 @@ fn gen_start_page(model: &model::Wiki) {
 
 fn gen_all_topics_page(model: &model::Wiki) {
     let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(&model.namespace_navigation()), wiki::PAGE_NAME_ALL_TOPICS,None);
-    add_all_topics(&mut page, model);
+    add_links_to_all_topics(&mut page, model);
     page.write();
 }
 
@@ -101,7 +101,7 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Wiki, use_li
     }
 }
 
-fn add_all_topics(page: &mut wiki::WikiGenPage, model: &model::Wiki) {
+fn add_links_to_all_topics(page: &mut wiki::WikiGenPage, model: &model::Wiki) {
     for topic_key in model.topic_keys_alphabetical_by_topic_name().iter() {
         //bg!(topic_key);
         let link = GenFromModel::page_link(topic_key);

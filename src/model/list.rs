@@ -92,6 +92,34 @@ impl ListType {
             Self::Tutorials => "Tutorials",
         }
     }
+
+    pub fn catalog_possible_list_types(model: &Wiki) -> util::group::Grouper<String> {
+        let mut group = util::group::Grouper::new("Possible List Types");
+        for topic in model.topics.values() {
+            for paragraph in topic.paragraphs.iter() {
+                match paragraph {
+                    Paragraph::List { type_, header, .. } => {
+                        match type_ {
+                            ListType::General => {
+                                if header.items.len() == 1 {
+                                    match &header.items[0] {
+                                        TextItem::Text { text } => {
+                                            group.record_entry(text);
+                                        },
+                                        _ => {},
+                                    }
+                                }
+                            },
+                            _ => {},
+                        }
+                    }
+                    _ => {},
+                }
+            }
+        }
+        group
+    }
+
 }
 
 impl ListItem {
