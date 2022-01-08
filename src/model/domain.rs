@@ -35,7 +35,7 @@ impl DomainList {
 
     pub fn catalog_domains(model: &mut Wiki) -> TopicErrorList {
         // This must be run after catalog_attributes().
-        debug_assert!(!model.attributes.is_empty());
+        debug_assert!(!model.attributes.attributes.is_empty());
         let errors = TopicErrorList::new();
         model.domains = DomainList::new();
         for topic in model.topics.values_mut() {

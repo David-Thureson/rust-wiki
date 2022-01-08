@@ -3,7 +3,7 @@ use crate::{model, Itertools};
 use crate::dokuwiki as wiki;
 use std::rc::Rc;
 use std::cell::RefCell;
-use crate::model::{AttributeValueType, TopicKey};
+use crate::model::{AttributeValueType, TopicKey, Topic};
 use std::collections::BTreeMap;
 use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR};
 
@@ -48,9 +48,9 @@ impl <'a> GenFromModel<'a> {
 
     pub fn gen_attr_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR,None);
-        for attribute_type in self.model.attributes.values()
+        for attribute_type in self.model.attributes.attributes.values()
             .filter(|attribute_type| attribute_type.value_type != AttributeValueType::Date && attribute_type.value_type != AttributeValueType::Year)
-            .filter(|attribute_type| self.model.attributes_to_index.contains(&attribute_type.name)) {
+            .filter(|attribute_type| self.model.attributes.attributes_to_index.contains(&attribute_type.name)) {
             page.add_headline(&attribute_type.name,1);
             for (value, topic_keys) in attribute_type.values.iter() {
                 page.add_headline(&attribute_type.get_value_display_string(value), 2);
@@ -71,8 +71,8 @@ impl <'a> GenFromModel<'a> {
     pub fn gen_attr_value_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR_VALUE,None);
         let mut map = BTreeMap::new();
-        for attribute_type in self.model.attributes.values()
-                .filter(|attribute_type| self.model.attributes_to_index.contains(&attribute_type.name)) {
+        for attribute_type in self.model.attributes.attributes.values()
+                .filter(|attribute_type| self.model.attributes.attributes_to_index.contains(&attribute_type.name)) {
             for (value, topic_keys) in attribute_type.values.iter() {
                 let entry = map.entry(value).or_insert(vec![]);
                 for topic_key in topic_keys.iter() {
@@ -187,6 +187,7 @@ impl <'a> GenFromModel<'a> {
             self.add_category_optional(&mut page, &topic);
             self.add_attributes_optional(&mut page, &topic);
             self.add_paragraphs(&mut page, &topic);
+            self.add_inbound_links_section_optional(&mut page, &topic);
             page.write();
         }
         self.errors.print(Some("GenFromModel::gen()"));
@@ -252,11 +253,11 @@ impl <'a> GenFromModel<'a> {
             let mut table = WikiAttributeTable::new();
             for attr_instance in topic.attributes.values()
                     .sorted_by_key(|attr_instance| attr_instance.sequence) {
-                let attr_type = self.model.attributes.get(&attr_instance.attribute_type_name).unwrap();
+                let attr_type = self.model.attributes.attributes.get(&attr_instance.attribute_type_name).unwrap();
                 let attr_type_link = match attr_type.value_type {
                     AttributeValueType::Date => wiki::page_link(&namespace_navigation, PAGE_NAME_ATTR_DATE,Some(&attr_type.name)),
                     AttributeValueType::Year => wiki::page_link(&namespace_navigation, PAGE_NAME_ATTR_YEAR,Some(&attr_type.name)),
-                    _ => if self.model.attributes_to_index.contains(&attr_type.name) {
+                    _ => if self.model.attributes.attributes_to_index.contains(&attr_type.name) {
                         wiki::section_link(&namespace_navigation, PAGE_NAME_ATTR, &attr_type.name, Some(&attr_type.name))
                     } else {
                         attr_type.name.clone()
@@ -268,7 +269,7 @@ impl <'a> GenFromModel<'a> {
                         match attr_type.value_type {
                             AttributeValueType::Date => wiki::section_link(&namespace_navigation, PAGE_NAME_ATTR_DATE,&label,Some(&label)),
                             AttributeValueType::Year => wiki::section_link(&namespace_navigation, PAGE_NAME_ATTR_YEAR,&label,Some(&label)),
-                            _ => if self.model.attributes_to_index.contains(&attr_type.name) {
+                            _ => if self.model.attributes.attributes_to_index.contains(&attr_type.name) {
                                 wiki::section_link(&namespace_navigation, PAGE_NAME_ATTR_VALUE, &label, Some(&label))
                             } else {
                                 label
@@ -526,6 +527,41 @@ impl <'a> GenFromModel<'a> {
                 self.add_error(&msg_func_unexpected("LinkType", "InternalUnresolved"));
                 "".to_string()
             }
+        }
+    }
+
+    pub fn add_inbound_links_section_optional(&self, page: &mut wiki::WikiGenPage, topic: &Topic) {
+        let has_attribute_links = self.model.attributes.has_attribute_links(&page.topic_name);
+        let has_inbound_links = !topic.inbound_topic_keys.is_empty();
+        if has_attribute_links || has_inbound_links {
+            page.add_headline("Inbound Links", 1);
+            self.add_attribute_value_topics_list_optional(page);
+            self.add_inbound_links_optional(page, topic);
+        }
+    }
+
+    pub fn add_attribute_value_topics_list_optional(&self, page: &mut wiki::WikiGenPage) {
+        if let Some(list) = self.model.attributes.values.get(&page.topic_name) {
+            if !list.is_empty() {
+                page.add_line("Topics with this attribute:");
+                for (topic_key, attribute_type_name) in list.iter() {
+                    let link = self.page_link_simple(&topic_key);
+                    let line = format!("({}) {}", attribute_type_name.to_lowercase(), link);
+                    page.add_list_item_unordered(1, &line);
+                }
+                page.add_linefeed();
+            }
+        }
+    }
+
+    pub fn add_inbound_links_optional(&self, page: &mut wiki::WikiGenPage, topic: &Topic) {
+        if !topic.inbound_topic_keys.is_empty() {
+            page.add_line("Inbound links:");
+            for topic_key in topic.inbound_topic_keys.iter() {
+                let link = self.page_link_simple(&topic_key);
+                page.add_list_item_unordered(1, &link);
+            }
+            page.add_linefeed();
         }
     }
 

@@ -809,7 +809,7 @@ impl BuildProcess {
 pub fn build_model(topic_limit: Option<usize>, attributes_to_index: Vec<&str>) -> Wiki {
     let mut bp = BuildProcess::new("Tools",NAMESPACE_TOOLS,PATH_CT_EXPORT,FILE_NAME_EXPORT_TOOLS, topic_limit);
     let mut model = bp.build();
-    model.attributes_to_index = attributes_to_index.iter().map(|x| x.to_string()).collect::<Vec<_>>();
+    model.attributes.attributes_to_index = attributes_to_index.iter().map(|x| x.to_string()).collect::<Vec<_>>();
     model
 }
 

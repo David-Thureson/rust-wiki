@@ -41,7 +41,7 @@ impl WikiReport {
         let namespace_count = wiki.namespaces.len();
         let topic_count = wiki.topics.len();
         let category_count = wiki.categories.len();
-        let attribute_count = wiki.attributes.len();
+        let attribute_count = wiki.attributes.attributes.len();
         println!("namespaces = {}, topics = {}, categories = {}, attributes = {}",
             namespace_count, topic_count, category_count, attribute_count);
         let child_depth = 1;
@@ -107,7 +107,7 @@ impl WikiReport {
 }
 
 pub fn report_attributes(wiki: &Wiki) {
-    for attribute_type in wiki.attributes.values() {
+    for attribute_type in wiki.attributes.attributes.values() {
         println!("\n{}: {} ({})", attribute_type.name, attribute_type.value_type.get_variant_name(), attribute_type.get_topic_count());
         for (value, topics) in attribute_type.values.iter() {
             let display_value = attribute_type.get_value_display_string(value);
@@ -119,7 +119,7 @@ pub fn report_attributes(wiki: &Wiki) {
     // Print the names of the string attribute types as a list of quoted strings.
     // println!("{}", wiki.attributes.iter().filter(|(_name, type_)| type_.value_type == AttributeValueType::String).map(|(name, _type_)| format!("\"{}\"", name)).join(", "));
     // Print the names of the date attribute types as a list of quoted strings.
-    println!("{}", wiki.attributes.iter().filter(|(_name, type_)| type_.value_type == AttributeValueType::Date).map(|(name, _type_)| format!("\"{}\"", name)).join(", "));
+    println!("{}", wiki.attributes.attributes.iter().filter(|(_name, type_)| type_.value_type == AttributeValueType::Date).map(|(name, _type_)| format!("\"{}\"", name)).join(", "));
     // Print the names of the year attribute types as a list of quoted strings.
     // println!("{}", wiki.attributes.iter().filter(|(_name, type_)| type_.value_type == AttributeValueType::Year).map(|(name, _type_)| format!("\"{}\"", name)).join(", "));
 }

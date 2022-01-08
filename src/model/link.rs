@@ -199,10 +199,11 @@ impl Link {
 
         // Sort all of the vectors of TopicKeys.
         for topic in model.topics.values_mut() {
-            topic.inbound_topic_keys.sort();
-            topic.subtopics.sort();
-            topic.combo_subtopics.sort();
-            topic.listed_topics.sort();
+            // topic.outbound_links.sort();
+            TopicKey::sort_topic_keys_by_name(&mut topic.inbound_topic_keys);
+            TopicKey::sort_topic_keys_by_name(&mut topic.subtopics);
+            TopicKey::sort_topic_keys_by_name(&mut topic.combo_subtopics);
+            TopicKey::sort_topic_keys_by_name(&mut topic.listed_topics);
         }
     }
 
