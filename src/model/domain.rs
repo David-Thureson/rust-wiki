@@ -59,6 +59,7 @@ impl DomainList {
             domain.fill_related_by_count();
         }
         // model.domains.print();
+        // model.domains.print_strong_relationships();
         errors
     }
 
@@ -67,6 +68,18 @@ impl DomainList {
         for domain in self.domains.values() {
             let related_list = domain.related_by_count.iter().join(", ");
             println!("\t{}: {}", domain.name, related_list);
+        }
+    }
+
+    pub fn print_strong_relationships(&self) {
+        println!("Domains: ({})", util::format::format_count(self.domains.len()));
+        for domain in self.domains.values()
+                .sorted_by(|a, b| a.max_related_count().cmp(&b.max_related_count()).reverse().then(a.name.cmp(&b.name))) {
+            println!("\n\t{}", domain.name);
+            for (related_name, related_count) in domain.related.iter()
+                    .sorted_by(|a, b| a.1.cmp(&b.1).reverse().then(a.0.cmp(&b.0))) {
+                println!("\t\t({}) {}", util::format::format_count(*related_count), related_name);
+            }
         }
     }
 }
@@ -88,5 +101,9 @@ impl Domain {
             .collect::<Vec<_>>();
         sorted.sort_by(|a, b| a.1.cmp(b.1).reverse().then(a.0.cmp(&b.0)));
         self.related_by_count = sorted.drain(..).map(|(name, _count)| name).collect::<Vec<_>>();
+    }
+
+    pub fn max_related_count(&self) -> usize {
+        *self.related.values().max().unwrap_or(&0)
     }
 }
