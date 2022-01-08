@@ -46,7 +46,7 @@ const CT_TEMP_DELIM_QUOTE_END: &str = "{TEMP QUOTE END}";
 
 pub fn main() {
     // build_wiki(Some(100));
-    build_model(None);
+    // build_model(None);
 }
 
 struct BuildProcess {
@@ -806,9 +806,10 @@ impl BuildProcess {
 
 }
 
-pub fn build_model(topic_limit: Option<usize>) -> Wiki {
+pub fn build_model(topic_limit: Option<usize>, attributes_to_index: Vec<&str>) -> Wiki {
     let mut bp = BuildProcess::new("Tools",NAMESPACE_TOOLS,PATH_CT_EXPORT,FILE_NAME_EXPORT_TOOLS, topic_limit);
-    let model = bp.build();
+    let mut model = bp.build();
+    model.attributes_to_index = attributes_to_index.iter().map(|x| x.to_string()).collect::<Vec<_>>();
     model
 }
 
@@ -820,4 +821,3 @@ fn remove_brackets_rc(text: &str, context: &str) -> Result<String, String> {
         Ok(util::parse::between_trim(text, CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT).to_string())
     }
 }
-

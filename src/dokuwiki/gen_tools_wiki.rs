@@ -13,7 +13,7 @@ pub fn main() {
 fn gen_from_connectedtext(_copy_image_files_to_local_wiki: bool, topic_limit: Option<usize>) {
     println!("\nGenerating wiki from ConnectedText...");
     let attr_to_index = vec!["Author", "Book", "Company", "Context", "Course", ATTRIBUTE_NAME_DOMAIN, "Domains", "Format", "Founder", "IDE", "Language", "License Type", "LinkedIn", "Narrator", "Operating System", "Organization", "PC Name", "Paradigm", "Platform", "School", "Series", "Status", "Translator"];
-    let model = build_model(topic_limit);
+    let model = build_model(topic_limit, attr_to_index);
     // if copy_image_files_to_local_wiki {
     //     copy_image_files(db, NaiveDate::from_ymd(1900, 3, 20), true);
     // }
@@ -30,8 +30,8 @@ fn gen_from_connectedtext(_copy_image_files_to_local_wiki: bool, topic_limit: Op
     gen.gen_subtopics_page();
     gen.gen_attr_year_page();
     gen.gen_attr_date_page();
-    gen.gen_attr_page(&attr_to_index);
-    gen.gen_attr_value_page(&attr_to_index);
+    gen.gen_attr_page();
+    gen.gen_attr_value_page();
     // gen_terms_page();
     gen.gen();
     println!("\nDone generating wiki.");

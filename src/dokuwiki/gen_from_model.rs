@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use crate::model::{AttributeValueType, TopicKey};
 use std::collections::BTreeMap;
-use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable};
+use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR};
 
 //const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
 
@@ -46,11 +46,11 @@ impl <'a> GenFromModel<'a> {
         page.write();
     }
 
-    pub fn gen_attr_page(&self, attr_to_index: &Vec<&str>) {
+    pub fn gen_attr_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR,None);
         for attribute_type in self.model.attributes.values()
             .filter(|attribute_type| attribute_type.value_type != AttributeValueType::Date && attribute_type.value_type != AttributeValueType::Year)
-            .filter(|attribute_type| attr_to_index.contains(&attribute_type.name.as_str())) {
+            .filter(|attribute_type| self.model.attributes_to_index.contains(&attribute_type.name)) {
             page.add_headline(&attribute_type.name,1);
             for (value, topic_keys) in attribute_type.values.iter() {
                 page.add_headline(&attribute_type.get_value_display_string(value), 2);
@@ -68,11 +68,11 @@ impl <'a> GenFromModel<'a> {
         page.write();
     }
 
-    pub fn gen_attr_value_page(&self, attr_to_index: &Vec<&str>) {
+    pub fn gen_attr_value_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR_VALUE,None);
         let mut map = BTreeMap::new();
         for attribute_type in self.model.attributes.values()
-                .filter(|attribute_type| attr_to_index.contains(&attribute_type.name.as_str())) {
+                .filter(|attribute_type| self.model.attributes_to_index.contains(&attribute_type.name)) {
             for (value, topic_keys) in attribute_type.values.iter() {
                 let entry = map.entry(value).or_insert(vec![]);
                 for topic_key in topic_keys.iter() {
@@ -132,14 +132,14 @@ impl <'a> GenFromModel<'a> {
         for (year, month_map) in year_month_map.iter() {
             page.add_headline(&year.to_string(),1);
             for (month, dates) in month_map.iter() {
-                page.add_headline(&util::date_time::year_month_to_doc_format(*year, *month), 2);
+                page.add_headline(&util::date_time::year_month_to_mon_format(*year, *month), 2);
                 for date in dates.iter() {
                     let display_value = model::AttributeType::date_to_display_string(&date);
-                    page.add_line(&format!("{}:", display_value));
+                    page.add_headline(&display_value, 3);
                     let match_value = model::AttributeType::date_to_canonical_value(date);
                     for (attribute_type_name, topic_key) in self.model.get_typed_topics_for_attr_value(&AttributeValueType::Date, &match_value, None) {
                         let link = self.page_link_simple(&topic_key);
-                        page.add_list_item_unordered(1, &format!("{} {}", attribute_type_name, link));
+                        page.add_list_item_unordered(1, &format!("({}) {}", attribute_type_name.to_lowercase(), link));
                     }
                 }
             }
@@ -248,14 +248,34 @@ impl <'a> GenFromModel<'a> {
 
     fn add_attributes_optional(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
         if !topic.attributes.is_empty() {
+            let namespace_navigation = &self.model.namespace_navigation();
             let mut table = WikiAttributeTable::new();
             for attr_instance in topic.attributes.values()
                     .sorted_by_key(|attr_instance| attr_instance.sequence) {
                 let attr_type = self.model.attributes.get(&attr_instance.attribute_type_name).unwrap();
+                let attr_type_link = match attr_type.value_type {
+                    AttributeValueType::Date => wiki::page_link(&namespace_navigation, PAGE_NAME_ATTR_DATE,Some(&attr_type.name)),
+                    AttributeValueType::Year => wiki::page_link(&namespace_navigation, PAGE_NAME_ATTR_YEAR,Some(&attr_type.name)),
+                    _ => if self.model.attributes_to_index.contains(&attr_type.name) {
+                        wiki::section_link(&namespace_navigation, PAGE_NAME_ATTR, &attr_type.name, Some(&attr_type.name))
+                    } else {
+                        attr_type.name.clone()
+                    },
+                };
                 let value_list = attr_instance.values.iter()
-                    .map(|value| attr_type.get_value_display_string(value))
+                    .map(|value| {
+                        let label = attr_type.get_value_display_string(value);
+                        match attr_type.value_type {
+                            AttributeValueType::Date => wiki::section_link(&namespace_navigation, PAGE_NAME_ATTR_DATE,&label,Some(&label)),
+                            AttributeValueType::Year => wiki::section_link(&namespace_navigation, PAGE_NAME_ATTR_YEAR,&label,Some(&label)),
+                            _ => if self.model.attributes_to_index.contains(&attr_type.name) {
+                                wiki::section_link(&namespace_navigation, PAGE_NAME_ATTR_VALUE, &label, Some(&label))
+                            } else {
+                                label
+                            },
+                        }})
                     .join(", ");
-                table.add_row(&attr_instance.attribute_type_name, &value_list);
+                table.add_row(&attr_type_link, &value_list);
             }
             page.add_text(&table.get_markup());
         }

@@ -17,6 +17,7 @@ pub struct Wiki {
     subtopic_tree: Option<TopicTree>,
     pub attributes: BTreeMap<String, AttributeType>,
     pub attribute_orders: BTreeMap<String, usize>,
+    pub attributes_to_index: Vec<String>,
     pub domains: DomainList,
 }
 
@@ -32,6 +33,7 @@ impl Wiki {
             subtopic_tree: None,
             attributes: Default::default(),
             attribute_orders: Default::default(),
+            attributes_to_index: Default::default(),
             domains: DomainList::new(),
         };
         wiki.add_namespace(main_namespace);
