@@ -13,6 +13,7 @@ pub const PATH_CT_EXPORT: &str = r"T:\Private Wiki Export";
 pub const PATH_CT_EXPORT_TOOLS: &str = r"T:\Private Wiki Export\Tools";
 pub const PATH_CT_EXPORT_HOME: &str = r"T:\Private Wiki Export\Home";
 pub const PATH_CT_EXPORT_FILE_BACKUP_FOLDER: &str = r"T:\ConnectedText\Project Backup";
+pub const PATH_CT_EXPORT_IMAGES: &str = r"T:\Private Wiki Export\Images";
 
 pub const FILE_NAME_EXPORT_TOOLS: &str = "Tools.txt";
 

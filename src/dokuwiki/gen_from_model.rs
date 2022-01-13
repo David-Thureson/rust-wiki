@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use crate::model::{AttributeValueType, TopicKey, Topic};
 use std::collections::BTreeMap;
 use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR};
+use std::fs;
 
 //const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
 
@@ -514,7 +515,9 @@ impl <'a> GenFromModel<'a> {
                 // pub(crate) fn image_part(image_namespace: &str, image_file_name: &str, image_link_type: &WikiImageLinkType, image_size: &WikiImageSize) -> String {
                 match source {
                     model::ImageSource::Internal { namespace, file_name } => {
-                        let text = wiki::gen::image_part(&namespace, &file_name, &wiki::gen::WikiImageLinkType::Direct, &wiki::gen::WikiImageSize::Large);
+                        let link_type = wiki::gen::WikiImageLinkType::Direct;
+                        let size = wiki::gen::WikiImageSize::Original;
+                        let text = wiki::gen::image_part(&namespace, &file_name, &link_type, &size);
                         text
                     }
                     model::ImageSource::External {..} => {
@@ -596,4 +599,17 @@ impl <'a> GenFromModel<'a> {
         let link = wiki::section_link(&topic_key.namespace, &topic_key.topic_name, section_name, None);
         link
     }
+
+    pub fn copy_image_files(path_from: &str, path_to: &str, print: bool) {
+        dbg!(&path_from, &path_to);
+        for path in fs::read_dir(path_from).unwrap() {
+            let dir_entry = path.as_ref().unwrap();
+            let file_name_from = util::file::dir_entry_to_file_name(dir_entry);
+            let full_file_name_from = format!("{}/{}", path_from, file_name_from);
+            let full_file_name_to = format!("{}/{}", path_to, wiki::gen::legal_file_name(&file_name_from));
+            if print { println!("{} => {}", full_file_name_from, full_file_name_to); }
+            std::fs::copy(&full_file_name_from, full_file_name_to).unwrap();
+        }
+    }
+
 }

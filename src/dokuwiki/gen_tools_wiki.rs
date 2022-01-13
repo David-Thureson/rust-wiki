@@ -3,20 +3,25 @@ use crate::model;
 use crate::connectedtext::to_model::build_model;
 use crate::model::ATTRIBUTE_NAME_DOMAIN;
 use crate::dokuwiki::gen_from_model::GenFromModel;
+use crate::connectedtext::PATH_CT_EXPORT_IMAGES;
+use crate::dokuwiki::PATH_MEDIA;
 
 const PROJECT_NAME: &str = "Tools";
 
 pub fn main() {
-    gen_from_connectedtext(true, None);
+    gen_from_connectedtext(false, None);
 }
 
-fn gen_from_connectedtext(_copy_image_files_to_local_wiki: bool, topic_limit: Option<usize>) {
+fn gen_from_connectedtext(copy_image_files_to_local_wiki: bool, topic_limit: Option<usize>) {
     println!("\nGenerating wiki from ConnectedText...");
+    let namespace_main = PROJECT_NAME.to_lowercase();
     let attr_to_index = vec!["Author", "Book", "Company", "Context", "Course", ATTRIBUTE_NAME_DOMAIN, "Domains", "Format", "Founder", "IDE", "Language", "License Type", "LinkedIn", "Narrator", "Operating System", "Organization", "PC Name", "Paradigm", "Platform", "School", "Series", "Status", "Translator"];
-    let model = build_model(topic_limit, attr_to_index);
-    // if copy_image_files_to_local_wiki {
-    //     copy_image_files(db, NaiveDate::from_ymd(1900, 3, 20), true);
-    // }
+    let model = build_model(PROJECT_NAME, &namespace_main, topic_limit, attr_to_index);
+    // model.interpolate_added_date();
+    if copy_image_files_to_local_wiki {
+        let path_to = format!("{}/{}", PATH_MEDIA, namespace_main);
+        GenFromModel::copy_image_files(PATH_CT_EXPORT_IMAGES, &path_to, true);
+    }
     gen_sidebar_page(&model);
     gen_start_page(&model);
     // gen_recent_topics_page();

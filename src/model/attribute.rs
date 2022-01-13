@@ -308,7 +308,6 @@ impl PartialEq for AttributeValueType {
 
 impl Eq for AttributeValueType {}
 
-
 /*
 impl AttributeValueList {
     pub fn new() -> Self {

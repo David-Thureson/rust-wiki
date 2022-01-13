@@ -110,6 +110,10 @@ impl Wiki {
         DomainList::catalog_domains(self)
     }
 
+    pub fn interpolate_added_date(&mut self) {
+        // super::date::interpolate_added_date(self);
+    }
+
     pub fn has_topic(&self, topic_key: &TopicKey) -> bool {
         self.topics.contains_key(topic_key)
     }
