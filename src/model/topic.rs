@@ -259,7 +259,7 @@ impl TopicKey {
     }
 
     pub fn get_key(&self) -> String {
-        self.to_string().to_lowercase()
+        format!("[{}:{}]", self.namespace.to_lowercase(), self.topic_name.to_lowercase())
     }
 
     pub fn sort_list_by_topic_name(list: &mut Vec<TopicKey>) {

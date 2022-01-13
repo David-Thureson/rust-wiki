@@ -422,7 +422,7 @@ impl <'a> GenFromModel<'a> {
             if let Some(label) = label {
                 page.add_line(label);
             }
-            for node_rc in nodes.iter() {
+            for node_rc in nodes.iter().sorted_by_key(|node| b!(node).item.topic_name.to_lowercase()) {
                 let node = b!(node_rc);
                 let use_this_node = if is_category { !node.is_leaf() } else { true };
                 if use_this_node {

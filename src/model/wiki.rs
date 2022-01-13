@@ -119,14 +119,21 @@ impl Wiki {
     }
 
     pub fn topic_keys_alphabetical_by_topic_name(&self) -> Vec<TopicKey> {
+        self.topics.keys().sorted_by_key(|topic_key| topic_key.topic_name.to_lowercase()).map(|x| x.clone()).collect()
+    }
+
+    /*
+    pub fn topic_keys_alphabetical_by_topic_name(&self) -> Vec<TopicKey> {
         let mut map = BTreeMap::new();
         for topic_key in self.topics.keys() {
             //bg!(topic_key);
-            map.insert(topic_key.topic_name.clone(), topic_key.clone());
+            let key_new = topic_key.topic_name.clone();
+            map.insert(key_new, topic_key.clone());
         }
         //bg!(&map);
         map.values().map(|topic_key| topic_key.clone()).collect::<Vec<_>>()
     }
+    */
 
     pub fn has_section(&self, section_key: &SectionKey) -> bool {
         if !self.has_topic(&section_key.topic_key) {
