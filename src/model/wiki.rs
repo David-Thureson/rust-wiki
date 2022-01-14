@@ -111,7 +111,7 @@ impl Wiki {
     }
 
     pub fn interpolate_added_date(&mut self) {
-        // super::date::interpolate_added_date(self);
+        super::date::interpolate_added_date(self);
     }
 
     pub fn has_topic(&self, topic_key: &TopicKey) -> bool {
@@ -120,6 +120,13 @@ impl Wiki {
 
     pub fn topic_keys_alphabetical_by_topic_name(&self) -> Vec<TopicKey> {
         self.topics.keys().sorted_by_key(|topic_key| topic_key.topic_name.to_lowercase()).map(|x| x.clone()).collect()
+    }
+
+    pub fn get_attribute_order(&self, attr_type_name: &str) -> Result<usize, String> {
+        match self.attributes.attribute_orders.get(attr_type_name) {
+            Some(sequence) => Ok(*sequence),
+            None => Err(format!("No sequence found for attribute type \"{}\".", attr_type_name)),
+        }
     }
 
     /*

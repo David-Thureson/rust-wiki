@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::cell::{RefCell, Ref};
+use chrono::NaiveDate;
 
 pub struct Topic {
     pub parents: Vec<TopicKey>,
@@ -93,7 +94,7 @@ impl Topic {
                 // own in the category tree and thus will not be a leaf.
                 let filter_func = |found_node: Ref<TopicTreeNode>| found_node.is_leaf();
                 let mut topic_keys = node.get_direct_child_items(&filter_func);
-                TopicKey::sort_list_by_topic_name(&mut topic_keys);
+                TopicKey::sort_topic_keys_by_name(&mut topic_keys);
                 topic_keys
             },
             None => vec![],
@@ -106,7 +107,7 @@ impl Topic {
                 let node = b!(node_rc);
                 let filter_func = |found_node: Ref<TopicTreeNode>| found_node.is_leaf();
                 let mut topic_keys = node.get_indirect_child_items(&filter_func);
-                TopicKey::sort_list_by_topic_name(&mut topic_keys);
+                TopicKey::sort_topic_keys_by_name(&mut topic_keys);
                 topic_keys
             },
             None => vec![],
@@ -223,7 +224,11 @@ impl Topic {
         tree
     }
 
-
+    pub fn set_attribute_date(&mut self, attr_type_name: &str, sequence: usize, value: &NaiveDate) {
+        self.attributes.remove(attr_type_name);
+        let mut attr_type = AttributeType::new(attr_type_name, &AttributeValueType::Date, sequence);
+        attr_type.add_date_value(value, &self.get_key()).unwrap();
+    }
 
 }
 
@@ -262,12 +267,8 @@ impl TopicKey {
         format!("[{}:{}]", self.namespace.to_lowercase(), self.topic_name.to_lowercase())
     }
 
-    pub fn sort_list_by_topic_name(list: &mut Vec<TopicKey>) {
-        list.sort_by_cached_key(|topic_key| topic_key.topic_name.to_lowercase());
-    }
-
     pub fn sort_topic_keys_by_name(vec: &mut Vec<TopicKey>) {
-        vec.sort_by_cached_key(|topic_key| topic_key.topic_name.clone());
+        vec.sort_by_cached_key(|topic_key| topic_key.topic_name.to_lowercase());
     }
 }
 

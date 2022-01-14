@@ -75,6 +75,10 @@ impl AttributeType {
         Ok(canonical_value)
     }
 
+    pub fn add_date_value(&mut self, value: &NaiveDate, topic_key: &TopicKey) -> Result<String, String> {
+        self.add_value(&Self::date_to_canonical_value(value), topic_key)
+    }
+
     pub fn get_canonical_value(&self, value: &str) -> Result<String, String> {
         Self::value_to_canonical_form(&self.value_type, value)
     }
@@ -86,8 +90,7 @@ impl AttributeType {
                 Ok(util::bool::bool_to_yes_no(value))
             }
             AttributeValueType::Date => {
-                let value= util::date_time::naive_date_from_sortable_format(value)
-                    .unwrap_or(util::date_time::naive_date_from_compact_format(value)?);
+                let value= util::date_time::naive_date_from_multiple_formats(value)?;
                 Ok(util::date_time::naive_date_to_sortable_format(&value))
             }
             AttributeValueType::Number => {
@@ -172,7 +175,7 @@ impl AttributeType {
                                 errors.add(&topic.get_key(), &format!("No sequence found for attribute type \"{}\".", temp_attr_name));
                                 ATTRIBUTE_ORDER.len()
                             },
-                            |sequence| { *sequence }
+                                |sequence| { *sequence }
                             );
                         AttributeType::new(temp_attr_name, &value_type, sequence)
                     });
