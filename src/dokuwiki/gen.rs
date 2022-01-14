@@ -159,8 +159,8 @@ pub fn add_headline(page_text: &mut String, text: &str, level: usize) {
     // Like "----- Categories -----" where a level 1 (top) headline has five hyphens.
     debug_assert!(level >= 1);
     debug_assert!(level <= 5);
-    let equal_signs = "=".repeat(6 - level);
-    page_text.push_str(&format!("{}{}{}\n\n", equal_signs, text, equal_signs));
+    let markers = DELIM_HEADLINE.repeat(6 - level);
+    page_text.push_str(&format!("{}{}{}\n\n", markers, text, markers));
 }
 
 pub fn add_image_internal_link(page_text: &mut String, page_namespace: &str, page_name: &str, image_namespace: &str, image_file_name: &str, image_size: &WikiImageSize) {

@@ -6,7 +6,7 @@ use crate::dokuwiki::gen_from_model::GenFromModel;
 use crate::connectedtext::PATH_CT_EXPORT_IMAGES;
 use crate::dokuwiki::{PATH_MEDIA, PATH_PAGES};
 
-const PROJECT_NAME: &str = "Tools";
+pub const PROJECT_NAME: &str = "Tools";
 
 pub fn main() {
     gen_from_connectedtext(false, None);
@@ -22,8 +22,7 @@ fn gen_from_connectedtext(copy_image_files_to_local_wiki: bool, topic_limit: Opt
     });
 
     let namespace_main = PROJECT_NAME.to_lowercase();
-    let attr_to_index = vec!["Author", "Book", "Company", "Context", "Course", ATTRIBUTE_NAME_DOMAIN, "Domains", "Format", "Founder", "IDE", "Language", "License Type", "LinkedIn", "Narrator", "Operating System", "Organization", "PC Name", "Paradigm", "Platform", "School", "Series", "Status", "Translator"];
-    let model = build_model(PROJECT_NAME, &namespace_main, topic_limit, attr_to_index);
+    let model = build_model(PROJECT_NAME, &namespace_main, topic_limit, get_attr_to_index());
     // model.interpolate_added_date();
     if copy_image_files_to_local_wiki {
         let path_to = format!("{}/{}", PATH_MEDIA, namespace_main);
@@ -119,4 +118,8 @@ fn add_links_to_all_topics(page: &mut wiki::WikiGenPage, model: &model::Wiki) {
         let link = GenFromModel::page_link(topic_key);
         page.add_line_with_break(&link);
     }
+}
+
+pub fn get_attr_to_index() -> Vec<&'static str> {
+    vec!["Author", "Book", "Company", "Context", "Course", ATTRIBUTE_NAME_DOMAIN, "Domains", "Format", "Founder", "IDE", "Language", "License Type", "LinkedIn", "Narrator", "Operating System", "Organization", "PC Name", "Paradigm", "Platform", "School", "Series", "Status", "Translator"]
 }

@@ -11,6 +11,9 @@ pub mod gen_tools_wiki;
 pub mod parse;
 pub use parse::*;
 
+pub mod to_model;
+pub use to_model::*;
+
 //pub mod model;
 //pub use model::*;
 
@@ -27,6 +30,7 @@ pub const PAGE_NAME_ATTR_YEAR: &str = "Years";
 pub const PAGE_NAME_ATTR_DATE: &str = "Dates";
 pub const PAGE_NAME_TERMS: &str = "Terms";
 
+pub const DELIM_PARAGRAPH: &str = "\n\n";
 pub const DELIM_BOOKMARK_RIGHT: &str = "=>";
 pub const DELIM_BOOKMARK_LEFT: &str = "<=";
 pub const DELIM_BOLD: &str = "**";
@@ -35,6 +39,8 @@ pub const DELIM_QUOTE_START: &str = "<WRAP round box>";
 pub const DELIM_QUOTE_END: &str = "</WRAP>";
 pub const DELIM_CODE_START: &str = "<code>";
 pub const DELIM_CODE_END: &str = "</code>";
+pub const DELIM_SECTION_IN_LINK: &str = "#";
+pub const DELIM_HEADLINE: &str = "=";
 
 /*
 pub fn back_up_from_live() {

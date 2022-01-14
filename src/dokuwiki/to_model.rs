@@ -1,70 +1,36 @@
 use crate::model::*;
-use crate::connectedtext::NAMESPACE_TOOLS;
 use std::path::PathBuf;
 use std::fs;
 use super::*;
 // use crate::model::report::WikiReport;
 use util::parse::{split_3_two_delimiters_rc, split_trim, between};
 use crate::Itertools;
-#[allow(unused_imports)]
-use crate::connectedtext::report::report_category_tree;
-#[allow(unused_imports)]
-use crate::model::report::report_attributes;
 
-const CT_BRACKETS_LEFT: &str = "[[";
-const CT_BRACKETS_RIGHT: &str = "]]";
-// const CT_BRACKET_SINGLE_LEFT: &str = "[";
-// const CT_BRACKET_SINGLE_RIGHT: &str = "]";
-const CT_TOPIC_BREAK: &str = "{{Topic}} ";
-// const CT_PARAGRAPH_BREAK: &str = "\r\n\r\n";
-const CT_PARAGRAPH_BREAK: &str = "\n\n";
-const CT_TEMP_PARAGRAPH_BREAK: &str = "{temp paragraph break}";
-const CT_TABLE_START_SINGLE_LINE_BREAK: &str = "\n{|";
-const CT_TABLE_START_DOUBLE_LINE_BREAK: &str = "\n\n{|";
-//const CT_LINE_BREAK: &str = "\r\n";
-const CT_LINE_BREAK: &str = "\n";
-const CT_CATEGORY_PREFIX: &str = "[[$CATEGORY:";
-const CT_BOOKMARK_DELIM_RIGHT: &str = "»";
-const CT_BOOKMARK_DELIM_LEFT: &str = "«";
-const CT_TABLE_START: &str = "{|";
-const CT_TABLE_END: &str = "|}";
-const CT_TABLE_DELIM: &str = "||";
-const CT_PREFIX_IMAGE: &str = "$IMG:";
-const CT_PREFIX_URL: &str = "$URL:";
-const CT_PIPE: &str = "|";
-const CT_DELIM_SECTION_IN_LINK: &str = "#";
+const DW_PARAGRAPH_BREAK: &str = "\n\n";
+const DW_LINE_BREAK: &str = "\n";
 const CT_MARK_SECTION_HEADER: &str = "=";
 const CT_PREFIX_IMAGE_FOLDER: &str = r"Images\";
-// const CT_CURRENT_TOPIC: &str = "(($CURRENTTOPIC))";
-const CT_IMAGE_SIZE_STD: &str = "(($IMG_SIZE))";
-const CT_IMAGE_SIZE_LARGE: &str = "(($IMG_SIZE_LARGE))";
-const CT_IMAGE_SIZE_100_PCT: &str = "100%";
-const CT_DELIM_CODE_START: &str = "{{{";
-const CT_DELIM_CODE_END: &str = "}}}";
-const CT_TEMP_DELIM_QUOTE_START: &str = "{TEMP QUOTE START}";
-const CT_TEMP_DELIM_QUOTE_END: &str = "{TEMP QUOTE END}";
 
 pub fn main() {
-    // build_wiki(Some(100));
-    // build_model(None);
+    // let topic_limit = None;
+    let topic_limit = Some(20);
+    build_model(gen_tools_wiki::PROJECT_NAME, &gen_tools_wiki::PROJECT_NAME.to_lowercase(), topic_limit, gen_tools_wiki::get_attr_to_index());
 }
 
 struct BuildProcess {
     wiki_name: String,
     namespace_main: String,
-    export_path: String,
-    export_file_name: String,
+    path_source: String,
     errors: TopicErrorList,
     topic_limit: Option<usize>,
 }
 
 impl BuildProcess {
-    pub fn new(wiki_name: &str, namespace_main: &str, export_path: &str, export_file_name: &str, topic_limit: Option<usize>) -> Self {
+    pub fn new(wiki_name: &str, namespace_main: &str, path_source: &str, topic_limit: Option<usize>) -> Self {
         Self {
             wiki_name: wiki_name.to_string(),
             namespace_main: namespace_main.to_string(),
-            export_path: export_path.to_string(),
-            export_file_name: export_file_name.to_string(),
+            path_source: path_source.to_string(),
             errors: TopicErrorList::new(),
             topic_limit,
         }
@@ -72,11 +38,18 @@ impl BuildProcess {
 
     pub fn build(&mut self) -> Wiki {
         let mut wiki = Wiki::new(&self.wiki_name, &self.namespace_main);
-        wiki.add_namespace(&wiki.namespace_book());
-        // wiki.add_namespace(NAMESPACE_CATEGORY);
-        wiki.add_namespace(&wiki.namespace_navigation());
-        wiki.add_namespace(&wiki.namespace_attribute());
-        self.parse_from_text_file(&mut wiki);
+        let namespace_main = self.namespace_main.clone();
+        let namespace_book = wiki.namespace_book();
+        wiki.add_namespace(&namespace_book);
+
+        let topic_limit_per_namespace = self.topic_limit.map(|topic_limit| topic_limit / 2);
+        self.parse_from_folder(&mut wiki, &namespace_main, topic_limit_per_namespace);
+        self.parse_from_folder(&mut wiki, &namespace_book, topic_limit_per_namespace);
+        // Figure out the real nature of each paragraph.
+
+        /*
+        self.refine_paragraphs(&mut wiki);
+
         wiki.catalog_links();
         self.check_links(&wiki);
         self.check_subtopic_relationships(&mut wiki);
@@ -87,12 +60,10 @@ impl BuildProcess {
         // report_category_tree(&wiki);
         // wiki.catalog_possible_list_types().print_by_count(0, None);
         wiki.add_missing_category_topics();
-        wiki.move_topics_to_namespace_by_category("Navigation",&wiki.namespace_navigation());
-        wiki.move_topics_to_namespace_by_category("Nonfiction Books",&wiki.namespace_book());
         wiki.catalog_links();
         self.errors.clear();
         self.check_links(&wiki);
-        self.errors.print(Some("After moving navigation and book topics."));
+        self.errors.print(Some("After adding missing category topics."));
         // Call the make tree functions after the last call to wiki.catalog_links().
         wiki.make_category_tree();
         wiki.make_subtopic_tree();
@@ -103,93 +74,45 @@ impl BuildProcess {
             //report_attributes(&wiki);
         }
         wiki.catalog_domains();
+
+         */
         wiki
     }
 
-    fn parse_from_text_file(&mut self, wiki: &mut Wiki) {
-        // Read the single topic file from disk and break it into topics, then break each topic
-        // into paragraphs. At this point we don't care about whether the paragraphs are plain or
-        // mixed text, attribute tables, section headers, breadcrumbs, etc.
-        self.read_text_file_as_topics(wiki);
-        // Figure out the real nature of each paragraph.
-        self.refine_paragraphs(wiki);
-    }
+    fn parse_from_folder(&mut self, wiki: &mut Wiki, namespace_name: &str, topic_limit: Option<usize>) {
+        // Read each page's text file and read it as a topic, then break each topic into
+        // paragraphs. At this point we don't care about whether the paragraphs are plain or mixed
+        // text, attribute tables, section headers, breadcrumbs, etc.
 
-    fn read_text_file_as_topics(&mut self, wiki: &mut Wiki) {
-        let path_export_file = PathBuf::from(&self.export_path).join(&self.export_file_name);
-
-        // Back up the export file.
-        util::file::back_up_file_next_number_r(&path_export_file, PATH_CT_EXPORT_FILE_BACKUP_FOLDER, "Project Export", "txt", 4).unwrap();
-
-        //bg!(util::file::path_name(&path_export_file));
-        let export_text = fs::read_to_string(&path_export_file).unwrap();
-        let export_text = export_text.replace("\u{feff}", "");
-        // Sometimes there's a linefeed followed by a line with whitespace, followed by a line
-        // break. So trim the end of every line and reassemble the block of text. This also turns
-        // every line break into a standard \n. We can't trim the beginning of the lines since
-        // things like list items depend on the number of spaces at the beginning.
-        let export_text = export_text.lines()
-            .map(|x| x.trim_end())
-            //.filter(|x| x != &CT_TABLE_END)
-            .join("\n");
-        // Get rid of extra line breaks.
-        let export_text = export_text.replace(&CT_LINE_BREAK.repeat(3), &CT_LINE_BREAK.repeat(2));
-        for topic_text in export_text.split(CT_TOPIC_BREAK)
-                .filter(|topic_text| !topic_text.trim().is_empty())
-                .take(self.topic_limit.unwrap_or(usize::max_value())) {
-            //bg!(&topic_text);
-            let (topic_name, topic_text) = util::parse::split_2(topic_text, CT_LINE_BREAK);
-            let mut topic_name = topic_name.to_string();
-            if topic_name.starts_with("_") {
-                topic_name = topic_name[1..].to_string();
+        let mut topic_count = 0;
+        let path_source = format!("{}/{}", self.path_source, gen::namespace_to_path(namespace_name));
+        for dir_entry_result in fs::read_dir(path_source).unwrap() {
+            let dir_entry = dir_entry_result.as_ref().unwrap();
+            let file_name = util::file::dir_entry_to_file_name(dir_entry);
+            if file_name.ends_with(".txt") {
+                let content = fs::read_to_string(&dir_entry.path()).unwrap();
+                let mut paragraphs = content.split(DELIM_PARAGRAPH).collect::<Vec<_>>();
+                // The first paragraph should have the topic name as a page header, like:
+                //   ======A Mind for Numbers======
+                let mut topic_name = paragraphs.remove(0).to_string();
+                assert!(topic_name.starts_with(DELIM_HEADLINE));
+                assert!(topic_name.ends_with(DELIM_HEADLINE));
+                topic_name = topic_name.replace(DELIM_HEADLINE, "").trim().to_string();
+                dbg!(&topic_name);
+                let mut topic = Topic::new(namespace_name, &topic_name);
+                for paragraph in paragraphs.iter() {
+                    topic.add_paragraph(Paragraph::new_unknown(paragraph));
+                }
+                wiki.add_topic(topic);
+                topic_count += 1;
+                if topic_limit.map_or(false, |topic_limit| topic_count >= topic_limit) {
+                    break;
+                }
             }
-            //rintln!("{}", topic_name);
-
-            let mut topic = Topic::new(&self.namespace_main, &topic_name);
-
-            if topic_name.chars().next().unwrap().is_ascii_lowercase() {
-                let topic_key = TopicKey::new(&self.namespace_main, &topic_name);
-                self.errors.add(&topic_key,"Starts with a lowercase letter.");
-            }
-
-            let topic_text = &Self::preprocess_topic_text_for_tables_as_quotes(&topic_name, topic_text);
-
-            // Pull out the code sections ("{{{" and "}}}") before breaking into paragraphs.
-            let context = format!("read_text_file_as_topics: code splits for \"{}\".", topic_name);
-            match util::parse::split_delimited_and_normal_rc(topic_text, CT_DELIM_CODE_START, CT_DELIM_CODE_END, &context) {
-                Ok(code_splits) => {
-                    for (is_code, entry_text) in code_splits.iter() {
-                        if *is_code {
-                            let entry_text = entry_text.trim_start_matches("\n").trim_end_matches("\n");
-                            topic.add_paragraph(Paragraph::new_code(entry_text));
-                        } else {
-                            // Break the topic into paragraphs.
-                            // First, though, find cases where there is a table start "{|" in the
-                            // line right after some text, and make sure the table start ends up
-                            // preceeded by two linefeeds.
-                            let entry_text= entry_text.replace(CT_PARAGRAPH_BREAK, CT_TEMP_PARAGRAPH_BREAK);
-                            let entry_text = entry_text.replace(CT_TABLE_START_SINGLE_LINE_BREAK, CT_TABLE_START_DOUBLE_LINE_BREAK);
-                            let entry_text= entry_text.replace(CT_TEMP_PARAGRAPH_BREAK, CT_PARAGRAPH_BREAK);
-                            for paragraph_text in entry_text.split(CT_PARAGRAPH_BREAK) {
-                                if !paragraph_text.is_empty() {
-                                    topic.add_paragraph(Paragraph::new_unknown(paragraph_text));
-                                }
-                            }
-                        }
-                    }
-                },
-                Err(msg) => {
-                    let topic_key = TopicKey::new(&self.namespace_main, &topic_name);
-                    self.errors.add(&topic_key, &msg);
-                },
-            }
-
-            //rintln!("{}: {}", topic_name, topic.paragraphs.len());
-
-            wiki.add_topic(topic);
         }
     }
 
+    /*
     fn preprocess_topic_text_for_tables_as_quotes(topic_name: &str, topic_text: &str) -> String {
         // A ConnectedText table might be used for what will be a quotation in the generic model.
         // It will look something like:
@@ -476,7 +399,7 @@ impl BuildProcess {
 
     fn paragraph_as_table_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
         //if topic.name.contains("Zero") {
-            //bg!(&topic.name, text);
+        //bg!(&topic.name, text);
         //}
         // A paragraph with a list of attributes will look something like this:
         //   {|
@@ -765,7 +688,7 @@ impl BuildProcess {
         let err_func = |msg: &str| Err(format!("{} make_image_link_rc: {}: text = \"{}\".", context, msg, text));
         let text = text.trim();
         if text.contains(CT_BRACKETS_LEFT) || text.contains(CT_BRACKETS_RIGHT) {
-           return err_func("Brackets found in text for an image link. They should have been removed.");
+            return err_func("Brackets found in text for an image link. They should have been removed.");
         }
         if !text.starts_with(CT_PREFIX_IMAGE) {
             return err_func(&format!("Presumed image link doesn't start with {}.", CT_PREFIX_IMAGE));
@@ -803,16 +726,17 @@ impl BuildProcess {
     }
 
      */
-
+*/
 }
 
 pub fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>, attributes_to_index: Vec<&str>) -> Wiki {
-    let mut bp = BuildProcess::new(name, namespace_main,PATH_CT_EXPORT,FILE_NAME_EXPORT_TOOLS, topic_limit);
+    let mut bp = BuildProcess::new(name, namespace_main,gen::PATH_PAGES, topic_limit);
     let mut model = bp.build();
     model.attributes.attributes_to_index = attributes_to_index.iter().map(|x| x.to_string()).collect::<Vec<_>>();
     model
 }
 
+/*
 fn remove_brackets_rc(text: &str, context: &str) -> Result<String, String> {
     let text = text.trim();
     if !text.starts_with(CT_BRACKETS_LEFT) || !text.ends_with(CT_BRACKETS_RIGHT) {
@@ -821,3 +745,4 @@ fn remove_brackets_rc(text: &str, context: &str) -> Result<String, String> {
         Ok(util::parse::between_trim(text, CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT).to_string())
     }
 }
+*/
