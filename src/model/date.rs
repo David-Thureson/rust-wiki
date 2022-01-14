@@ -39,14 +39,21 @@ pub fn interpolate_added_date(model: &mut Wiki) {
                 })
                 .map(|x| x.unwrap())
                 .collect::<Vec<_>>();
-            dbg!(&topic.name, &other_dates);
-            /*
-            if let Some(min_other_date) = min_other_date {
-                println!("Based on other dates in topic: \"{}\": {}", topic.name, min_other_date);
-                changes.insert(topic.get_key(), min_other_date);
-            }
+            //bg!(&topic.name, &other_dates);
+            if !other_dates.is_empty() {
+                /*
+                if let Some(min_other_date) = min_other_date {
+                    println!("Based on other dates in topic: \"{}\": {}", topic.name, min_other_date);
+                    changes.insert(topic.get_key(), min_other_date);
+                }
+                */
 
-             */
+
+                changed_count += 1;
+            }
+        }
+        if changed_count == 0 {
+            break;
         }
     }
 

@@ -68,3 +68,7 @@ pub const LIST_LABEL_SUBTOPICS: &str = "Subtopics:";
 pub const LIST_LABEL_COMBINATIONS: &str = "Combinations:";
 
 pub const ATTRIBUTE_ORDER: [&str; 52] = ["School", "Title", "Series", "Course", "Author", "Narrator", "Translator", "Year", "Language", "Domain", "Paradigm", "Format", "Location", "Acquired", "Read", "Started", "Completed", "Abandoned", "Repeat", "Platform", "IDE", "GitHub", "Book", "Context", "License Type", "Name", "Operating System", "PC Name", "Priority", "Status", "Organization", "Founder", "Company", "Email", "Phone", "Twitter", "Skype", "Facebook", "Slack", "LinkedIn", "Meetup", "Operation Code", "Address", "Pricing", "Signed Up", "Downloaded", "Installed", "Used Online", "Used Locally", "Presented", "Created", "Added"];
+
+pub const FOLDER_WIKI_GEN_BACKUP: &str = r"C:\Wiki Gen Backup";
+pub const FOLDER_PREFIX_WIKI_GEN_BACKUP: &str = "Wiki Gen";
+

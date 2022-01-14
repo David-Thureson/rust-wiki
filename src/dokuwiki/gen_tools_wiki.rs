@@ -1,10 +1,10 @@
 use crate::dokuwiki as wiki;
 use crate::model;
 use crate::connectedtext::to_model::build_model;
-use crate::model::ATTRIBUTE_NAME_DOMAIN;
+use crate::model::{ATTRIBUTE_NAME_DOMAIN, FOLDER_PREFIX_WIKI_GEN_BACKUP, FOLDER_WIKI_GEN_BACKUP};
 use crate::dokuwiki::gen_from_model::GenFromModel;
 use crate::connectedtext::PATH_CT_EXPORT_IMAGES;
-use crate::dokuwiki::PATH_MEDIA;
+use crate::dokuwiki::{PATH_MEDIA, PATH_PAGES};
 
 const PROJECT_NAME: &str = "Tools";
 
@@ -14,9 +14,16 @@ pub fn main() {
 
 fn gen_from_connectedtext(copy_image_files_to_local_wiki: bool, topic_limit: Option<usize>) {
     println!("\nGenerating wiki from ConnectedText...");
+
+    // Back up all of the generated *.txt files.
+    let path_pages_project = format!("{}/{}", PATH_PAGES, PROJECT_NAME);
+    util::date_time::print_elapsed(true, "back_up_folder_next_number_r", "", {
+        || { util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 3).unwrap(); }
+    });
+
     let namespace_main = PROJECT_NAME.to_lowercase();
     let attr_to_index = vec!["Author", "Book", "Company", "Context", "Course", ATTRIBUTE_NAME_DOMAIN, "Domains", "Format", "Founder", "IDE", "Language", "License Type", "LinkedIn", "Narrator", "Operating System", "Organization", "PC Name", "Paradigm", "Platform", "School", "Series", "Status", "Translator"];
-    let mut model = build_model(PROJECT_NAME, &namespace_main, topic_limit, attr_to_index);
+    let model = build_model(PROJECT_NAME, &namespace_main, topic_limit, attr_to_index);
     // model.interpolate_added_date();
     if copy_image_files_to_local_wiki {
         let path_to = format!("{}/{}", PATH_MEDIA, namespace_main);
