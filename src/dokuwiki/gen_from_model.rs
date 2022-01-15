@@ -280,6 +280,7 @@ impl <'a> GenFromModel<'a> {
                 table.add_row(&attr_type_link, &value_list);
             }
             page.add_text(&table.get_markup());
+            page.add_linefeed();
         }
     }
 

@@ -28,17 +28,17 @@ impl BuildProcess {
     }
 
     pub fn build(&mut self) -> Wiki {
-        let mut wiki = Wiki::new(&self.wiki_name, &self.namespace_main);
+        let mut model = Wiki::new(&self.wiki_name, &self.namespace_main);
         let namespace_main = self.namespace_main.clone();
-        let namespace_book = wiki.namespace_book();
-        wiki.add_namespace(&namespace_book);
+        let namespace_book = model.namespace_book();
+        model.add_namespace(&namespace_book);
 
         let topic_limit_per_namespace = self.topic_limit.map(|topic_limit| topic_limit / 2);
-        self.parse_from_folder(&mut wiki, &namespace_main, topic_limit_per_namespace);
-        self.parse_from_folder(&mut wiki, &namespace_book, topic_limit_per_namespace);
+        self.parse_from_folder(&mut model, &namespace_main, topic_limit_per_namespace);
+        self.parse_from_folder(&mut model, &namespace_book, topic_limit_per_namespace);
 
         // Figure out the real nature of each paragraph.
-        self.refine_paragraphs(&mut wiki);
+        self.refine_paragraphs(&mut model);
 
         /*
         wiki.catalog_links();
@@ -67,10 +67,10 @@ impl BuildProcess {
         wiki.catalog_domains();
 
          */
-        wiki
+        model
     }
 
-    fn parse_from_folder(&mut self, wiki: &mut Wiki, namespace_name: &str, topic_limit: Option<usize>) {
+    fn parse_from_folder(&mut self, model: &mut Wiki, namespace_name: &str, topic_limit: Option<usize>) {
         // Read each page's text file and read it as a topic, then break each topic into
         // paragraphs. At this point we don't care about whether the paragraphs are plain or mixed
         // text, attribute tables, section headers, breadcrumbs, etc.
@@ -94,7 +94,7 @@ impl BuildProcess {
                 for paragraph in paragraphs.iter() {
                     topic.add_paragraph(Paragraph::new_unknown(paragraph));
                 }
-                wiki.add_topic(topic);
+                model.add_topic(topic);
                 topic_count += 1;
                 if topic_limit.map_or(false, |topic_limit| topic_count >= topic_limit) {
                     break;
@@ -103,9 +103,10 @@ impl BuildProcess {
         }
     }
 
-    fn refine_paragraphs(&mut self, wiki: &mut Wiki) {
-        for topic in wiki.topics.values_mut() {
+    fn refine_paragraphs(&mut self, model: &mut Wiki) {
+        for topic in model.topics.values_mut() {
             let context = format!("Refining paragraphs for \"{}\".", topic.name);
+            println!("\n==================================================================\n\n{}\n", context);
             let paragraph_count = topic.paragraphs.len();
             for paragraph_index in 0..paragraph_count {
                 match self.refine_one_paragraph_rc(topic, paragraph_index, &context) {
@@ -144,11 +145,10 @@ impl BuildProcess {
                 if self.paragraph_as_section_header_rc(topic, &text, paragraph_index, context)? {
                     return Ok(());
                 }
-                /*
-                if let Some(new_paragraph) = self.paragraph_as_bookmark_rc(topic, &text, context)? {
-                    topic.paragraphs[paragraph_index] = new_paragraph;
+                if self.paragraph_as_bookmark_rc(topic, &text, context)? {
                     return Ok(());
                 }
+                /*
                 if let Some(new_paragraph) = self.paragraph_as_quote_start_or_end_rc(topic, &text, context)? {
                     topic.paragraphs[paragraph_index] = new_paragraph;
                     return Ok(());
@@ -196,7 +196,7 @@ impl BuildProcess {
                         match link.label {
                             Some(label) => {
                                 let category_name = label;
-                                println!("\"{}\" in \"{}\"", topic.name, category_name);
+                                //rintln!("\"{}\" in \"{}\"", topic.name, category_name);
                                 topic.category = Some(category_name);
                                 return Ok(true);
                             },
@@ -228,10 +228,9 @@ impl BuildProcess {
         // minus the level.
         let context = &format!("{} Seems to be a section header paragraph.", context);
         let err_func = |msg: &str| Err(format!("{} paragraph_as_section_header_rc: {}: text = \"{}\".", context, msg, text));
-        let text = text.trim();
         match parse_header_optional(text) {
             Ok(Some((name, depth))) => {
-                dbg!(&name, depth);
+                //bg!(&name, depth);
                 topic.paragraphs[paragraph_index] = Paragraph::new_section_header(&name, depth);
                 Ok(true)
             },
@@ -244,53 +243,34 @@ impl BuildProcess {
         }
     }
 
-    /*
-    fn paragraph_as_bookmark_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
-        // A bookmark paragraph showing the parent and grandparent topic will look like this:
-        //   {|
-        //   ||**[[Android]] » [[Android Development]] » (($CURRENTTOPIC))**
-        //   |}
+    fn paragraph_as_bookmark_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<bool, String> {
+        // A bookmark paragraph showing the parent and grandparent topic will look like this with
+        // the links worked out:
+        //   **[[tools:android|Android]] => [[tools:android_development|Android Development]] => Android Sensors**
+        // or like this in a new entry where only the topic names appear:
+        //   **tools:Android => tools:Android Development => Android Sensors**
+        // In the latter case they may or may not have the bold ("**") markup.
         // A bookmark paragraph for a combination topic with two parents will look like this:
-        //   {|
-        //   ||**[[AutoVoice]] » (($CURRENTTOPIC)) « [[Tasker]]**
-        //   |}
+        //   **[[tools:excel|Excel]] => Excel and MySQL <= [[tools:mysql|MySQL]]**
+        // or:
+        //   **tools:Excel => tools:Excel and MySQL <= MySQL**
         let context = &format!("{} Seems to be a bookmark paragraph.", context);
         let err_func = |msg: &str| Err(format!("{} paragraph_as_bookmark_rc: {}: text = \"{}\".", context, msg, text));
-        if text.contains(CT_BOOKMARK_DELIM_RIGHT) {
-            let lines = text.lines().collect::<Vec<_>>();
-            if lines.len() < 2 || lines.len() > 3 {
-                return err_func(&format!("Expected 2 or 3 lines, found {}.", lines.len()));
+        match parse_bookmark_optional(text) {
+            Ok(Some(parent_topic_keys)) => {
+                //bg!(&parent_topic_keys);
+                topic.parents = parent_topic_keys;
+                Ok(true)
+            },
+            Ok(None) => {
+                Ok(false)
+            },
+            Err(msg) => {
+                return err_func(&msg);
             }
-            if lines[0] != CT_TABLE_START {
-                return err_func("Table start delimiter is not right.");
-            }
-            if lines.len() > 2 && lines[2] != CT_TABLE_END {
-                return err_func("Table end delimiter is not right.");
-            }
-            // Get rid of the table row delimiter at the front and bold (**) markup.
-            let line = lines[1].replace(CT_TABLE_DELIM, "").replace("**", "");
-            let parents = if line.contains(CT_BOOKMARK_DELIM_LEFT) {
-                // This is a combination topic with two owners.
-                let (left, _, right) = split_3_two_delimiters_rc(&line, CT_BOOKMARK_DELIM_RIGHT, CT_BOOKMARK_DELIM_LEFT, context)?;
-                vec![left, right]
-            } else {
-                // The topic has one parent.
-                let splits = line.split(CT_BOOKMARK_DELIM_RIGHT).collect::<Vec<_>>();
-                // The second-to-last item should be the parent of the current topic.
-                let parent_split_index = splits.len() - 2;
-                vec![splits[parent_split_index]]
-            };
-            for parent in parents.iter() {
-                let parent = remove_brackets_rc(parent, context)?;
-                topic.parents.push(TopicKey::new(NAMESPACE_TOOLS, &parent));
-            }
-            //bg!(&topic.name, &parents, &topic.parents);
-            Ok(Some(Paragraph::Breadcrumbs))
-        } else {
-            Ok(None)
         }
     }
-
+    /*
     fn paragraph_as_quote_start_or_end_rc(&mut self, _topic: &mut Topic, text: &str, _context: &str) -> Result<Option<Paragraph>, String> {
         if text.trim().eq(CT_TEMP_DELIM_QUOTE_START) {
             Ok(Some(Paragraph::QuoteStart))
