@@ -1,6 +1,6 @@
 use std::fs;
 
-use super::gen::*;
+use super::*;
 use crate::Itertools;
 
 pub struct WikiGenPage {
@@ -30,7 +30,7 @@ impl WikiGenPage {
 
     pub fn add_category(&mut self, qualified_namespace: &str, category_name: &str) {
         // Like "Category: [[APIs]]".
-        self.content.push_str(&format!("Category: {}\n\n", page_link(qualified_namespace, category_name, None)));
+        self.content.push_str(&format!("{}{}\n\n", PREFIX_CATEGORY, page_link(qualified_namespace, category_name, None)));
     }
 
     /*

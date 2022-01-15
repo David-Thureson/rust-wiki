@@ -300,6 +300,12 @@ impl ImageSource {
             file_name: file_name.to_string(),
         }
     }
+
+    pub fn new_external(url: &str) -> Self {
+        Self::External {
+            url: url.to_string(),
+        }
+    }
 }
 
 impl ImageSize {

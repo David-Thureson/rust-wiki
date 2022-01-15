@@ -197,7 +197,8 @@ pub(crate) fn image_part(image_namespace: &str, image_file_name: &str, image_lin
         (None, Some(size_string)) => format!("{}", size_string),
         (None, None) => "".to_string(),
     };
-    format!("{{{{:{}:{}?{}|}}}}", image_namespace, legal_file_name(image_file_name), suffix)
+    // format!("{{{{:{}:{}?{}|}}}}", image_namespace, legal_file_name(image_file_name), suffix)
+    format!("{{{{{}:{}?{}}}}}", image_namespace, legal_file_name(image_file_name), suffix)
 }
 
 pub fn add_page_link(page_text: &mut String, namespace: &str, page_name: &str, label: Option<&str>) {
@@ -242,7 +243,7 @@ pub fn namespace_prefix(namespace: &str) -> String {
 
 pub fn page_link(namespace: &str, page_name: &str, label: Option<&str>) -> String {
     // format!("[[{}{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), label.map_or("".to_string(), |x| format!("|{}", x)))
-    format!("[[{}{}|{}]]", namespace_prefix(namespace), legal_file_name(page_name), label.unwrap_or(page_name))
+    format!("[[{}{}{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), DELIM_LINK_LABEL, label.unwrap_or(page_name))
 }
 
 pub fn section_link(namespace: &str, page_name: &str, section_name: &str, label: Option<&str>) -> String {
@@ -256,7 +257,7 @@ pub fn section_link(namespace: &str, page_name: &str, section_name: &str, label:
     //format!("[[{}{}#{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name)
     let label = label.map_or(format!("{}: {}", page_name, section_name), |label| label.to_string());
     // format!("[[{}{}#{}|{}: {}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, page_name, section_name)
-    format!("[[{}{}#{}|{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, label)
+    format!("[[{}{}#{}{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, DELIM_LINK_LABEL, label)
 }
 
 pub fn section_link_same_page(section_name: &str, label: Option<&str>) -> String {
@@ -264,12 +265,12 @@ pub fn section_link_same_page(section_name: &str, label: Option<&str>) -> String
     // format!("[[#{}{}]]", section_name, label.map_or("".to_string(), |x| format!("|{}", x)))
     let label = label.unwrap_or(section_name);
     // format!("[[#{}|: {}]]", section_name, section_name)
-    format!("[[#{}|{}]]", section_name, label)
+    format!("[[#{}{}{}]]", section_name, DELIM_LINK_LABEL, label)
 }
 
 pub fn external_link(url: &str, label: Option<&str>) -> String {
     // Like "[[https://github.com/|external link|GitHub]]".
-    format!("[[{}{}]]", url, label.map_or("".to_string(), |x| format!("|{}", x)))
+    format!("[[{}{}]]", url, label.map_or("".to_string(), |x| format!("{}{}", DELIM_LINK_LABEL, x)))
 }
 
 pub fn legal_file_name(name: &str) -> String {

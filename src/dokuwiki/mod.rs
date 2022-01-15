@@ -30,17 +30,29 @@ pub const PAGE_NAME_ATTR_YEAR: &str = "Years";
 pub const PAGE_NAME_ATTR_DATE: &str = "Dates";
 pub const PAGE_NAME_TERMS: &str = "Terms";
 
+pub const DELIM_NAMESPACE: &str = ":";
+pub const DELIM_LINEFEED: &str = "\n";
 pub const DELIM_PARAGRAPH: &str = "\n\n";
 pub const DELIM_BOOKMARK_RIGHT: &str = "=>";
 pub const DELIM_BOOKMARK_LEFT: &str = "<=";
 pub const DELIM_BOLD: &str = "**";
 pub const DELIM_ITALIC: &str = "//";
+pub const DELIM_LINK_START: &str = "[[";
+pub const DELIM_LINK_END: &str = "]]";
+pub const DELIM_LINK_LABEL: &str = "|";
+pub const DELIM_LINK_SECTION: &str = "#";
+pub const DELIM_IMAGE_START: &str = "<code>";
+pub const DELIM_IMAGE_END: &str = "</code>";
+pub const DELIM_IMAGE_OPTIONS: &str = "?";
 pub const DELIM_QUOTE_START: &str = "<WRAP round box>";
 pub const DELIM_QUOTE_END: &str = "</WRAP>";
 pub const DELIM_CODE_START: &str = "<code>";
 pub const DELIM_CODE_END: &str = "</code>";
 pub const DELIM_SECTION_IN_LINK: &str = "#";
 pub const DELIM_HEADLINE: &str = "=";
+
+pub const PREFIX_CATEGORY: &str = "Category: ";
+pub const PREFIX_HTTPS: &str = "https://";
 
 /*
 pub fn back_up_from_live() {

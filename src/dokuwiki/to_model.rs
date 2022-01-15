@@ -1,15 +1,6 @@
 use crate::model::*;
-use std::path::PathBuf;
 use std::fs;
 use super::*;
-// use crate::model::report::WikiReport;
-use util::parse::{split_3_two_delimiters_rc, split_trim, between};
-use crate::Itertools;
-
-const DW_PARAGRAPH_BREAK: &str = "\n\n";
-const DW_LINE_BREAK: &str = "\n";
-const CT_MARK_SECTION_HEADER: &str = "=";
-const CT_PREFIX_IMAGE_FOLDER: &str = r"Images\";
 
 pub fn main() {
     // let topic_limit = None;
@@ -45,11 +36,11 @@ impl BuildProcess {
         let topic_limit_per_namespace = self.topic_limit.map(|topic_limit| topic_limit / 2);
         self.parse_from_folder(&mut wiki, &namespace_main, topic_limit_per_namespace);
         self.parse_from_folder(&mut wiki, &namespace_book, topic_limit_per_namespace);
-        // Figure out the real nature of each paragraph.
 
-        /*
+        // Figure out the real nature of each paragraph.
         self.refine_paragraphs(&mut wiki);
 
+        /*
         wiki.catalog_links();
         self.check_links(&wiki);
         self.check_subtopic_relationships(&mut wiki);
@@ -112,111 +103,6 @@ impl BuildProcess {
         }
     }
 
-    /*
-    fn preprocess_topic_text_for_tables_as_quotes(topic_name: &str, topic_text: &str) -> String {
-        // A ConnectedText table might be used for what will be a quotation in the generic model.
-        // It will look something like:
-        //   {|
-        //   ||This short, but packed demonstration will show you why tens of thousands of data analysts from more than 1,800 companies rely on Alteryx daily to prep, blend, and analyze data, to deliver deeper business insights in hours, not weeks. You’ll see how our drag-and-drop interface allows you to:
-        //     * Blend data from a wide variety of sources, including internal, third-party, and cloud-based data
-        //     * Analyze data with over 60 pre-built tools for predictive and spatial analytics, with no programming required
-        //
-        //    Second paragraph.
-        //   |}
-        // The key difference from a normal table or an attribute block is that there is at least
-        // one row within the start and end delimiters that does not end with "||".
-        // let debug = topic_text.contains("||Card Type||MC||");
-        let mut new_text = "".to_string();
-        let lines = topic_text.split("\n").collect::<Vec<_>>();
-        let mut line_index = 0;
-        while line_index < lines.len() {
-            // if debug { dbg!(line_index, &lines[line_index]); }
-            if lines[line_index].trim().starts_with(CT_TABLE_START) {
-                // The line is "{|", so we're starting a table that may be a quote.
-                let line_table_start = line_index;
-                // let debug = lines[line_table_start + 1].contains("||Card Type||MC||");
-                // if debug { //bg!(line_table_start); }
-                // Find the end of this table.
-                let mut line_table_end = line_index + 1;
-                // If this is an attributes block it will start like this and we need to ignore it:
-                // {|
-                // ||Added||[[Added:=20180524]]||
-                if !lines[line_table_start + 1].contains(CT_ATTRIBUTE_ASSIGN) && !lines[line_table_start + 1].trim().ends_with(CT_TABLE_DELIM) {
-                    loop {
-                        // if debug { //bg!(line_table_end, &lines[line_table_end]); }
-                        //if line_table_end == lines.len() || lines[line_table_end].trim().is_empty() {
-                        if line_table_end == lines.len() {
-                            //anic!("No table end for topic \"{}\".", topic_name);
-                            break;
-                        }
-                        //bg!(&line_table_end, lines[line_table_end]);
-                        if lines[line_table_end].trim().starts_with(CT_TABLE_END) {
-                            break;
-                        }
-                        line_table_end += 1;
-                    }
-                }
-                let mut is_quotation = false;
-                // We know the lines on which the table starts and ends.
-                // if debug { //bg!(line_table_start, line_table_end); }
-                if line_table_end - line_table_start > 1 {
-                    // There's at least one row.
-                    // The first row in the table should start with "||".
-                    // let debug = lines[line_table_start + 1].contains("This short, but packed demonstration");
-                    // if debug { //bg!(line_table_start, line_table_end, &lines[line_table_start], &lines[line_table_end]); }
-                    if !lines[line_table_start + 1].starts_with(CT_TABLE_DELIM) {
-                        panic!("No first row table delimiter for topic \"{}\" at line {}.", topic_name, line_table_start + 1);
-                    }
-                    // There's a special case where the table is a bookmark block like
-                    //   {|
-                    //   ||**[[Main Topic]] » (($CURRENTTOPIC))**
-                    //   |}
-                    // We'll need to leave this cases alone because they're handled later on.
-                    if !lines[line_table_start + 1].contains(CT_BOOKMARK_DELIM_RIGHT) {
-                        // The rows in a table used for a quotation don't end with "||".
-                        for i in line_table_start + 1..line_table_end {
-                            // if topic_name.contains("Zero") { //bg!(line_table_start, line_table_end, i, lines[i]); }
-                            if !lines[i].trim().ends_with(CT_TABLE_DELIM) {
-                                is_quotation = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if is_quotation {
-                    // Put a placeholder in the topic text that will later be replaced with a
-                    // Paragraph::QuoteStart.
-                    new_text.push_str(&format!("{}\n\n", CT_TEMP_DELIM_QUOTE_START));
-                    // Copy the row lines into the new topic text, removing any "||" at the
-                    // start of the line. These lines will then be interpreted as normal paragraphs
-                    // later in the process.
-                    for i in line_table_start+1..line_table_end {
-
-                        new_text.push_str(&format!("{}\n", lines[i].replace(CT_TABLE_DELIM, "")));
-                    }
-                    // Put a placeholder in the topic text that will later be replaced with a
-                    // Paragraph::QuoteEnd.
-                    new_text.push_str(&format!("\n\n{}\n\n", CT_TEMP_DELIM_QUOTE_END));
-                } else {
-                    // This is a table but not a quotation, so append the lines to the new output
-                    // topic text unchanged.
-                    line_table_end = line_table_end.min(lines.len() - 1);
-                    for i in line_table_start..=line_table_end {
-                        new_text.push_str(&format!("{}\n", lines[i]));
-                    }
-                }
-                line_index = line_table_end + 1;
-            } else {
-                // Nothing going on, so simply append this line to the new output topic text.
-                new_text.push_str(&format!("{}\n", lines[line_index]));
-                line_index += 1;
-            }
-        }
-        new_text = new_text.trim_end_matches("\n").to_string();
-        //bg!(&topic_name, &topic_text, &new_text);
-        new_text
-    }
-
     fn refine_paragraphs(&mut self, wiki: &mut Wiki) {
         for topic in wiki.topics.values_mut() {
             let context = format!("Refining paragraphs for \"{}\".", topic.name);
@@ -252,10 +138,10 @@ impl BuildProcess {
          */
         match source_paragraph {
             Paragraph::Unknown { text } => {
-                if let Some(new_paragraph) = self.paragraph_as_category_rc(topic, &text, context)? {
-                    topic.paragraphs[paragraph_index] = new_paragraph;
+                if self.paragraph_as_category_rc(topic, &text, context)? {
                     return Ok(());
                 }
+                /*
                 if let Some(new_paragraph) = self.paragraph_as_section_header_rc(topic, &text, context)? {
                     topic.paragraphs[paragraph_index] = new_paragraph;
                     return Ok(());
@@ -280,7 +166,8 @@ impl BuildProcess {
                     topic.paragraphs[paragraph_index] = new_paragraph;
                     return Ok(());
                 }
-                let new_paragraph = self.paragraph_as_text_unresolved(&text);
+                */
+                let new_paragraph = Paragraph::new_text_unresolved(&text);
                 topic.paragraphs[paragraph_index] = new_paragraph;
                 return Ok(());
             },
@@ -292,16 +179,50 @@ impl BuildProcess {
         Ok(())
     }
 
-    fn paragraph_as_category_rc(&mut self, topic: &mut Topic, text: &str, _context: &str) -> Result<Option<Paragraph>, String> {
-        // If it's a category line it will look like this:
-        //   [[$CATEGORY:Books]]
-        Ok(util::parse::between_optional_trim(text, CT_CATEGORY_PREFIX, CT_BRACKETS_RIGHT)
-            .map(|category_name| {
-                topic.category = Some(category_name.to_string());
-                Paragraph::Category
-            }))
+    fn paragraph_as_category_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<bool, String> {
+        // If it's a category line it will look like this if it already has a link:
+        //   Category: [[tools:nonfiction_books|Nonfiction Books]]
+        // or like this if it does not yet have a link (which will be added during the re-gen
+        // process we're in):
+        //   Category: Nonfiction Books
+        let context = &format!("{} Seems to be a category paragraph.", context);
+        let err_func = |msg: &str| Err(format!("{} paragraph_as_category_rc: {}: text = \"{}\".", context, msg, text));
+        if text.trim().starts_with(PREFIX_CATEGORY) {
+            if text.trim().contains(DELIM_LINEFEED) {
+                return err_func("The text seems to be a category format but it has linefeeds.");
+            } else {
+                let category_part = util::parse::after(text, PREFIX_CATEGORY).trim().to_string();
+                match parse_link_optional(&category_part) {
+                    Ok(Some(link)) => {
+                        match link.label {
+                            Some(label) => {
+                                let category_name = label;
+                                println!("\"{}\" in \"{}\"", topic.name, category_name);
+                                topic.category = Some(category_name);
+                                return Ok(true);
+                            },
+                            None => {
+                                return err_func("Expected the link to have a label which is the category name.");
+                            },
+                        }
+                    },
+                    Ok(None) => {
+                        let category_name = category_part;
+                        println!("\"{}\" in \"{}\"", topic.name, category_name);
+                        topic.category = Some(category_name);
+                        return Ok(true);
+                    },
+                    Err(msg) => {
+                        return err_func(&msg);
+                    }
+                }
+            }
+        } else {
+            Ok(false)
+        }
     }
 
+    /*
     fn paragraph_as_section_header_rc(&mut self, _topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
         // A section header will look like:
         //   =Title=
@@ -602,11 +523,8 @@ impl BuildProcess {
         let text_block = self.make_text_block_rc(&topic.name, text, context)?;
         Ok(Some(Paragraph::new_text(text_block)))
     }
-
-    fn paragraph_as_text_unresolved(&self, text: &str) -> Paragraph {
-        Paragraph::new_text_unresolved(text)
-    }
-
+    */
+    /*
     fn check_links(&mut self, wiki: &Wiki) {
         let mut link_errors = wiki.check_links();
         self.errors.append(&mut link_errors);
@@ -713,7 +631,7 @@ impl BuildProcess {
         let link = Link::new_image(None, source, ImageAlignment::Left, size, ImageLinkType::Direct);
         Ok(link)
     }
-
+    */
     /*
     fn clear_errors(&mut self) {
         self.errors.clear();
@@ -724,9 +642,7 @@ impl BuildProcess {
         let entry = self.errors.entry(topic_key).or_insert(vec![]);
         entry.push(msg.to_string());
     }
-
-     */
-*/
+    */
 }
 
 pub fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>, attributes_to_index: Vec<&str>) -> Wiki {
