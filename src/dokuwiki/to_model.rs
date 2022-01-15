@@ -86,9 +86,9 @@ impl BuildProcess {
                 // The first paragraph should have the topic name as a page header, like:
                 //   ======A Mind for Numbers======
                 let mut topic_name = paragraphs.remove(0).to_string();
-                assert!(topic_name.starts_with(DELIM_HEADLINE));
-                assert!(topic_name.ends_with(DELIM_HEADLINE));
-                topic_name = topic_name.replace(DELIM_HEADLINE, "").trim().to_string();
+                assert!(topic_name.starts_with(DELIM_HEADER));
+                assert!(topic_name.ends_with(DELIM_HEADER));
+                topic_name = topic_name.replace(DELIM_HEADER, "").trim().to_string();
                 dbg!(&topic_name);
                 let mut topic = Topic::new(namespace_name, &topic_name);
                 for paragraph in paragraphs.iter() {
@@ -141,11 +141,10 @@ impl BuildProcess {
                 if self.paragraph_as_category_rc(topic, &text, context)? {
                     return Ok(());
                 }
-                /*
-                if let Some(new_paragraph) = self.paragraph_as_section_header_rc(topic, &text, context)? {
-                    topic.paragraphs[paragraph_index] = new_paragraph;
+                if self.paragraph_as_section_header_rc(topic, &text, paragraph_index, context)? {
                     return Ok(());
                 }
+                /*
                 if let Some(new_paragraph) = self.paragraph_as_bookmark_rc(topic, &text, context)? {
                     topic.paragraphs[paragraph_index] = new_paragraph;
                     return Ok(());
@@ -222,46 +221,30 @@ impl BuildProcess {
         }
     }
 
-    /*
-    fn paragraph_as_section_header_rc(&mut self, _topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
+    fn paragraph_as_section_header_rc(&mut self, topic: &mut Topic, text: &str, paragraph_index: usize, context: &str) -> Result<bool, String> {
         // A section header will look like:
-        //   =Title=
-        // with the number of equal signs indicating the depth.
+        //   ===Section Name===
+        // The level is between 0 and 5 where 0 is the main page title. The number of "=" is six
+        // minus the level.
         let context = &format!("{} Seems to be a section header paragraph.", context);
         let err_func = |msg: &str| Err(format!("{} paragraph_as_section_header_rc: {}: text = \"{}\".", context, msg, text));
         let text = text.trim();
-        if text.starts_with(CT_MARK_SECTION_HEADER) {
-            let lines = text.lines().collect::<Vec<_>>();
-            if lines.len() > 1 {
-                return err_func(&format!("Expected a single line, found {}.", lines.len()));
+        match parse_header_optional(text) {
+            Ok(Some((name, depth))) => {
+                dbg!(&name, depth);
+                topic.paragraphs[paragraph_index] = Paragraph::new_section_header(&name, depth);
+                Ok(true)
+            },
+            Ok(None) => {
+                Ok(false)
+            },
+            Err(msg) => {
+                return err_func(&msg);
             }
-            let marker_char = CT_MARK_SECTION_HEADER.chars().nth(0).unwrap();
-            let mut depth = 0;
-            for char in text.chars() {
-                if char == marker_char {
-                    depth += 1;
-                } else {
-                    break;
-                }
-            }
-            let section_marker = CT_MARK_SECTION_HEADER.repeat(depth);
-            debug_assert!(text.starts_with(&section_marker));
-            if !text.ends_with(&section_marker) {
-                return err_func("Matching marker on right side not found.");
-            }
-            let section_name = util::parse::between(text, &section_marker, &section_marker).trim();
-            if section_name.is_empty() {
-                return err_func("Empty section header.");
-            }
-            if section_name.ends_with(CT_MARK_SECTION_HEADER) {
-                return err_func("Too many markers on right side.");
-            }
-            Ok(Some(Paragraph::new_section_header(section_name, depth)))
-        } else {
-            Ok(None)
         }
     }
 
+    /*
     fn paragraph_as_bookmark_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
         // A bookmark paragraph showing the parent and grandparent topic will look like this:
         //   {|

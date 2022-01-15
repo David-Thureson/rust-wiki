@@ -49,7 +49,7 @@ pub const DELIM_QUOTE_END: &str = "</WRAP>";
 pub const DELIM_CODE_START: &str = "<code>";
 pub const DELIM_CODE_END: &str = "</code>";
 pub const DELIM_SECTION_IN_LINK: &str = "#";
-pub const DELIM_HEADLINE: &str = "=";
+pub const DELIM_HEADER: &str = "=";
 
 pub const PREFIX_CATEGORY: &str = "Category: ";
 pub const PREFIX_HTTPS: &str = "https://";

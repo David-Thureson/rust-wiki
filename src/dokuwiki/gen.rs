@@ -159,7 +159,7 @@ pub fn add_headline(page_text: &mut String, text: &str, level: usize) {
     // Like "----- Categories -----" where a level 1 (top) headline has five hyphens.
     debug_assert!(level >= 1);
     debug_assert!(level <= 5);
-    let markers = DELIM_HEADLINE.repeat(6 - level);
+    let markers = DELIM_HEADER.repeat(6 - level);
     page_text.push_str(&format!("{}{}{}\n\n", markers, text, markers));
 }
 

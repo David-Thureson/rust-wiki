@@ -44,7 +44,7 @@ pub fn parse_link_optional(text: &str) -> Result<Option<model::Link>, String> {
         let image_source = if file_ref.to_lowercase().starts_with(PREFIX_HTTPS) {
             model::ImageSource::new_external(file_ref)
         } else {
-            let (namespace, file_name) = util::parse::rsplit_2(file_ref, DELIM_NAMESPACE);
+            let (file_name, namespace) = util::parse::rsplit_2(file_ref, DELIM_NAMESPACE);
             model::ImageSource::new_internal(namespace, file_name)
         };
         // For now assume the image link type, size, alignment, etc.
@@ -56,11 +56,36 @@ pub fn parse_link_optional(text: &str) -> Result<Option<model::Link>, String> {
     Ok(None)
 }
 
+pub fn parse_header_optional(text: &str) -> Result<Option<(String, usize)>, String> {
+    // A section header will look like:
+    //   ===Section Name===
+    // The level is between 0 and 5 where 0 is the main page title. The number of "=" is six
+    // minus the level.
+    let text = text.trim();
+    if text.starts_with(DELIM_HEADER) {
+        if !text.ends_with(DELIM_HEADER) {
+            return Err(format!("Text seems to be a section header because it starts with \"{}\" but it does not end with \"{}\": \"{}\".", DELIM_HEADER, DELIM_HEADER, text));
+        }
+        for depth in 0..=5 {
+            let delim = DELIM_HEADER.repeat(6 - depth);
+            if text.starts_with(&delim) {
+                if !text.ends_with(&delim) {
+                    return Err(format!("Text seems to be a section header because it starts with \"{}\" but it does not end with a matching-length \"{}\": \"{}\".", delim, delim, text));
+                }
+                let name = util::parse::between_trim(text, &delim, &delim);
+                return Ok(Some((name.to_string(), depth)));
+            }
+        }
+        return Err(format!("Text seems to be a section header but the header level couldn't be determined: \"{}\".", text));
+    }
+    Ok(None)
+}
+
 pub fn topic_ref_to_topic_key(topic_ref: &str) -> Result<model::TopicKey, String> {
     // Something like "tools:books:Zero to One".
     if !topic_ref.contains(DELIM_NAMESPACE) {
         return Err(format!("Namespace delimiter \"{}\" not found in topic reference \"{}\".", DELIM_NAMESPACE, topic_ref));
     }
-    let (namespace, topic_name) = util::parse::rsplit_2(topic_ref, DELIM_NAMESPACE);
+    let (topic_name, namespace) = util::parse::rsplit_2(topic_ref, DELIM_NAMESPACE);
     Ok(model::TopicKey::new(namespace, topic_name))
 }
