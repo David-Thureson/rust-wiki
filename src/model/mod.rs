@@ -35,6 +35,9 @@ pub use parse::*;
 
 pub mod report;
 
+pub mod table;
+pub use table::*;
+
 pub mod textblock;
 pub use textblock::*;
 

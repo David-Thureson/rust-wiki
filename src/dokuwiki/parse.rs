@@ -54,6 +54,7 @@ pub fn parse_link_optional(text: &str) -> Result<Option<model::Link>, String> {
         //bg!(&link);
         return Ok(Some(link));
     }
+    // This doesn't look like a link.
     Ok(None)
 }
 
@@ -82,6 +83,7 @@ pub fn parse_header_optional(text: &str) -> Result<Option<(String, usize)>, Stri
         }
         return Err(format!("Text seems to be a section header but the header level couldn't be determined: \"{}\".", text));
     }
+    // This doesn't look like a section header.
     Ok(None)
 }
 
@@ -99,7 +101,7 @@ pub fn parse_bookmark_optional(text: &str) -> Result<Option<Vec<TopicKey>>, Stri
     let text = text.trim().replace(DELIM_BOLD, "");
     //bg!(text);
     if text.contains(DELIM_BOOKMARK_RIGHT) {
-        dbg!(&text);
+        //bg!(&text);
         if text.contains(DELIM_BOOKMARK_LEFT) {
             // Presumably bookmarks for a combo topic.
             let left = util::parse::before(&text, DELIM_BOOKMARK_RIGHT).trim();
@@ -117,6 +119,39 @@ pub fn parse_bookmark_optional(text: &str) -> Result<Option<Vec<TopicKey>>, Stri
             return Ok(Some(vec![topic_key]));
         }
     }
+    // This doesn't look like a bookmark.
+    Ok(None)
+}
+
+pub fn parse_table_optional(text: &str) -> Result<Option<model::TextTable>, String> {
+    // A table with the first column bolded might look like this:
+    //   ^ Platform | Android, Windows |
+    //   ^ Added | Jul 24, 2018 |
+    let text = text.trim();
+    if text.starts_with(DELIM_TABLE_CELL) || text.starts_with(DELIM_TABLE_CELL_BOLD) {
+        // This looks like a table.
+        let lines = text.split(DELIM_LINEFEED).collect::<Vec<_>>();
+        // Every line should start with one of the cell delimiters.
+        if !lines.iter().all(|line| line.starts_with(DELIM_TABLE_CELL) || line.starts_with(DELIM_TABLE_CELL_BOLD)) {
+            return Err(format!("This looks like a table, but not every line starts with the expected \"{}\" or \"{}\".", DELIM_TABLE_CELL, DELIM_TABLE_CELL_BOLD));
+        }
+        let mut table = model::TextTable::new();
+        let delim_bold_temp = format!("{}{}", DELIM_TABLE_CELL, DELIM_TABLE_CELL_BOLD);
+        for line in lines.iter() {
+            // For ease in splitting the row into cells, change the "^" delimiters to "|^".
+            let line = line.replace(DELIM_TABLE_CELL_BOLD, &delim_bold_temp);
+            let splits = line.split(DELIM_TABLE_CELL).collect::<Vec<_>>();
+            let mut row = vec![];
+            for split in splits.iter() {
+                let is_bold = split.trim().starts_with(DELIM_TABLE_CELL_BOLD);
+                let cell_text = split.replace(DELIM_TABLE_CELL_BOLD, "").trim().to_string();
+                row.push(model::TextTableCell::new(&cell_text, is_bold));
+            }
+            table.rows.push(row);
+        }
+        return Ok(Some(table));
+    }
+    // This doesn't look like a table.
     Ok(None)
 }
 
@@ -131,7 +166,6 @@ fn eval_bookmark_topic_ref(topic_ref: &str) -> Result<TopicKey, String> {
     }
 }
 
-
 pub fn topic_ref_to_topic_key(topic_ref: &str) -> Result<model::TopicKey, String> {
     // Something like "tools:books:Zero to One".
     if !topic_ref.contains(DELIM_NAMESPACE) {
@@ -139,4 +173,17 @@ pub fn topic_ref_to_topic_key(topic_ref: &str) -> Result<model::TopicKey, String
     }
     let (topic_name, namespace) = util::parse::rsplit_2(topic_ref, DELIM_NAMESPACE);
     Ok(model::TopicKey::new(namespace, topic_name))
+}
+
+pub fn text_or_topic_link_label(text: &str) -> Result<String, String> {
+    Ok(match parse_link_optional(text)? {
+        Some(link) => {
+            let label = link.label.clone();
+            label.unwrap_or(match link.type_ {
+                model::LinkType::Topic { topic_key} => topic_key.topic_name,
+                _ => unimplemented!(),
+            })
+        },
+        None => text.to_string(),
+    })
 }

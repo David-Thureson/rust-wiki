@@ -122,52 +122,19 @@ impl BuildProcess {
 
     fn refine_one_paragraph_rc(&mut self, topic: &mut Topic, paragraph_index: usize, context: &str) -> Result<(), String> {
         let source_paragraph= std::mem::replace(&mut topic.paragraphs[paragraph_index], Paragraph::Placeholder);
-        // if topic.name.contains("Zero") { //bg!("source_paragraph", &source_paragraph.get_variant_name()); }
-        /* let new_paragraph = match source_paragraph {
-            Paragraph::Unknown { text } => {
-                self.paragraph_as_category_rc(topic, &text, context)?
-                    .or(self.paragraph_as_section_header_rc(topic, &text, context)?)
-                    .or(self.paragraph_as_bookmark_rc(topic, &text, context)?)
-                    .or(self.paragraph_as_quote_start_or_end_rc(topic, &text, context)?)
-                    .or(self.paragraph_as_table_rc(topic, &text, context)?)
-                    .or(self.paragraph_as_list_rc(topic, &text, context)?)
-                    .or(self.paragraph_as_text_rc(topic, &text, context)?)
-                    .unwrap_or(self.paragraph_as_text_unresolved(&text))
-            },
-            _ => source_paragraph,
-        };
-         */
         match source_paragraph {
             Paragraph::Unknown { text } => {
-                if self.paragraph_as_category_rc(topic, &text, context)? {
-                    return Ok(());
-                }
-                if self.paragraph_as_section_header_rc(topic, &text, paragraph_index, context)? {
-                    return Ok(());
-                }
-                if self.paragraph_as_bookmark_rc(topic, &text, context)? {
-                    return Ok(());
-                }
-                /*
-                if let Some(new_paragraph) = self.paragraph_as_quote_start_or_end_rc(topic, &text, context)? {
+                if !(self.paragraph_as_category_rc(topic, &text, context)?
+                    || self.paragraph_as_section_header_rc(topic, &text, paragraph_index, context)?
+                    || self.paragraph_as_bookmark_rc(topic, &text, context)?
+                    // || self.paragraph_as_quote_start_or_end_rc(topic, &text, context)? {
+                    || self.paragraph_as_table_rc(topic, &text, paragraph_index, context)?
+                    // || self.paragraph_as_list_rc(topic, &text, context)? {
+                    // || self.paragraph_as_text_rc(topic, &text, context)? {
+                ) {
+                    let new_paragraph = Paragraph::new_text_unresolved(&text);
                     topic.paragraphs[paragraph_index] = new_paragraph;
-                    return Ok(());
                 }
-                if let Some(new_paragraph) = self.paragraph_as_table_rc(topic, &text, context)? {
-                    topic.paragraphs[paragraph_index] = new_paragraph;
-                    return Ok(());
-                }
-                if let Some(new_paragraph) = self.paragraph_as_list_rc(topic, &text, context)? {
-                    topic.paragraphs[paragraph_index] = new_paragraph;
-                    return Ok(());
-                }
-                if let Some(new_paragraph) = self.paragraph_as_text_rc(topic, &text, context)? {
-                    topic.paragraphs[paragraph_index] = new_paragraph;
-                    return Ok(());
-                }
-                */
-                let new_paragraph = Paragraph::new_text_unresolved(&text);
-                topic.paragraphs[paragraph_index] = new_paragraph;
                 return Ok(());
             },
             _ => {},
@@ -280,104 +247,55 @@ impl BuildProcess {
             Ok(None)
         }
     }
+    */
 
-    fn paragraph_as_table_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
-        //if topic.name.contains("Zero") {
-        //bg!(&topic.name, text);
-        //}
+    fn paragraph_as_table_rc(&mut self, topic: &mut Topic, text: &str, _paragraph_index: usize, context: &str) -> Result<bool, String> {
         // A paragraph with a list of attributes will look something like this:
-        //   {|
-        //   ||Domain||[[Domain:=Serverless]], [[Domain:=Function as a Service / FaaS]]||
-        //   ||Added||[[Added:=20201204]]||
-        // A regular table will look like that but without things like [[Domain:=Serverless]].
-        // The Terms page has a large example of a regular table.
+        //   ^ [[tools:nav:attributes#Platform|Platform]] | [[tools:nav:attribute_values#Android|Android]] |
+        //   ^ [[tools:nav:dates|Added]] | [[tools:nav:dates#Jul 24, 2018|Jul 24, 2018]] |
+        // A given attribute type may have multiple values separated by commas, in which case the
+        // values cell might look like:
+        //   ^ [[tools:nav:attribute_values#Android|Android]], [[tools:nav:attribute_values#Windows|Windows]]
+        // If the attributes were added by hand, and have not gone through the cycle of parsing
+        // generating that we're in right now, the table might look like:
+        //   ^ Platform | Android, Windows |
+        //   ^ Added | Jul 24, 2018 |
+        // and the date might be "2018-Jul-24", "2018-07-24", or some other supported format.
+        // A regular table will look similar. The Terms page has a large example of a regular
+        // table.
         let context = &format!("{} Seems to be a table paragraph.", context);
-        let lines = text.lines().collect::<Vec<_>>();
-        if lines[0].trim().starts_with(CT_TABLE_START) {
-            // && lines.len() > 1
-            // && lines[1].starts_with(CT_TABLE_DELIM) {
-            // && split_trim(lines[1], CT_TABLE_DELIM).len() == 4 {
-            // This is a table in ConnectedText. But it will be interpreted either as:
-            //  - A set of attributes.
-            //  - A regular table.
-            // If instead it was a quotation, it should have been detected earlier and should not
-            // reach this code.
-            if lines.len() < 2 {
-                return Err(format!("{} Seems to be the start of a table but there are no rows.", context));
-            }
-            let is_attributes = lines[1].contains(CT_ATTRIBUTE_ASSIGN);
-            // if topic.name.contains("Zero") { //bg!(is_attributes); }
-
-            let mut rows = vec![];
-            for line_index in 1..lines.len() {
-                let line = lines[line_index].trim();
-                if line == CT_TABLE_END {
-                    break;
-                }
-                if !line.starts_with(CT_TABLE_DELIM) {
-                    return Err(format!("{} Seems to be a table but the line doesn't start with the delimiter at line {}: \"{}\"", context, line_index, line));
-                }
-                let line = between(line, CT_TABLE_DELIM, CT_TABLE_DELIM);
-                let split = split_trim(line, CT_TABLE_DELIM);
-                if is_attributes && split.len() != 2 {
-                    return Err(format!("{} Wrong number of table cells for an attribute row in \"{}\".", context, line));
-                }
-                rows.push(split);
-            }
-            if is_attributes {
-                for row in rows.iter_mut() {
-                    let mut name = row.remove(0);
-                    if name.eq("Subject") {
-                        name = ATTRIBUTE_NAME_DOMAIN.to_string();
-                    }
-                    if name.eq("Date") {
-                        name = ATTRIBUTE_NAME_ADDED.to_string();
-                    }
-                    let max_value_count = if name.eq("Added") { Some(1) } else { None };
-                    let values = row.remove(0);
-                    // let debug = name.eq("Date") && values.eq("[[Date:=20160824]], [[Date:=20160505]]");
-                    assert!(row.is_empty());
-                    let attribute = topic.temp_attributes.entry(name.clone())
-                        .or_insert(vec![]);
-                    let values = between(&values, CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT);
-                    let bracket_delim_with_space = format!("{}, {}", CT_BRACKETS_RIGHT, CT_BRACKETS_LEFT);
-                    let bracket_delim_no_space = format!("{},{}", CT_BRACKETS_RIGHT, CT_BRACKETS_LEFT);
-                    let assignments = values.replace(&bracket_delim_with_space, &bracket_delim_no_space);
-                    // if debug { //bg!(values, &bracket_delim_with_space, &bracket_delim_no_space, &assignments); };
-                    for assignment in assignments.split(&bracket_delim_no_space) {
-                        if max_value_count.map_or(true, |max_value_count| max_value_count > attribute.len()) {
-                            let value = util::parse::after(assignment, CT_ATTRIBUTE_ASSIGN).trim().to_string();
-                            // if debug { //bg!(&value); }
-                            if !value.contains("*") && !value.is_empty() {
-                                if attribute.contains(&value) {
-                                    return Err(format!("{} In attribute \"{}\", duplicated value \"{}\".", context, name, value));
-                                }
-                                attribute.push(value);
-                            }
+        let err_func = |msg: &str| Err(format!("{} paragraph_as_table_rc: {}: text = \"{}\".", context, msg, text));
+        match parse_table_optional(text) {
+            Ok(Some(text_table)) => {
+                dbg!(&text_table);
+                if !text_table.has_header() && text_table.has_label_column() {
+                    // For now assume this is a table of attributes.
+                    for row in text_table.rows.iter() {
+                        let attr_type_name = text_or_topic_link_label(&row[0].text)?;
+                        dbg!(&attr_type_name);
+                        let mut attr_values = vec![];
+                        let cell_items = row[1].text.split(",").collect::<Vec<_>>();
+                        for cell_item in cell_items.iter() {
+                            attr_values.push(text_or_topic_link_label(cell_item)?);
                         }
+                        dbg!(&attr_values);
+                        topic.temp_attributes.insert(attr_type_name, attr_values);
                     }
+                } else {
+                    // Assume this is a normal (non-attribute) table.
+
+
+
+                    // topic.paragraphs[paragraph_index] = Paragraph::new_section_header(&name, depth);
                 }
-                // if topic.name.contains("Zero") { //bg!(&topic.attributes); }
-                Ok(Some(Paragraph::Attributes))
-            } else {
-                // Normal (non-attribute) table.
-                let has_header = rows[0].iter().all(|cell| cell.contains(CT_FORMAT_BOLD));
-                let mut rows_as_text_blocks = vec![];
-                for (index, cells) in rows.iter().enumerate() {
-                    let is_header = has_header && index == 0;
-                    let mut cells_as_text_blocks = vec![];
-                    for cell in cells.iter() {
-                        // If this is the header row, remove the bold formatting.
-                        let cell_cleaned = if is_header { cell.replace(CT_FORMAT_BOLD, "").to_string() } else { cell.to_string() };
-                        let text_block= self.make_text_block_rc(&topic.name, &cell_cleaned, context)?;
-                        cells_as_text_blocks.push(text_block);
-                    }
-                    rows_as_text_blocks.push(cells_as_text_blocks);
-                }
-                Ok(Some(Paragraph::Table { has_header, rows: rows_as_text_blocks }))
+                Ok(true)
+            },
+            Ok(None) => {
+                Ok(false)
+            },
+            Err(msg) => {
+                return err_func(&msg);
             }
-        } else {
-            Ok(None)
         }
     }
 
@@ -427,7 +345,6 @@ impl BuildProcess {
             Ok(None)
         }
     }
-    */
 
     fn paragraph_as_list_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
         // if text.contains("Determine if number of messages") {
@@ -486,8 +403,7 @@ impl BuildProcess {
         let text_block = self.make_text_block_rc(&topic.name, text, context)?;
         Ok(Some(Paragraph::new_text(text_block)))
     }
-    */
-    /*
+
     fn check_links(&mut self, wiki: &Wiki) {
         let mut link_errors = wiki.check_links();
         self.errors.append(&mut link_errors);
