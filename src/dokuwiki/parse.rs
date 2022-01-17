@@ -188,7 +188,12 @@ pub fn topic_ref_to_topic_key(topic_ref: &str) -> Result<model::TopicKey, String
 }
 
 pub fn text_or_topic_link_label(text: &str) -> Result<String, String> {
-    Ok(match parse_link_optional(text)? {
+    // If this is a link, take the label if there is one, otherwise if it's a section link take the
+    // section name, or if it's a topic link take the topic name.
+    // If it's not a link, simply return the text.
+    // This is used for the round trip with DokuWiki, in the attribute blocks. It reduces a given
+    // attribute value to its string form without any links.
+    let label = match parse_link_optional(text)? {
         Some(link) => {
             let label = link.label.clone();
             label.unwrap_or(match link.type_ {
@@ -201,5 +206,7 @@ pub fn text_or_topic_link_label(text: &str) -> Result<String, String> {
             })
         },
         None => text.to_string(),
-    })
+    };
+    let label = util::parse::unquote(&label);
+    Ok(label.to_string())
 }

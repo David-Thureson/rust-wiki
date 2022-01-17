@@ -277,7 +277,16 @@ impl <'a> GenFromModel<'a> {
                             _ => if self.model.attributes.attributes_to_index.contains(&attr_type.name) {
                                 wiki::section_link(&namespace_navigation, PAGE_NAME_ATTR_VALUE, &label, Some(&label))
                             } else {
-                                label
+                                // A raw, unindexed attribute value such as a book title may
+                                // contain commas, which will complicate the round trip since it's
+                                // unclear whether the string represents multiple values or a
+                                // single value with commas. So put quotes around values that have
+                                // commas.
+                                if label.contains(",") {
+                                    format!("\"{}\"", label)
+                                } else {
+                                    label
+                                }
                             },
                         }})
                     .join(", ");

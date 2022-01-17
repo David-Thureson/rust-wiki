@@ -267,14 +267,15 @@ impl BuildProcess {
         let err_func = |msg: &str| Err(format!("{} paragraph_as_table_rc: {}: text = \"{}\".", context, msg, text));
         match parse_table_optional(text) {
             Ok(Some(text_table)) => {
-                dbg!(&text_table);
+                //bg!(&text_table);
                 if !text_table.has_header() && text_table.has_label_column() {
                     // For now assume this is a table of attributes.
                     for row in text_table.rows.iter() {
                         let attr_type_name = text_or_topic_link_label(&row[0].text)?;
                         dbg!(&attr_type_name);
                         let mut attr_values = vec![];
-                        let cell_items = row[1].text.split(",").collect::<Vec<_>>();
+                        // let cell_items = row[1].text.split(",").collect::<Vec<_>>();
+                        let cell_items = util::parse::split_outside_of_delimiters_rc(&row[1].text, ",", "\"", "\"", context).unwrap();
                         for cell_item in cell_items.iter() {
                             attr_values.push(text_or_topic_link_label(cell_item)?);
                         }
