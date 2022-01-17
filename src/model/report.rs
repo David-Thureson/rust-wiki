@@ -124,3 +124,44 @@ pub fn report_attributes(wiki: &Wiki) {
     // println!("{}", wiki.attributes.iter().filter(|(_name, type_)| type_.value_type == AttributeValueType::Year).map(|(name, _type_)| format!("\"{}\"", name)).join(", "));
 }
 
+pub fn report_attributes_with_multiple_values(wiki: &Wiki) {
+    // For round-trip parsing/generating of the wiki, we need conventions for handling multiple
+    // attributes separated by commas, since commas can also appear inside a value. First simply do
+    // a survey of attributes that appear to have multiple values within a given topic but might
+    // really be a case where a value such as a book title has commas that we misinterpreted.
+    println!("\nReport: Attributes with Multiple Values:\n");
+    for attr_type in wiki.attributes.attributes.values()
+            .filter(|attr_type| attr_type.value_type.eq(&AttributeValueType::String)) {
+        let mult_value_count = wiki.topics.values()
+            .map(|topic| {
+                let topic_value_count = topic.attributes.get(&attr_type.name).map_or(0, |attr_instance| attr_instance.values.len());
+                if topic_value_count > 0 { 1 } else { 0 }
+            })
+            .sum::<usize>();
+        if mult_value_count > 0 {
+            println!("{}: {} ({}): topics with multiple values = {}",
+                     attr_type.name, attr_type.value_type.get_variant_name(),
+                     attr_type.get_topic_count(), mult_value_count);
+        }
+    }
+    println!();
+}
+
+// pub fn report_attribute_values_with_commas(wiki: &Wiki) {
+    // Based on the results of report_attributes_with_multiple_values(), show the attribute
+    // values that have one or more commas. This is not a prablem with the initial parse of the
+    // ConnectedText wikis because each value is contained in markup like this:
+    //   [[Title:=Soldier, Sailor, Frogman, Spy, Airman, Gangster, Kill or Die: How the Allies Won on D-Day]]
+    // However, when we start doing round trips with Dokuwiki, we'll need a way to
+/*
+Address: String (1): topics with multiple values = 1
+Book: String (1): topics with multiple values = 1
+Company: String (5): topics with multiple values = 5
+Course: String (1): topics with multiple values = 1
+Organization: String (16): topics with multiple values = 16
+School: String (18): topics with multiple values = 18
+Series: String (70): topics with multiple values = 70
+Title: String (295): topics with multiple values = 295
+*/
+//}
+

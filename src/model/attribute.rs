@@ -143,7 +143,8 @@ impl AttributeType {
     }
 
     pub fn date_to_display_string(value: &NaiveDate) -> String {
-        util::date_time::naive_date_to_mon_format(&value)
+        // util::date_time::naive_date_to_mon_format(&value)
+        util::date_time::naive_date_to_doc_format(&value)
     }
 
     pub fn date_to_canonical_value(value: &NaiveDate) -> String {

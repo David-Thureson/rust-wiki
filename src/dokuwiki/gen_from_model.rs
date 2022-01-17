@@ -64,6 +64,7 @@ impl <'a> GenFromModel<'a> {
                     let link = self.page_link_simple(&topic_key);
                     page.add_list_item_unordered(1, &link);
                 }
+                page.add_linefeed();
             }
         }
         page.write();
@@ -95,6 +96,7 @@ impl <'a> GenFromModel<'a> {
                 let line = format!("({}) {}", attribute_type_name.to_lowercase(), link);
                 page.add_list_item_unordered(1, &line);
             }
+            page.add_linefeed();
         }
         page.write();
     }
@@ -121,6 +123,7 @@ impl <'a> GenFromModel<'a> {
                 let link = self.page_link_simple(&topic_key);
                 page.add_list_item_unordered(1, &link);
             }
+            page.add_linefeed();
         }
         page.write();
     }
@@ -133,7 +136,7 @@ impl <'a> GenFromModel<'a> {
         for (year, month_map) in year_month_map.iter() {
             page.add_headline(&year.to_string(),1);
             for (month, dates) in month_map.iter() {
-                page.add_headline(&util::date_time::year_month_to_mon_format(*year, *month), 2);
+                page.add_headline(&util::date_time::year_month_to_doc_format(*year, *month), 2);
                 for date in dates.iter() {
                     let display_value = model::AttributeType::date_to_display_string(&date);
                     page.add_headline(&display_value, 3);
@@ -142,6 +145,7 @@ impl <'a> GenFromModel<'a> {
                         let link = self.page_link_simple(&topic_key);
                         page.add_list_item_unordered(1, &format!("({}) {}", attribute_type_name.to_lowercase(), link));
                     }
+                    page.add_linefeed();
                 }
             }
         }
@@ -439,6 +443,7 @@ impl <'a> GenFromModel<'a> {
                     page.add_list_item_unordered(depth + 1, &line);
                 }
             }
+            page.add_linefeed();
         }
     }
 

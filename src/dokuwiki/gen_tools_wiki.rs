@@ -17,13 +17,14 @@ fn gen_from_connectedtext(copy_image_files_to_local_wiki: bool, topic_limit: Opt
 
     // Back up all of the generated *.txt files.
     let path_pages_project = format!("{}/{}", PATH_PAGES, PROJECT_NAME);
-    util::date_time::print_elapsed(true, "back_up_folder_next_number_r", "", {
+    util::date_time::print_elapsed(false, "back_up_folder_next_number_r", "", {
         || { util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 3).unwrap(); }
     });
 
     let namespace_main = PROJECT_NAME.to_lowercase();
     let model = build_model(PROJECT_NAME, &namespace_main, topic_limit, get_attr_to_index());
     // model.interpolate_added_date();
+    // model::report::report_attributes_with_multiple_values(&model); panic!();
     if copy_image_files_to_local_wiki {
         let path_to = format!("{}/{}", PATH_MEDIA, namespace_main);
         GenFromModel::copy_image_files(PATH_CT_EXPORT_IMAGES, &path_to, true);
