@@ -127,6 +127,7 @@ pub fn parse_table_optional(text: &str) -> Result<Option<model::TextTable>, Stri
     // A table with the first column bolded might look like this:
     //   ^ Platform | Android, Windows |
     //   ^ Added | Jul 24, 2018 |
+    let context = "parse_table_optional()";
     let text = text.trim();
     if text.starts_with(DELIM_TABLE_CELL) || text.starts_with(DELIM_TABLE_CELL_BOLD) {
         // This looks like a table.
@@ -140,7 +141,18 @@ pub fn parse_table_optional(text: &str) -> Result<Option<model::TextTable>, Stri
         for line in lines.iter() {
             // For ease in splitting the row into cells, change the "^" delimiters to "|^".
             let line = line.replace(DELIM_TABLE_CELL_BOLD, &delim_bold_temp);
-            let splits = line.split(DELIM_TABLE_CELL).collect::<Vec<_>>();
+            // Non-bolded cells start with "|". This pipe also appears inside links as the
+            // between the link destination and the label, so the row might look like this (with
+            // the bold first cell already turned into "|^" above).
+            // |^ [[tools:nav:attributes#Narrator|Narrator]] | [[tools:nav:attribute_values#Mark Steinberg|Mark Steinberg]] |
+            let mut splits = util::parse::split_outside_of_delimiters_rc(&line, DELIM_TABLE_CELL, DELIM_LINK_START, DELIM_LINK_END, context)?;
+            // We don't want the first and last splits because these are simply empty strings
+            // outside the first and last "|" characters, not actual table cells.
+            assert_eq!("", splits[0]);
+            splits.remove(0);
+            assert_eq!("", splits[splits.len() - 1]);
+            splits.remove(splits.len() - 1);
+            //bg!(&line, &splits);
             let mut row = vec![];
             for split in splits.iter() {
                 let is_bold = split.trim().starts_with(DELIM_TABLE_CELL_BOLD);
@@ -181,7 +193,11 @@ pub fn text_or_topic_link_label(text: &str) -> Result<String, String> {
             let label = link.label.clone();
             label.unwrap_or(match link.type_ {
                 model::LinkType::Topic { topic_key} => topic_key.topic_name,
-                _ => unimplemented!(),
+                model::LinkType::Section { section_key} => section_key.section_name,
+                _ => {
+                    dbg!(&text, &link);
+                    unimplemented!()
+                },
             })
         },
         None => text.to_string(),
