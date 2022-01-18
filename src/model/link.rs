@@ -261,7 +261,7 @@ impl Link {
                             item.block.update_internal_links(keys);
                         }
                     },
-                    Paragraph::Table { has_header: _, rows} => {
+                    Paragraph::Table { has_header: _, has_label_column: _, rows} => {
                         for row in rows.iter_mut() {
                             for cell in row.iter_mut() {
                                 cell.update_internal_links(keys);

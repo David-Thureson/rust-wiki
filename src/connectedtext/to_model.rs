@@ -567,7 +567,7 @@ impl BuildProcess {
                     }
                     rows_as_text_blocks.push(cells_as_text_blocks);
                 }
-                Ok(Some(Paragraph::Table { has_header, rows: rows_as_text_blocks }))
+                Ok(Some(Paragraph::Table { has_header, has_label_column: false, rows: rows_as_text_blocks }))
             }
         } else {
             Ok(None)

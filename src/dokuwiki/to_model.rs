@@ -3,8 +3,8 @@ use std::fs;
 use super::*;
 
 pub fn main() {
-    // let topic_limit = None;
-    let topic_limit = Some(20);
+    let topic_limit = None;
+    // let topic_limit = Some(20);
     build_model(gen_tools_wiki::PROJECT_NAME, &gen_tools_wiki::PROJECT_NAME.to_lowercase(), topic_limit, gen_tools_wiki::get_attr_to_index());
 }
 
@@ -89,7 +89,7 @@ impl BuildProcess {
                 assert!(topic_name.starts_with(DELIM_HEADER));
                 assert!(topic_name.ends_with(DELIM_HEADER));
                 topic_name = topic_name.replace(DELIM_HEADER, "").trim().to_string();
-                dbg!(&topic_name);
+                //bg!(&topic_name);
                 let mut topic = Topic::new(namespace_name, &topic_name);
                 for paragraph in paragraphs.iter() {
                     topic.add_paragraph(Paragraph::new_unknown(paragraph));
@@ -249,7 +249,7 @@ impl BuildProcess {
     }
     */
 
-    fn paragraph_as_table_rc(&mut self, topic: &mut Topic, text: &str, _paragraph_index: usize, context: &str) -> Result<bool, String> {
+    fn paragraph_as_table_rc(&mut self, topic: &mut Topic, text: &str, paragraph_index: usize, context: &str) -> Result<bool, String> {
         // A paragraph with a list of attributes will look something like this:
         //   ^ [[tools:nav:attributes#Platform|Platform]] | [[tools:nav:attribute_values#Android|Android]] |
         //   ^ [[tools:nav:dates|Added]] | [[tools:nav:dates#Jul 24, 2018|Jul 24, 2018]] |
@@ -272,22 +272,30 @@ impl BuildProcess {
                     // For now assume this is a table of attributes.
                     for row in text_table.rows.iter() {
                         let attr_type_name = text_or_topic_link_label(&row[0].text)?;
-                        dbg!(&attr_type_name);
+                        //bg!(&attr_type_name);
                         let mut attr_values = vec![];
                         // let cell_items = row[1].text.split(",").collect::<Vec<_>>();
                         let cell_items = util::parse::split_outside_of_delimiters_rc(&row[1].text, ",", "\"", "\"", context).unwrap();
                         for cell_item in cell_items.iter() {
                             attr_values.push(text_or_topic_link_label(cell_item)?);
                         }
-                        dbg!(&attr_values);
+                        //bg!(&attr_values);
                         topic.temp_attributes.insert(attr_type_name, attr_values);
                     }
                 } else {
                     // Assume this is a normal (non-attribute) table.
-
-
-
-                    // topic.paragraphs[paragraph_index] = Paragraph::new_section_header(&name, depth);
+                    let mut rows_as_text_blocks = vec![];
+                    for cells in text_table.rows.iter() {
+                        let mut cells_as_text_blocks = vec![];
+                        for cell in cells.iter() {
+                            let text_block = self.make_text_block_rc(&cell.text, context)?;
+                            cells_as_text_blocks.push(text_block);
+                        }
+                        rows_as_text_blocks.push(cells_as_text_blocks);
+                    }
+                    let paragraph = Paragraph::new_table(text_table.has_header(), text_table.has_label_column(), rows_as_text_blocks);
+                    dbg!(&paragraph);
+                    topic.paragraphs[paragraph_index] = paragraph;
                 }
                 Ok(true)
             },
@@ -414,17 +422,32 @@ impl BuildProcess {
         let mut subtopic_errors = wiki.check_subtopic_relationships();
         self.errors.append(&mut subtopic_errors);
     }
+    */
 
-    fn make_text_block_rc(&self, topic_name: &str, text: &str, context: &str) -> Result<TextBlock, String> {
+    fn make_text_block_rc(&self, text: &str, context: &str) -> Result<TextBlock, String> {
         let text = text.trim();
         let mut text_block = TextBlock::new();
-        let delimited_splits = util::parse::split_delimited_and_normal_rc(text, CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT, context)?;
+        // An image link will look like this:
+        //   {{tools:antlr_plugin.png?direct}}
+        // To make it easier to split the text into link and non-link parts, first change text like
+        // the above to:
+        //   [[{{tools:antlr_plugin.png?direct}}]]
+        // This way all we have to do is split based on what is inside or outside of pairs of "[["
+        // and "]]".
+        let text = text.replace(DELIM_IMAGE_START, TEMP_DELIM_IMG_START)
+            .replace(DELIM_IMAGE_END, TEMP_DELIM_IMG_END);
+        let delimited_splits = util::parse::split_delimited_and_normal_rc(&text, DELIM_LINK_START, DELIM_LINK_END, context)?;
         for (item_is_delimited, item_text) in delimited_splits.iter() {
             if *item_is_delimited {
                 // Assume it's an internal or external link, or an image link.
-                if let Some(link) = self.make_link_rc(topic_name, item_text, context)? {
-                    text_block.items.push(TextItem::new_link(link));
-                }
+                let link_text = if text.starts_with(DELIM_IMAGE_START) {
+                    item_text.clone()
+                } else {
+                    // Put the brackets back on since the parsing function will expect them.
+                    format!("{}{}{}", DELIM_LINK_START, text, DELIM_LINK_END)
+                };
+                let link = self.make_link_rc(&link_text, context)?;
+                text_block.items.push(TextItem::new_link(link));
             } else {
                 // Assume it's plain text.
                 text_block.items.push(TextItem::new_text(item_text));
@@ -433,85 +456,15 @@ impl BuildProcess {
         Ok(text_block)
     }
 
-    fn make_link_rc(&self, topic_name: &str, text: &str, context: &str) -> Result<Option<Link>, String> {
+    fn make_link_rc(&self, text: &str, context: &str) -> Result<Link, String> {
         let text = text.trim();
         let err_func = |msg: &str| Err(format!("{} make_link_rc: {}: text = \"{}\".", context, msg, text));
-        // The brackets should have been removed by this point.
-        if text.starts_with("$ASK:") {
-            return Ok(None);
-        }
-        if text.contains(CT_BRACKETS_LEFT) || text.contains(CT_BRACKETS_RIGHT) {
-            return err_func("Brackets found in text for a link. They should have been removed.");
-        }
-        if text.starts_with(CT_PREFIX_IMAGE) {
-            return Ok(Some(self.make_image_link_rc(text, context)?));
-        }
-        if text.starts_with(CT_PREFIX_URL) {
-            // External link.
-            let (url, label) = util::parse::split_1_or_2_trim(&text, CT_PIPE);
-            let url = util::parse::after(url, CT_PREFIX_URL);
-            return Ok(Some(Link::new_external(label, url)));
-        }
-        // For now skip anything else starting with a "$" like $FILE.
-        if text.starts_with("$") {
-            return Ok(None);
-        }
-        // Assume it's an internal link, either to a topic or a section of a topic.
-        let (mut dest, label) = util::parse::split_1_or_2_trim(&text, CT_PIPE);
-        if dest.contains(CT_DELIM_SECTION_IN_LINK) {
-            // Link to a section of a topic.
-            let (mut link_topic_name, link_section_name) = util::parse::split_2_trim(dest, CT_DELIM_SECTION_IN_LINK);
-            if link_topic_name.trim().is_empty() {
-                // This is a link to a section in the same topic.
-                link_topic_name = topic_name;
-            }
-            if link_topic_name.starts_with("_") {
-                link_topic_name = &link_topic_name[1..];
-            }
-            return Ok(Some(Link::new_section(label,&self.namespace_main, link_topic_name, link_section_name)));
-        } else {
-            // Link to a whole topic.
-            if dest.starts_with("_") {
-                dest = &dest[1..];
-            }
-            return Ok(Some(Link::new_topic(label, &self.namespace_main, dest)));
+        match parse_link_optional(&text)? {
+            Some(link) => Ok(link),
+            None => err_func("parse_link_optional didn't think it was a link."),
         }
     }
 
-    fn make_image_link_rc(&self, text: &str, context: &str) -> Result<Link, String> {
-        // Something like this (with no brackets):
-        //   $IMG:Images\libgdx project setup main.jpg|100%|NONE
-        //   $IMG:Images\libgdx generated new project.png|(($IMG_SIZE))|NONE
-        // The brackets should have been removed by this point.
-        let err_func = |msg: &str| Err(format!("{} make_image_link_rc: {}: text = \"{}\".", context, msg, text));
-        let text = text.trim();
-        if text.contains(CT_BRACKETS_LEFT) || text.contains(CT_BRACKETS_RIGHT) {
-            return err_func("Brackets found in text for an image link. They should have been removed.");
-        }
-        if !text.starts_with(CT_PREFIX_IMAGE) {
-            return err_func(&format!("Presumed image link doesn't start with {}.", CT_PREFIX_IMAGE));
-        }
-        let text = text[CT_PREFIX_IMAGE.len()..].trim().to_string();
-        let splits = util::parse::split_trim(&text, CT_PIPE);
-        // if splits.len() != 3 {
-        //     return err_func("There are not three pipe-delimited segments.");
-        // }
-        let source = splits[0].trim();
-        let size = splits[1].trim();
-        if !source.starts_with(CT_PREFIX_IMAGE_FOLDER) {
-            return err_func(&format!("Image destination does not start with \"{}\".", CT_PREFIX_IMAGE_FOLDER));
-        }
-        let source = source[CT_PREFIX_IMAGE_FOLDER.len()..].to_string();
-        let size = match size {
-            CT_IMAGE_SIZE_STD | CT_IMAGE_SIZE_LARGE => ImageSize::DokuLarge,
-            CT_IMAGE_SIZE_100_PCT => ImageSize::Original,
-            _ => ImageSize::DokuLarge,
-        };
-        let source = ImageSource::new_internal(&self.namespace_main, &source);
-        let link = Link::new_image(None, source, ImageAlignment::Left, size, ImageLinkType::Direct);
-        Ok(link)
-    }
-    */
     /*
     fn clear_errors(&mut self) {
         self.errors.clear();

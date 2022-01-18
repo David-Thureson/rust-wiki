@@ -9,7 +9,9 @@ use crate::dokuwiki::{PATH_MEDIA, PATH_PAGES};
 pub const PROJECT_NAME: &str = "Tools";
 
 pub fn main() {
-    gen_from_connectedtext(false, None);
+    let copy_image_files = false;
+    let topic_limit = None;
+    gen_from_connectedtext(copy_image_files, topic_limit);
 }
 
 fn gen_from_connectedtext(copy_image_files_to_local_wiki: bool, topic_limit: Option<usize>) {

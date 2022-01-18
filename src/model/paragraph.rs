@@ -4,7 +4,7 @@ use std::cell::RefCell;
 
 pub type ParagraphRc = Rc<RefCell<Paragraph>>;
 
-// #[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Paragraph {
     Attributes,
     Breadcrumbs,
@@ -28,6 +28,7 @@ pub enum Paragraph {
     },
     Table {
         has_header: bool,
+        has_label_column: bool,
         rows: Vec<Vec<TextBlock>>,
     },
     Text {
@@ -43,23 +44,42 @@ pub enum Paragraph {
 
 impl Paragraph {
     pub fn new_code(text: &str) -> Self {
-        Paragraph::Code { text: text.to_string() }
+        Self::Code {
+            text: text.to_string()
+        }
     }
 
     pub fn new_section_header(name: &str, depth: usize) -> Self {
-        Paragraph::SectionHeader { name: name.to_string(), depth }
+        Self::SectionHeader {
+            name: name.to_string(),
+            depth
+        }
+    }
+
+    pub fn new_table(has_header: bool, has_label_column: bool, rows: Vec<Vec<TextBlock>>) -> Self {
+        Self::Table {
+            has_header,
+            has_label_column,
+            rows
+        }
     }
 
     pub fn new_text(text_block: TextBlock) -> Self {
-        Paragraph::Text { text_block }
+        Self::Text {
+            text_block
+        }
     }
 
     pub fn new_text_unresolved(text: &str) -> Self {
-        Paragraph::TextUnresolved { text: text.to_string() }
+        Self::TextUnresolved {
+            text: text.to_string()
+        }
     }
 
     pub fn new_unknown(text: &str) -> Self {
-        Paragraph::Unknown { text: text.to_string() }
+        Self::Unknown {
+            text: text.to_string()
+        }
     }
 
     pub fn get_variant_name(&self) -> &str {

@@ -66,6 +66,9 @@ impl Wiki {
     pub fn add_topic(&mut self, topic: Topic) {
         assert!(self.namespaces.contains_key(&topic.namespace));
         let key = topic.get_key();
+        if self.topics.contains_key(&key) {
+            panic!("We already have this topic key: {:?}", key)
+        }
         assert!(!self.topics.contains_key(&key));
         self.topics.insert(key, topic);
     }

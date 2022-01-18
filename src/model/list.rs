@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ListType {
     Articles,
     Books,
@@ -28,7 +28,7 @@ pub enum ListType {
     Tutorials,
 }
 
-// #[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ListItem {
     pub depth: usize,
     pub block: TextBlock,

@@ -126,15 +126,20 @@ impl WikiGenPage {
         self.content.push_str(&format!("{}\n\n", list.get_markup()));
     }
 
-    pub fn add_table_row(&mut self, is_header: bool, cells: &Vec<String>) {
+    pub fn add_table_row(&mut self, row_index: usize, has_header: bool, has_label_column: bool, cells: &Vec<String>) {
         // A table header row should look something like:
         //   ^ Color ^ Blue ^
         // A regular table row should look something like:
         //   | Color | Blue |
-        let delimiter = if is_header { "^" } else { "|" };
-        let markup = format!("{}{}\n", delimiter, cells.iter()
-            .map(|cell| format!(" {} {}", cell, delimiter))
-            .join(""));
+        let last_delimiter = if has_header && row_index == 0 { DELIM_TABLE_CELL_BOLD } else { DELIM_TABLE_CELL };
+        let markup = format!("{}{}\n", cells.iter().enumerate()
+            .map(|(cell_index, cell_text)| {
+                let delimiter = if (has_header && row_index == 0) || (has_label_column || cell_index == 0) { DELIM_TABLE_CELL_BOLD } else { DELIM_TABLE_CELL };
+                format!("{} {}", delimiter, cell_text)
+            })
+            .join(""),
+            last_delimiter
+        );
         self.content.push_str(&markup);
     }
 

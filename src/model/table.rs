@@ -1,4 +1,5 @@
-// This is a simple table abstraction used during parsing. It's not part of the model.
+// This is a simple table abstraction used during parsing. It's not part of the model. In the
+// model, use Paragraph::Table.
 #[derive(Clone, Debug)]
 pub struct TextTable {
     pub rows: Vec<Vec<TextTableCell>>,

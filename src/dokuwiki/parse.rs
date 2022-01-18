@@ -147,10 +147,14 @@ pub fn parse_table_optional(text: &str) -> Result<Option<model::TextTable>, Stri
             // |^ [[tools:nav:attributes#Narrator|Narrator]] | [[tools:nav:attribute_values#Mark Steinberg|Mark Steinberg]] |
             let mut splits = util::parse::split_outside_of_delimiters_rc(&line, DELIM_TABLE_CELL, DELIM_LINK_START, DELIM_LINK_END, context)?;
             // We don't want the first and last splits because these are simply empty strings
-            // outside the first and last "|" characters, not actual table cells.
+            // outside the first and last "|" characters (or just a "^"), not actual table cells.
             assert_eq!("", splits[0]);
             splits.remove(0);
-            assert_eq!("", splits[splits.len() - 1]);
+            // if !splits[splits.len() - 1].is_empty() {
+            //     dbg!(&splits);
+            //     panic!()
+            // }
+            // assert_eq!("", splits[splits.len() - 1]);
             splits.remove(splits.len() - 1);
             //bg!(&line, &splits);
             let mut row = vec![];

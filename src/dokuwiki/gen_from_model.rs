@@ -340,8 +340,8 @@ impl <'a> GenFromModel<'a> {
                 model::Paragraph::SectionHeader { name, depth } => {
                     page.add_headline(name, *depth);
                 }
-                model::Paragraph::Table { has_header, rows} => {
-                    self.add_table(page, *has_header, rows);
+                model::Paragraph::Table { has_header, has_label_column, rows} => {
+                    self.add_table(page, *has_header, *has_label_column, rows);
                 }
                 model::Paragraph::Text { text_block} => {
                     let markup = self.text_block_to_markup(text_block);
@@ -493,13 +493,12 @@ impl <'a> GenFromModel<'a> {
         }
     }
 
-    fn add_table(&mut self, page: &mut wiki::WikiGenPage, has_header: bool, rows:&Vec<Vec<model::TextBlock>>) {
-        for (index, cells) in rows.iter().enumerate() {
+    fn add_table(&mut self, page: &mut wiki::WikiGenPage, has_header: bool, has_label_column: bool, rows:&Vec<Vec<model::TextBlock>>) {
+        for (row_index, cells) in rows.iter().enumerate() {
             let cells_as_markup = cells.iter()
                 .map(|cell| self.text_block_to_markup(cell))
                 .collect::<Vec<_>>();
-            let is_header = has_header && index == 0;
-            page.add_table_row(is_header,&cells_as_markup);
+            page.add_table_row(row_index, has_header, has_label_column, &cells_as_markup);
         }
         page.end_paragraph();
     }
