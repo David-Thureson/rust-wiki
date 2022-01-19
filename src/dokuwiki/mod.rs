@@ -44,14 +44,17 @@ pub const DELIM_LINK_SECTION: &str = "#";
 pub const DELIM_IMAGE_START: &str = "{{";
 pub const DELIM_IMAGE_END: &str = "}}";
 pub const DELIM_IMAGE_OPTIONS: &str = "?";
-pub const DELIM_QUOTE_START: &str = "<WRAP round box>";
-pub const DELIM_QUOTE_END: &str = "</WRAP>";
-pub const DELIM_CODE_START: &str = "<code>";
-pub const DELIM_CODE_END: &str = "</code>";
 pub const DELIM_SECTION_IN_LINK: &str = "#";
 pub const DELIM_HEADER: &str = "=";
 pub const DELIM_TABLE_CELL: &str = "|";
 pub const DELIM_TABLE_CELL_BOLD: &str = "^";
+
+pub const MARKER_LINE_START: &str = "<";
+pub const MARKER_LINE_END: &str = ">";
+pub const MARKER_QUOTE_START: &str = "<WRAP round box>";
+pub const MARKER_QUOTE_END: &str = "</WRAP>";
+pub const MARKER_CODE_START_PREFIX: &str = "<code";
+pub const MARKER_CODE_END: &str = "</code>";
 
 pub const TEMP_DELIM_IMG_START: &str = "[[{{";
 pub const TEMP_DELIM_IMG_END: &str = "}}]]";

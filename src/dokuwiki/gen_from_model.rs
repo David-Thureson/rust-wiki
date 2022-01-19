@@ -320,23 +320,17 @@ impl <'a> GenFromModel<'a> {
                 model::Paragraph::Attributes => {}, // This was already added to the page.
                 model::Paragraph::Breadcrumbs => {}, // This was already added to the page.
                 model::Paragraph::Category => {}, // This was already added to the page.
-                model::Paragraph::Code { text} => {
-                    self.add_code(page, text)
-                }
                 model::Paragraph::GenStart => {},
                 model::Paragraph::GenEnd => {},
                 model::Paragraph::List { type_, header, items} => {
                     self.add_list(page, type_, header, items);
                 },
+                model::Paragraph::Marker { text } => {
+                    page.add_paragraph(text);
+                }
                 model::Paragraph::Placeholder => {
                     self.add_error(&msg_func_unexpected("Placeholder"));
                 },
-                model::Paragraph::QuoteEnd => {
-                    page.add(wiki::DELIM_QUOTE_END);
-                }
-                model::Paragraph::QuoteStart => {
-                    page.add_paragraph(wiki::DELIM_QUOTE_START);
-                }
                 model::Paragraph::SectionHeader { name, depth } => {
                     page.add_headline(name, *depth);
                 }
@@ -476,13 +470,6 @@ impl <'a> GenFromModel<'a> {
             }
         }
         markup
-    }
-
-    fn add_code(&mut self, page: &mut wiki::WikiGenPage, text: &str) {
-        //bg!(&text);
-        page.add_line(wiki::DELIM_CODE_START);
-        page.add_line(text);
-        page.add_paragraph(wiki::DELIM_CODE_END);
     }
 
     fn add_list(&mut self, page: &mut wiki::WikiGenPage, type_: &model::ListType, header: &model::TextBlock, items: &Vec<model::ListItem>) {

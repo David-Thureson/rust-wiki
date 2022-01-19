@@ -44,6 +44,8 @@ const CT_DELIM_CODE_END: &str = "}}}";
 const CT_TEMP_DELIM_QUOTE_START: &str = "{TEMP QUOTE START}";
 const CT_TEMP_DELIM_QUOTE_END: &str = "{TEMP QUOTE END}";
 
+// const CT_CODING_LANGUAGES: [&str; 6] = ["JavaScript", "Java", "Kotlin", "Python", "Scala", "Rust"];
+
 pub fn main() {
     // build_wiki(Some(100));
     // build_model(None);
@@ -161,7 +163,22 @@ impl BuildProcess {
                     for (is_code, entry_text) in code_splits.iter() {
                         if *is_code {
                             let entry_text = entry_text.trim_start_matches("\n").trim_end_matches("\n");
-                            topic.add_paragraph(Paragraph::new_code(entry_text));
+                            let language_marker = "".to_string();
+                            // for language in CT_CODING_LANGUAGES.iter() {
+                            //     if topic.name.starts_with(language) {
+                            //         language_marker = format!(" {}", language);
+                            //     }
+                            //     break;
+                            // }
+                            let marker_start = format!("{}{}{}",
+                                                       crate::dokuwiki::MARKER_CODE_START_PREFIX,
+                                                       language_marker, crate::dokuwiki::MARKER_LINE_END);
+                            // if !marker_start.eq("<code>") { //rintln!("read_text_file_as_topics(): topic = \"{}\", marker = \"{}\".", topic.name, marker_start); }
+                            topic.add_paragraph(Paragraph::new_marker(&marker_start));
+                            let items = vec![TextItem::new_text(&entry_text)];
+                            let text_block = TextBlock::new_resolved(items);
+                            topic.add_paragraph(Paragraph::new_text(text_block));
+                            topic.add_paragraph(Paragraph::new_marker(crate::dokuwiki::MARKER_CODE_END));
                         } else {
                             // Break the topic into paragraphs.
                             // First, though, find cases where there is a table start "{|" in the
@@ -466,9 +483,9 @@ impl BuildProcess {
 
     fn paragraph_as_quote_start_or_end_rc(&mut self, _topic: &mut Topic, text: &str, _context: &str) -> Result<Option<Paragraph>, String> {
         if text.trim().eq(CT_TEMP_DELIM_QUOTE_START) {
-            Ok(Some(Paragraph::QuoteStart))
+            Ok(Some(Paragraph::new_marker(crate::dokuwiki::MARKER_QUOTE_START)))
         } else if text.trim().eq(CT_TEMP_DELIM_QUOTE_END) {
-            Ok(Some(Paragraph::QuoteEnd))
+            Ok(Some(Paragraph::new_marker(crate::dokuwiki::MARKER_QUOTE_END)))
         } else {
             Ok(None)
         }

@@ -123,6 +123,24 @@ pub fn parse_bookmark_optional(text: &str) -> Result<Option<Vec<TopicKey>>, Stri
     Ok(None)
 }
 
+pub fn parse_marker_optional(text: &str) -> Result<Option<String>, String> {
+    // A marker will be a one-line paragraph with something like "<WRAP round box>", "</WRAP>",
+    // "<code>", "</code>", "<code Rust>", "<file>", "<html>", or "<php>".
+    let text = text.trim();
+    if text.starts_with(MARKER_LINE_START) {
+        // We can assume this is a marker.
+        if !text.ends_with(MARKER_LINE_END) {
+            return Err(format!("Text seems to be a marker because it starts with \"{}\" but it does not end with \"{}\": \"{}\".", MARKER_LINE_START, MARKER_LINE_END, text));
+        }
+        if text.trim().contains(DELIM_LINEFEED) {
+            return Err(format!("The text seems to be a marker but it has linefeeds: \"{}\".", text));
+        }
+        return Ok(Some(text.to_string()));
+    }
+    // This doesn't look like a section header.
+    Ok(None)
+}
+
 pub fn parse_table_optional(text: &str) -> Result<Option<model::Table>, String> {
     // A table with the first column bolded might look like this:
     //   ^ Platform | Android, Windows |

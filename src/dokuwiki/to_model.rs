@@ -127,7 +127,7 @@ impl BuildProcess {
                 if !(self.paragraph_as_category_rc(topic, &text, context)?
                     || self.paragraph_as_section_header_rc(topic, &text, paragraph_index, context)?
                     || self.paragraph_as_bookmark_rc(topic, &text, context)?
-                    // || self.paragraph_as_quote_start_or_end_rc(topic, &text, context)? {
+                    || self.paragraph_as_marker_start_or_end_rc(topic, &text, paragraph_index, context)?
                     || self.paragraph_as_table_rc(topic, &text, paragraph_index, context)?
                     // || self.paragraph_as_list_rc(topic, &text, context)? {
                     // || self.paragraph_as_text_rc(topic, &text, context)? {
@@ -237,17 +237,35 @@ impl BuildProcess {
             }
         }
     }
-    /*
-    fn paragraph_as_quote_start_or_end_rc(&mut self, _topic: &mut Topic, text: &str, _context: &str) -> Result<Option<Paragraph>, String> {
-        if text.trim().eq(CT_TEMP_DELIM_QUOTE_START) {
-            Ok(Some(Paragraph::QuoteStart))
-        } else if text.trim().eq(CT_TEMP_DELIM_QUOTE_END) {
-            Ok(Some(Paragraph::QuoteEnd))
-        } else {
-            Ok(None)
+
+    fn paragraph_as_marker_start_or_end_rc(&mut self, topic: &mut Topic, text: &str, paragraph_index: usize, context: &str) -> Result<bool, String> {
+        // A quote might be multiple paragraphs. It will have markers preceeding and following
+        // these paragraphs which themselves are paragraphs consisting of:
+        //   <WRAP round box>
+        //   </WRAP>
+        // Likewise the code markers are separate paragraphs with:
+        //   <code>;
+        //   </code>;
+        // Or it might specify the language, like "<code rust>". Other markers are "<html>" and
+        // "<php>".
+        let context = &format!("{} Seems to be a marker start or end paragraph.", context);
+        let err_func = |msg: &str| Err(format!("{} paragraph_as_marker_start_or_end_rc: {}: text = \"{}\".", context, msg, text));
+        let text = text.trim();
+        match parse_marker_optional(text) {
+            Ok(Some(text)) => {
+                //bg!(&name, depth);
+                topic.paragraphs[paragraph_index] = Paragraph::new_marker(&text);
+                Ok(true)
+            },
+            Ok(None) => {
+                // Not a marker paragraph, but also not an error.
+                Ok(false)
+            },
+            Err(msg) => {
+                return err_func(&msg);
+            }
         }
     }
-    */
 
     fn paragraph_as_table_rc(&mut self, topic: &mut Topic, text: &str, paragraph_index: usize, context: &str) -> Result<bool, String> {
         // A paragraph with a list of attributes will look something like this:

@@ -9,9 +9,6 @@ pub enum Paragraph {
     Attributes,
     Breadcrumbs,
     Category,
-    Code {
-        text: String,
-    },
     GenStart,
     GenEnd,
     List {
@@ -19,9 +16,10 @@ pub enum Paragraph {
         header: TextBlock,
         items: Vec<ListItem>,
     },
+    Marker {
+        text: String,
+    },
     Placeholder,
-    QuoteEnd,
-    QuoteStart,
     SectionHeader {
         name: String,
         depth: usize,
@@ -41,9 +39,10 @@ pub enum Paragraph {
 }
 
 impl Paragraph {
-    pub fn new_code(text: &str) -> Self {
-        Self::Code {
-            text: text.to_string()
+
+    pub fn new_marker(text: &str) -> Self {
+        Self::Marker {
+            text: text.to_string(),
         }
     }
 
@@ -83,13 +82,11 @@ impl Paragraph {
             Paragraph::Attributes { .. } => "Attributes",
             Paragraph::Breadcrumbs { .. } => "Breadcrumbs",
             Paragraph::Category { .. } => "Category",
-            Paragraph::Code { .. } => "Code",
             Paragraph::GenStart { .. } => "GenStart",
             Paragraph::GenEnd { .. } => "GenEnd",
             Paragraph::List { .. } => "List",
+            Paragraph::Marker { .. } => "Marker",
             Paragraph::Placeholder { .. } => "Placeholder",
-            Paragraph::QuoteEnd { .. } => "QuoteEnd",
-            Paragraph::QuoteStart { .. } => "QuoteStart",
             Paragraph::SectionHeader { .. } => "SectionHeader",
             Paragraph::Table { .. } => "Table",
             Paragraph::Text { .. } => "Text",
