@@ -1,6 +1,6 @@
 use crate::*;
 use super::*;
-use crate::model::TopicKey;
+use crate::model::{TopicKey, HorizontalAlignment};
 
 pub fn parse_link_optional(text: &str) -> Result<Option<model::Link>, String> {
     // Example topic link:
@@ -123,7 +123,7 @@ pub fn parse_bookmark_optional(text: &str) -> Result<Option<Vec<TopicKey>>, Stri
     Ok(None)
 }
 
-pub fn parse_table_optional(text: &str) -> Result<Option<model::TextTable>, String> {
+pub fn parse_table_optional(text: &str) -> Result<Option<model::Table>, String> {
     // A table with the first column bolded might look like this:
     //   ^ Platform | Android, Windows |
     //   ^ Added | Jul 24, 2018 |
@@ -136,7 +136,7 @@ pub fn parse_table_optional(text: &str) -> Result<Option<model::TextTable>, Stri
         if !lines.iter().all(|line| line.starts_with(DELIM_TABLE_CELL) || line.starts_with(DELIM_TABLE_CELL_BOLD)) {
             return Err(format!("This looks like a table, but not every line starts with the expected \"{}\" or \"{}\".", DELIM_TABLE_CELL, DELIM_TABLE_CELL_BOLD));
         }
-        let mut table = model::TextTable::new();
+        let mut table = model::Table::new(false);
         let delim_bold_temp = format!("{}{}", DELIM_TABLE_CELL, DELIM_TABLE_CELL_BOLD);
         for line in lines.iter() {
             // For ease in splitting the row into cells, change the "^" delimiters to "|^".
@@ -160,10 +160,21 @@ pub fn parse_table_optional(text: &str) -> Result<Option<model::TextTable>, Stri
             let mut row = vec![];
             for split in splits.iter() {
                 let is_bold = split.trim().starts_with(DELIM_TABLE_CELL_BOLD);
-                let cell_text = split.replace(DELIM_TABLE_CELL_BOLD, "").trim().to_string();
-                row.push(model::TextTableCell::new(&cell_text, is_bold));
+                let cell_text = split.replace(DELIM_TABLE_CELL_BOLD, "");
+                let horizontal = if cell_text.starts_with("  ") && cell_text.ends_with("  ") {
+                    HorizontalAlignment::Center
+                } else if cell_text.starts_with("  ") {
+                    HorizontalAlignment::Right
+                } else {
+                    HorizontalAlignment::Left
+                };
+                let cell_text = cell_text.trim();
+                row.push(model::TableCell::new_unresolved_text(cell_text, is_bold, &horizontal));
             }
             table.rows.push(row);
+        }
+        if table.assume_has_header() {
+            table.has_header = true;
         }
         return Ok(Some(table));
     }

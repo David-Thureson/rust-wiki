@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use crate::model::{AttributeValueType, TopicKey, Topic};
 use std::collections::BTreeMap;
-use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR};
+use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL};
 use std::fs;
 
 //const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
@@ -340,8 +340,8 @@ impl <'a> GenFromModel<'a> {
                 model::Paragraph::SectionHeader { name, depth } => {
                     page.add_headline(name, *depth);
                 }
-                model::Paragraph::Table { has_header, has_label_column, rows} => {
-                    self.add_table(page, *has_header, *has_label_column, rows);
+                model::Paragraph::Table { table} => {
+                    self.add_table(page, table);
                 }
                 model::Paragraph::Text { text_block} => {
                     let markup = self.text_block_to_markup(text_block);
@@ -458,14 +458,21 @@ impl <'a> GenFromModel<'a> {
 
     fn text_block_to_markup(&mut self, text_block: &model::TextBlock) -> String {
         let mut markup = "".to_string();
-        for text_item in text_block.items.iter() {
-            match text_item {
-                model::TextItem::Text { text } => {
-                    markup.push_str(text);
-                },
-                model::TextItem::Link { link } => {
-                    markup.push_str(&self.link_to_markup(link));
+        match text_block {
+            model::TextBlock::Resolved {items} => {
+                for text_item in items.iter() {
+                    match text_item {
+                        model::TextItem::Text { text } => {
+                            markup.push_str(text);
+                        },
+                        model::TextItem::Link { link } => {
+                            markup.push_str(&self.link_to_markup(link));
+                        }
+                    }
                 }
+            },
+            model::TextBlock::Unresolved { text } => {
+                panic!("Text block should be resolved by this point. Text = \"{}\".", text)
             }
         }
         markup
@@ -493,14 +500,42 @@ impl <'a> GenFromModel<'a> {
         }
     }
 
-    fn add_table(&mut self, page: &mut wiki::WikiGenPage, has_header: bool, has_label_column: bool, rows:&Vec<Vec<model::TextBlock>>) {
-        for (row_index, cells) in rows.iter().enumerate() {
+    fn add_table(&mut self, page: &mut wiki::WikiGenPage, table: &model::Table) {
+        for (row_index, cells) in table.rows.iter().enumerate() {
             let cells_as_markup = cells.iter()
-                .map(|cell| self.text_block_to_markup(cell))
+                .map(|cell| self.text_block_to_markup(&cell.text_block))
                 .collect::<Vec<_>>();
-            page.add_table_row(row_index, has_header, has_label_column, &cells_as_markup);
+            self.add_table_row(page, table, row_index, &cells_as_markup);
         }
         page.end_paragraph();
+    }
+
+    pub fn add_table_row(&mut self, page: &mut wiki::WikiGenPage, table: &model::Table, row_index: usize, cells: &Vec<String>) {
+        // A table header row should look something like:
+        //   ^ Color ^ Blue ^
+        // A regular table row should look something like:
+        //   | Color | Blue |
+        let last_delimiter = if table.has_header && row_index == 0 { DELIM_TABLE_CELL_BOLD } else { DELIM_TABLE_CELL };
+        let markup = format!("{}{}\n", cells.iter().enumerate()
+            .map(|(cell_index, cell_text)| {
+                let cell_info = &table.rows[row_index][cell_index];
+                let delimiter = if cell_info.is_bold { DELIM_TABLE_CELL_BOLD } else { DELIM_TABLE_CELL };
+                match cell_info.horizontal {
+                    model::HorizontalAlignment::Center => {
+                        format!("{}  {}  ", delimiter, cell_text.trim())
+                    },
+                    model::HorizontalAlignment::Left => {
+                        format!("{} {} ", delimiter, cell_text.trim())
+                    },
+                    model::HorizontalAlignment::Right => {
+                        format!("{}  {} ", delimiter, cell_text.trim())
+                    },
+                }
+            })
+            .join(""),
+                             last_delimiter
+        );
+        page.add_text(&markup);
     }
 
     fn link_to_markup(&mut self, link: &model::Link) -> String {

@@ -266,16 +266,18 @@ impl BuildProcess {
         let context = &format!("{} Seems to be a table paragraph.", context);
         let err_func = |msg: &str| Err(format!("{} paragraph_as_table_rc: {}: text = \"{}\".", context, msg, text));
         match parse_table_optional(text) {
-            Ok(Some(text_table)) => {
-                //bg!(&text_table);
-                if !text_table.has_header() && text_table.has_label_column() {
+            Ok(Some(temp_table)) => {
+                //bg!(&table);
+                if !temp_table.has_header && temp_table.get_column_count() == 2 {
                     // For now assume this is a table of attributes.
-                    for row in text_table.rows.iter() {
-                        let attr_type_name = text_or_topic_link_label(&row[0].text)?;
+                    for row in temp_table.rows.iter() {
+                        let text = row[0].text_block.get_unresolved_text();
+                        let attr_type_name = text_or_topic_link_label(&text)?;
                         //bg!(&attr_type_name);
                         let mut attr_values = vec![];
                         // let cell_items = row[1].text.split(",").collect::<Vec<_>>();
-                        let cell_items = util::parse::split_outside_of_delimiters_rc(&row[1].text, ",", "\"", "\"", context).unwrap();
+                        let text = row[1].text_block.get_unresolved_text();
+                        let cell_items = util::parse::split_outside_of_delimiters_rc(&text, ",", "\"", "\"", context).unwrap();
                         for cell_item in cell_items.iter() {
                             attr_values.push(text_or_topic_link_label(cell_item)?);
                         }
@@ -284,17 +286,18 @@ impl BuildProcess {
                     }
                 } else {
                     // Assume this is a normal (non-attribute) table.
-                    let mut rows_as_text_blocks = vec![];
-                    for cells in text_table.rows.iter() {
-                        let mut cells_as_text_blocks = vec![];
-                        for cell in cells.iter() {
-                            let text_block = self.make_text_block_rc(&cell.text, context)?;
-                            cells_as_text_blocks.push(text_block);
+                    let mut table = Table::new(temp_table.assume_has_header());
+                    for temp_row in temp_table.rows.iter() {
+                        let mut cells = vec![];
+                        for temp_cell in temp_row.iter() {
+                            let text = temp_cell.text_block.get_unresolved_text();
+                            let text_block = self.make_text_block_rc(&text, context)?;
+                            cells.push(TableCell::new_text_block(text_block, temp_cell.is_bold, &temp_cell.horizontal));
                         }
-                        rows_as_text_blocks.push(cells_as_text_blocks);
+                        table.rows.push(cells);
                     }
-                    let paragraph = Paragraph::new_table(text_table.has_header(), text_table.has_label_column(), rows_as_text_blocks);
-                    dbg!(&paragraph);
+                    let paragraph = Paragraph::new_table(table);
+                    //bg!(&paragraph);
                     topic.paragraphs[paragraph_index] = paragraph;
                 }
                 Ok(true)
@@ -426,7 +429,6 @@ impl BuildProcess {
 
     fn make_text_block_rc(&self, text: &str, context: &str) -> Result<TextBlock, String> {
         let text = text.trim();
-        let mut text_block = TextBlock::new();
         // An image link will look like this:
         //   {{tools:antlr_plugin.png?direct}}
         // To make it easier to split the text into link and non-link parts, first change text like
@@ -437,6 +439,7 @@ impl BuildProcess {
         let text = text.replace(DELIM_IMAGE_START, TEMP_DELIM_IMG_START)
             .replace(DELIM_IMAGE_END, TEMP_DELIM_IMG_END);
         let delimited_splits = util::parse::split_delimited_and_normal_rc(&text, DELIM_LINK_START, DELIM_LINK_END, context)?;
+        let mut items = vec![];
         for (item_is_delimited, item_text) in delimited_splits.iter() {
             if *item_is_delimited {
                 // Assume it's an internal or external link, or an image link.
@@ -447,12 +450,13 @@ impl BuildProcess {
                     format!("{}{}{}", DELIM_LINK_START, text, DELIM_LINK_END)
                 };
                 let link = self.make_link_rc(&link_text, context)?;
-                text_block.items.push(TextItem::new_link(link));
+                items.push(TextItem::new_link(link));
             } else {
                 // Assume it's plain text.
-                text_block.items.push(TextItem::new_text(item_text));
+                items.push(TextItem::new_text(item_text));
             }
         }
+        let text_block = TextBlock::new_resolved(items);
         Ok(text_block)
     }
 

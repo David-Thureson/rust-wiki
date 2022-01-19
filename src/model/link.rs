@@ -208,16 +208,21 @@ impl Link {
     }
 
     fn catalog_links_text_block(text_block: &TextBlock) -> Vec<Link> {
-        let mut links = vec![];
-        for item in text_block.items.iter() {
-            match item {
-                TextItem::Link { link } => {
-                    links.push(link.clone());
-                },
-                _ => {},
-            }
+        match text_block {
+            TextBlock::Resolved { items } => {
+                let mut links = vec![];
+                for item in items.iter() {
+                    match item {
+                        TextItem::Link { link } => {
+                            links.push(link.clone());
+                        },
+                        _ => {},
+                    }
+                }
+                links
+            },
+            _ => panic!("Expected a resolved text block."),
         }
-        links
     }
 
     pub fn check_links(model: &Wiki) -> TopicErrorList {
@@ -261,10 +266,10 @@ impl Link {
                             item.block.update_internal_links(keys);
                         }
                     },
-                    Paragraph::Table { has_header: _, has_label_column: _, rows} => {
-                        for row in rows.iter_mut() {
+                    Paragraph::Table { table} => {
+                        for row in table.rows.iter_mut() {
                             for cell in row.iter_mut() {
-                                cell.update_internal_links(keys);
+                                cell.text_block.update_internal_links(keys);
                             }
                         }
                     },

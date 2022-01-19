@@ -3,8 +3,13 @@ use super::*;
 // pub type TextBlockRc = Rc<RefCell<TextBlock>>;
 
 #[derive(Clone, Debug)]
-pub struct TextBlock {
-    pub items: Vec<TextItem>,
+pub enum TextBlock {
+    Resolved {
+        items: Vec<TextItem>,
+    },
+    Unresolved {
+        text: String,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -18,19 +23,46 @@ pub enum TextItem {
 }
 
 impl TextBlock {
-    pub fn new() -> Self {
-        Self {
-            items: vec![],
+    pub fn new_unresolved(text: &str) -> Self {
+        Self::Unresolved {
+            text: text.to_string(),
+        }
+    }
+
+    pub fn new_resolved(items: Vec<TextItem>) -> Self {
+        Self::Resolved {
+            items,
+        }
+    }
+
+    pub fn get_unresolved_text(&self) -> String {
+        match self {
+            Self::Resolved { .. } => panic!("Expected an unresolved text block."),
+            Self::Unresolved { text } => text.clone(),
+        }
+    }
+
+    pub fn get_resolved_items(&self) -> &Vec<TextItem> {
+        match self {
+            Self::Resolved { items } => items,
+            Self::Unresolved { .. } => panic!("Expected a resolved text block."),
         }
     }
 
     pub fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
-        for text_item in self.items.iter_mut() {
-            //bg!(&text_item);
-            *text_item = text_item.clone().update_internal_link_optional(keys);
-            //bg!(&text_item);
+        match self {
+            Self::Resolved { items } => {
+                for text_item in items.iter_mut() {
+                    //bg!(&text_item);
+                    *text_item = text_item.clone().update_internal_link_optional(keys);
+                    //bg!(&text_item);
+                }
+                //bg!(&items);
+            }
+            Self::Unresolved { .. } => {
+                panic!("This shouldn't be called for unresolved text blocks.")
+            },
         }
-        //bg!(&self.items);
     }
 }
 

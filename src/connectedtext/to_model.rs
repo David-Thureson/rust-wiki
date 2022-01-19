@@ -5,7 +5,7 @@ use std::fs;
 use super::*;
 // use crate::model::report::WikiReport;
 use util::parse::{split_3_two_delimiters_rc, split_trim, between};
-use crate::Itertools;
+use crate::{Itertools, model};
 #[allow(unused_imports)]
 use crate::connectedtext::report::report_category_tree;
 #[allow(unused_imports)]
@@ -555,19 +555,21 @@ impl BuildProcess {
             } else {
                 // Normal (non-attribute) table.
                 let has_header = rows[0].iter().all(|cell| cell.contains(CT_FORMAT_BOLD));
-                let mut rows_as_text_blocks = vec![];
+                let mut table = model::Table::new(has_header);
                 for (index, cells) in rows.iter().enumerate() {
-                    let is_header = has_header && index == 0;
-                    let mut cells_as_text_blocks = vec![];
+                    let is_bold = has_header && index == 0;
+                    let mut table_cells = vec![];
                     for cell in cells.iter() {
-                        // If this is the header row, remove the bold formatting.
-                        let cell_cleaned = if is_header { cell.replace(CT_FORMAT_BOLD, "").to_string() } else { cell.to_string() };
-                        let text_block= self.make_text_block_rc(&topic.name, &cell_cleaned, context)?;
-                        cells_as_text_blocks.push(text_block);
+                        // Remove bold formatting.
+                        let cell = cell.replace(CT_FORMAT_BOLD, "");
+                        let horizontal = if cell.contains(TAG_ALIGN_RIGHT) { HorizontalAlignment::Right } else { HorizontalAlignment::Left };
+                        let cell = cell.replace(TAG_ALIGN_RIGHT, "").trim().to_string();
+                        let text_block= self.make_text_block_rc(&topic.name, &cell, context)?;
+                        table_cells.push(TableCell::new_text_block(text_block, is_bold, &horizontal));
                     }
-                    rows_as_text_blocks.push(cells_as_text_blocks);
+                    table.rows.push(table_cells);
                 }
-                Ok(Some(Paragraph::Table { has_header, has_label_column: false, rows: rows_as_text_blocks }))
+                Ok(Some(Paragraph::new_table(table)))
             }
         } else {
             Ok(None)
@@ -696,19 +698,20 @@ impl BuildProcess {
 
     fn make_text_block_rc(&self, topic_name: &str, text: &str, context: &str) -> Result<TextBlock, String> {
         let text = text.trim();
-        let mut text_block = TextBlock::new();
+        let mut items = vec![];
         let delimited_splits = util::parse::split_delimited_and_normal_rc(text, CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT, context)?;
         for (item_is_delimited, item_text) in delimited_splits.iter() {
             if *item_is_delimited {
                 // Assume it's an internal or external link, or an image link.
                 if let Some(link) = self.make_link_rc(topic_name, item_text, context)? {
-                    text_block.items.push(TextItem::new_link(link));
+                    items.push(TextItem::new_link(link));
                 }
             } else {
                 // Assume it's plain text.
-                text_block.items.push(TextItem::new_text(item_text));
+                items.push(TextItem::new_text(item_text));
             }
         }
+        let text_block = TextBlock::new_resolved(items);
         Ok(text_block)
     }
 

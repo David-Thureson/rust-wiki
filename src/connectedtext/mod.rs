@@ -18,6 +18,7 @@ pub const PATH_CT_EXPORT_IMAGES: &str = r"T:\Private Wiki Export\Images";
 pub const FILE_NAME_EXPORT_TOOLS: &str = "Tools.txt";
 
 pub const TAG_CATEGORY: &str = "$CATEGORY:";
+pub const TAG_ALIGN_RIGHT: &str = "%%text-align=right%%";
 
 pub const NAMESPACE_TOOLS: &str = "tools";
 pub const NAMESPACE_HOME: &str = "home";

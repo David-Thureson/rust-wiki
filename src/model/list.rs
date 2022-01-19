@@ -101,8 +101,9 @@ impl ListType {
                     Paragraph::List { type_, header, .. } => {
                         match type_ {
                             ListType::General => {
-                                if header.items.len() == 1 {
-                                    match &header.items[0] {
+                                let items = header.get_resolved_items();
+                                if items.len() == 1 {
+                                    match &items[0] {
                                         TextItem::Text { text } => {
                                             group.record_entry(text);
                                         },

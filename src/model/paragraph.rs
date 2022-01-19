@@ -27,9 +27,7 @@ pub enum Paragraph {
         depth: usize,
     },
     Table {
-        has_header: bool,
-        has_label_column: bool,
-        rows: Vec<Vec<TextBlock>>,
+        table: Table,
     },
     Text {
         text_block: TextBlock,
@@ -56,11 +54,9 @@ impl Paragraph {
         }
     }
 
-    pub fn new_table(has_header: bool, has_label_column: bool, rows: Vec<Vec<TextBlock>>) -> Self {
+    pub fn new_table(table: Table) -> Self {
         Self::Table {
-            has_header,
-            has_label_column,
-            rows
+            table,
         }
     }
 
