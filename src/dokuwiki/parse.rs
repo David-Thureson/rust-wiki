@@ -100,8 +100,8 @@ pub fn parse_breadcrumb_optional(text: &str) -> Result<Option<Vec<TopicKey>>, St
     //   **tools:Excel => tools:Excel and MySQL <= MySQL**
     let text = text.trim().replace(DELIM_BOLD, "");
     //bg!(text);
-    if text.contains(DELIM_BREADCRUMB_RIGHT) {
-        dbg!(&text);
+    if !text.contains(DELIM_LINEFEED) && text.contains(DELIM_BREADCRUMB_RIGHT) {
+        //bg!(&text);
         if text.contains(DELIM_BREADCRUMB_LEFT) {
             // Presumably breadcrumbs for a combo topic.
             let left = util::parse::before(&text, DELIM_BREADCRUMB_RIGHT).trim();
@@ -123,11 +123,13 @@ pub fn parse_breadcrumb_optional(text: &str) -> Result<Option<Vec<TopicKey>>, St
     Ok(None)
 }
 
-pub fn parse_marker_optional(text: &str) -> Result<Option<String>, String> {
+pub fn parse_marker_optional(text: &str) -> Result<Option<(String, String)>, String> {
     // A marker will be a one-line paragraph with something like "<WRAP round box>", "</WRAP>",
     // "<code>", "</code>", "<code Rust>", "<file>", "<html>", or "<php>".
     let text = text.trim();
-    if text.starts_with(MARKER_LINE_START) {
+    // For now we handle only "<code...>" (with or without a language) and "<WRAP...>".
+    if text.starts_with(MARKER_QUOTE_START_PREFIX) || text.starts_with(MARKER_CODE_START_PREFIX) {
+    // if text.starts_with(MARKER_LINE_START) {
         // We can assume this is a marker.
         if !text.ends_with(MARKER_LINE_END) {
             return Err(format!("Text seems to be a marker because it starts with \"{}\" but it does not end with \"{}\": \"{}\".", MARKER_LINE_START, MARKER_LINE_END, text));
@@ -135,7 +137,12 @@ pub fn parse_marker_optional(text: &str) -> Result<Option<String>, String> {
         if text.trim().contains(DELIM_LINEFEED) {
             return Err(format!("The text seems to be a marker but it has linefeeds: \"{}\".", text));
         }
-        return Ok(Some(text.to_string()));
+        let marker_exit_string = if text.contains(" ") {
+            format!("{}{}", util::parse::before(text, " "), MARKER_LINE_END)
+        } else {
+            text.to_string()
+        };
+        return Ok(Some((text.to_string(), marker_exit_string)));
     }
     // This doesn't look like a section header.
     Ok(None)

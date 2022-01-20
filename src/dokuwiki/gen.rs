@@ -284,6 +284,10 @@ pub fn legal_file_name(name: &str) -> String {
         .map(|c| {
             if c.is_alphabetic() || c.is_digit(10) || c == '.' || c == '-' || c == '_' {
                 c
+            } else if c == '+' {
+                // This means "C++" will be turned into "cpp" rather than simply "c" which would
+                // overwrite a topic titled "C".
+                'p'
             } else {
                 '_'
             }

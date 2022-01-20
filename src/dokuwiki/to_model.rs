@@ -14,6 +14,9 @@ struct BuildProcess {
     path_source: String,
     errors: TopicErrorList,
     topic_limit: Option<usize>,
+    in_code: bool,
+    in_non_code_marker: bool,
+    marker_exit_string: Option<String>,
 }
 
 impl BuildProcess {
@@ -24,6 +27,9 @@ impl BuildProcess {
             path_source: path_source.to_string(),
             errors: TopicErrorList::new(),
             topic_limit,
+            in_code: false,
+            in_non_code_marker: false,
+            marker_exit_string: None,
         }
     }
 
@@ -43,7 +49,9 @@ impl BuildProcess {
         model.catalog_links();
         self.check_links(&model);
         //bg!(model.topics.keys());
-        self.check_subtopic_relationships(&mut model);
+        // It's not necessary to check whether parents link to subtopics, since those links will be
+        // generated.
+        // self.check_subtopic_relationships(&mut model);
         self.errors.print(Some("First pass"));
         self.errors.list_missing_topics();
 
@@ -150,6 +158,9 @@ impl BuildProcess {
         // or like this if it does not yet have a link (which will be added during the re-gen
         // process we're in):
         //   Category: Nonfiction Books
+        if self.in_code || self.in_non_code_marker {
+            return Ok(false);
+        }
         let context = &format!("{} Seems to be a category paragraph.", context);
         let err_func = |msg: &str| Err(format!("{} paragraph_as_category_rc: {}: text = \"{}\".", context, msg, text));
         if text.trim().starts_with(PREFIX_CATEGORY) {
@@ -192,6 +203,10 @@ impl BuildProcess {
         //   ===Section Name===
         // The level is between 0 and 5 where 0 is the main page title. The number of "=" is six
         // minus the level.
+        if text.starts_with("=LEFT(G6") { dbg!(text, self.in_code, self.in_non_code_marker, &self.marker_exit_string); }
+        if self.in_code || self.in_non_code_marker {
+            return Ok(false);
+        }
         let context = &format!("{} Seems to be a section header paragraph.", context);
         let err_func = |msg: &str| Err(format!("{} paragraph_as_section_header_rc: {}: text = \"{}\".", context, msg, text));
         match parse_header_optional(text) {
@@ -220,11 +235,14 @@ impl BuildProcess {
         //   **[[tools:excel|Excel]] => Excel and MySQL <= [[tools:mysql|MySQL]]**
         // or:
         //   **tools:Excel => tools:Excel and MySQL <= MySQL**
+        if self.in_code || self.in_non_code_marker {
+            return Ok(false);
+        }
         let context = &format!("{} Seems to be a breadcrumb paragraph.", context);
         let err_func = |msg: &str| Err(format!("{} paragraph_as_breadcrumb_rc: {}: text = \"{}\".", context, msg, text));
         match parse_breadcrumb_optional(text) {
             Ok(Some(parent_topic_keys)) => {
-                dbg!(&parent_topic_keys);
+                //bg!(&parent_topic_keys);
                 topic.parents = parent_topic_keys;
                 Ok(true)
             },
@@ -247,13 +265,27 @@ impl BuildProcess {
         //   </code>;
         // Or it might specify the language, like "<code rust>". Other markers are "<html>" and
         // "<php>".
+        if self.in_code || self.in_non_code_marker {
+            if text.trim().eq(*&self.marker_exit_string.as_ref().unwrap()) {
+                topic.paragraphs[paragraph_index] = Paragraph::new_marker(&text);
+                self.in_code = false;
+                self.in_non_code_marker = false;
+                self.marker_exit_string = None;
+                return Ok(true);
+            }
+        }
         let context = &format!("{} Seems to be a marker start or end paragraph.", context);
         let err_func = |msg: &str| Err(format!("{} paragraph_as_marker_start_or_end_rc: {}: text = \"{}\".", context, msg, text));
         let text = text.trim();
         match parse_marker_optional(text) {
-            Ok(Some(text)) => {
-                //bg!(&name, depth);
+            Ok(Some((text, marker_exit_string))) => {
                 topic.paragraphs[paragraph_index] = Paragraph::new_marker(&text);
+                if marker_exit_string.eq(MARKER_CODE_END) {
+                    self.in_code = true;
+                } else {
+                    self.in_non_code_marker = true;
+                }
+                self.marker_exit_string = Some(marker_exit_string);
                 Ok(true)
             },
             Ok(None) => {
@@ -280,6 +312,9 @@ impl BuildProcess {
         // and the date might be "2018-Jul-24", "2018-07-24", or some other supported format.
         // A regular table will look similar. The Terms page has a large example of a regular
         // table.
+        if self.in_code || self.in_non_code_marker {
+            return Ok(false);
+        }
         let context = &format!("{} Seems to be a table paragraph.", context);
         let err_func = |msg: &str| Err(format!("{} paragraph_as_table_rc: {}: text = \"{}\".", context, msg, text));
         match parse_table_optional(text) {
@@ -391,11 +426,6 @@ impl BuildProcess {
     fn check_links(&mut self, wiki: &Wiki) {
         let mut link_errors = wiki.check_links();
         self.errors.append(&mut link_errors);
-    }
-
-    fn check_subtopic_relationships(&mut self, wiki: &mut Wiki) {
-        let mut subtopic_errors = wiki.check_subtopic_relationships();
-        self.errors.append(&mut subtopic_errors);
     }
 
     fn make_text_block_rc(&self, text: &str, context: &str) -> Result<TextBlock, String> {

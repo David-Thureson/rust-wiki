@@ -140,7 +140,7 @@ impl Topic {
 
     pub fn check_subtopic_relationships(model: &Wiki) -> TopicErrorList {
         let mut errors = TopicErrorList::new();
-        let err_msg_func = |msg: &str| format!("Wiki::check_subtopic_relationships: {}", msg);
+        let err_msg_func = |msg: &str| format!("Topic::check_subtopic_relationships: {}", msg);
         let cat_combo = "Combinations".to_string();
         for topic in model.topics.values() {
             let topic_key = topic.get_key();
