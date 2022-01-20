@@ -229,15 +229,15 @@ impl <'a> GenFromModel<'a> {
                 topic_keys.reverse();
                 let breadcrumbs = topic_keys.iter()
                     .map(|topic_key| self.page_link_simple(topic_key))
-                    .join(&format!(" {} ", wiki::DELIM_BOOKMARK_RIGHT));
-                let breadcrumbs = format!("{}{} {} {}{}", wiki::DELIM_BOLD, breadcrumbs, wiki::DELIM_BOOKMARK_RIGHT, topic.name, wiki::DELIM_BOLD);
+                    .join(&format!(" {} ", wiki::DELIM_BREADCRUMB_RIGHT));
+                let breadcrumbs = format!("{}{} {} {}{}", wiki::DELIM_BOLD, breadcrumbs, wiki::DELIM_BREADCRUMB_RIGHT, topic.name, wiki::DELIM_BOLD);
                 page.add_paragraph(&breadcrumbs);
             },
             2 => {
                 // Combination topic.
                 let link_a = self.page_link_simple(&topic.parents[0]);
                 let link_b = self.page_link_simple(&topic.parents[1]);
-                let breadcrumbs = format!("{}{} {} {} {} {}{}", wiki::DELIM_BOLD, link_a, wiki::DELIM_BOOKMARK_RIGHT, topic.name, wiki::DELIM_BOOKMARK_LEFT, link_b, wiki::DELIM_BOLD);
+                let breadcrumbs = format!("{}{} {} {} {} {}{}", wiki::DELIM_BOLD, link_a, wiki::DELIM_BREADCRUMB_RIGHT, topic.name, wiki::DELIM_BREADCRUMB_LEFT, link_b, wiki::DELIM_BOLD);
                 page.add_paragraph(&breadcrumbs);
             },
             _ => {

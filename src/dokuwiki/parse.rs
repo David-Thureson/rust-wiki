@@ -87,39 +87,39 @@ pub fn parse_header_optional(text: &str) -> Result<Option<(String, usize)>, Stri
     Ok(None)
 }
 
-pub fn parse_bookmark_optional(text: &str) -> Result<Option<Vec<TopicKey>>, String> {
-    // A bookmark paragraph showing the parent and grandparent topic will look like this with
+pub fn parse_breadcrumb_optional(text: &str) -> Result<Option<Vec<TopicKey>>, String> {
+    // A breadcrumb paragraph showing the parent and grandparent topic will look like this with
     // the links worked out:
     //   **[[tools:android|Android]] => [[tools:android_development|Android Development]] => Android Sensors**
     // or like this in a new entry where only the topic names appear:
     //   **tools:Android => tools:Android Development => Android Sensors**
     // In the latter case they may or may not have the bold ("**") markup.
-    // A bookmark paragraph for a combination topic with two parents will look like this:
+    // A breadcrumb paragraph for a combination topic with two parents will look like this:
     //   **[[tools:excel|Excel]] => Excel and MySQL <= [[tools:mysql|MySQL]]**
     // or:
     //   **tools:Excel => tools:Excel and MySQL <= MySQL**
     let text = text.trim().replace(DELIM_BOLD, "");
     //bg!(text);
-    if text.contains(DELIM_BOOKMARK_RIGHT) {
-        //bg!(&text);
-        if text.contains(DELIM_BOOKMARK_LEFT) {
-            // Presumably bookmarks for a combo topic.
-            let left = util::parse::before(&text, DELIM_BOOKMARK_RIGHT).trim();
-            let right = util::parse::after(&text, DELIM_BOOKMARK_LEFT).trim();
-            let left = eval_bookmark_topic_ref(left)?;
-            let right = eval_bookmark_topic_ref(right)?;
+    if text.contains(DELIM_BREADCRUMB_RIGHT) {
+        dbg!(&text);
+        if text.contains(DELIM_BREADCRUMB_LEFT) {
+            // Presumably breadcrumbs for a combo topic.
+            let left = util::parse::before(&text, DELIM_BREADCRUMB_RIGHT).trim();
+            let right = util::parse::after(&text, DELIM_BREADCRUMB_LEFT).trim();
+            let left = eval_breadcrumb_topic_ref(left)?;
+            let right = eval_breadcrumb_topic_ref(right)?;
             return Ok(Some(vec![left, right]));
         } else {
-            // Presumably a bookmark for a topic with a single parent topic. We only care about the
+            // Presumably a breadcrumb for a topic with a single parent topic. We only care about the
             // one just to the left of the current topic name, so the second-to-last topic
             // reference in the chain.
-            let topic_refs = text.rsplit(DELIM_BOOKMARK_RIGHT).collect::<Vec<_>>();
+            let topic_refs = text.rsplit(DELIM_BREADCRUMB_RIGHT).collect::<Vec<_>>();
             //bg!(&topic_refs);
-            let topic_key = eval_bookmark_topic_ref(topic_refs[1])?;
+            let topic_key = eval_breadcrumb_topic_ref(topic_refs[1])?;
             return Ok(Some(vec![topic_key]));
         }
     }
-    // This doesn't look like a bookmark.
+    // This doesn't look like a breadcrumb.
     Ok(None)
 }
 
@@ -200,16 +200,30 @@ pub fn parse_table_optional(text: &str) -> Result<Option<model::Table>, String> 
     Ok(None)
 }
 
-fn eval_bookmark_topic_ref(topic_ref: &str) -> Result<TopicKey, String> {
+fn eval_breadcrumb_topic_ref(topic_ref: &str) -> Result<TopicKey, String> {
+    let topic_ref = topic_ref.replace(DELIM_LINK_START, "").replace(DELIM_LINK_END, "");
+    let (topic_ref, label) = util::parse::split_1_or_2(&topic_ref, DELIM_LINK_LABEL);
+    if topic_ref.contains(DELIM_NAMESPACE) {
+        let (topic_name_ref, namespace) = util::parse::rsplit_2(&topic_ref, DELIM_NAMESPACE);
+        let topic_name = label.unwrap_or(topic_name_ref);
+        Ok(TopicKey::new(namespace.trim(), topic_name.trim()))
+    } else {
+        Err(format!("Expected a namespace in the breadcrumb topic reference \"{}\".", &topic_ref))
+    }
+}
+
+/*
+fn eval_breadcrumb_topic_ref(topic_ref: &str) -> Result<TopicKey, String> {
     let topic_ref = topic_ref.replace(DELIM_LINK_START, "").replace(DELIM_LINK_END, "");
     let (topic_ref, _label) = util::parse::split_1_or_2(&topic_ref, DELIM_LINK_LABEL);
     if topic_ref.contains(DELIM_NAMESPACE) {
         let (topic_name, namespace) = util::parse::rsplit_2(&topic_ref, DELIM_NAMESPACE);
         Ok(TopicKey::new(namespace, topic_name))
     } else {
-        Err(format!("Expected a namespace in the bookmark topic reference \"{}\".", &topic_ref))
+        Err(format!("Expected a namespace in the breadcrumb topic reference \"{}\".", &topic_ref))
     }
 }
+*/
 
 pub fn topic_ref_to_topic_key(topic_ref: &str) -> Result<model::TopicKey, String> {
     // Something like "tools:books:Zero to One".

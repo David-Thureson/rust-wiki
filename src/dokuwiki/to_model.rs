@@ -42,6 +42,7 @@ impl BuildProcess {
 
         model.catalog_links();
         self.check_links(&model);
+        //bg!(model.topics.keys());
         self.check_subtopic_relationships(&mut model);
         self.errors.print(Some("First pass"));
         self.errors.list_missing_topics();
@@ -124,7 +125,7 @@ impl BuildProcess {
             Paragraph::Unknown { text } => {
                 if !(self.paragraph_as_category_rc(topic, &text, context)?
                     || self.paragraph_as_section_header_rc(topic, &text, paragraph_index, context)?
-                    || self.paragraph_as_bookmark_rc(topic, &text, context)?
+                    || self.paragraph_as_breadcrumb_rc(topic, &text, context)?
                     || self.paragraph_as_marker_start_or_end_rc(topic, &text, paragraph_index, context)?
                     || self.paragraph_as_table_rc(topic, &text, paragraph_index, context)?
                     // || self.paragraph_as_list_rc(topic, &text, context)? {
@@ -208,22 +209,22 @@ impl BuildProcess {
         }
     }
 
-    fn paragraph_as_bookmark_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<bool, String> {
-        // A bookmark paragraph showing the parent and grandparent topic will look like this with
+    fn paragraph_as_breadcrumb_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<bool, String> {
+        // A breadcrumb paragraph showing the parent and grandparent topic will look like this with
         // the links worked out:
         //   **[[tools:android|Android]] => [[tools:android_development|Android Development]] => Android Sensors**
         // or like this in a new entry where only the topic names appear:
         //   **tools:Android => tools:Android Development => Android Sensors**
         // In the latter case they may or may not have the bold ("**") markup.
-        // A bookmark paragraph for a combination topic with two parents will look like this:
+        // A breadcrumb paragraph for a combination topic with two parents will look like this:
         //   **[[tools:excel|Excel]] => Excel and MySQL <= [[tools:mysql|MySQL]]**
         // or:
         //   **tools:Excel => tools:Excel and MySQL <= MySQL**
-        let context = &format!("{} Seems to be a bookmark paragraph.", context);
-        let err_func = |msg: &str| Err(format!("{} paragraph_as_bookmark_rc: {}: text = \"{}\".", context, msg, text));
-        match parse_bookmark_optional(text) {
+        let context = &format!("{} Seems to be a breadcrumb paragraph.", context);
+        let err_func = |msg: &str| Err(format!("{} paragraph_as_breadcrumb_rc: {}: text = \"{}\".", context, msg, text));
+        match parse_breadcrumb_optional(text) {
             Ok(Some(parent_topic_keys)) => {
-                //bg!(&parent_topic_keys);
+                dbg!(&parent_topic_keys);
                 topic.parents = parent_topic_keys;
                 Ok(true)
             },

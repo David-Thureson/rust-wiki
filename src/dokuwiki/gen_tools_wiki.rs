@@ -49,11 +49,11 @@ pub fn gen_from_connectedtext_and_round_trip() {
 }
 
 fn path_pages_project() -> String {
-    format!("{}/{}", PATH_PAGES, PROJECT_NAME)
+    format!("{}/{}", PATH_PAGES, PROJECT_NAME.to_lowercase())
 }
 
 fn path_media_project() -> String {
-    format!("{}/{}", PATH_MEDIA, PROJECT_NAME)
+    format!("{}/{}", PATH_MEDIA, PROJECT_NAME.to_lowercase())
 }
 
 fn clean_up_tools_dokuwiki_files(include_images: bool) {

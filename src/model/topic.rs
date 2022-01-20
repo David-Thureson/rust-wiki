@@ -152,6 +152,7 @@ impl Topic {
                 } else {
                     for parent_topic_key in topic.parents.iter() {
                         //bg!(&topic.name, parent_topic_key);
+                        assert!(model.topics.contains_key(parent_topic_key), "No topic found for parent key = \"{:?}\" in topic = \"{}\". This should have been caught earlier.", parent_topic_key, topic.name);
                         if !model.topics[parent_topic_key].listed_topics.contains(&topic_key) {
                             errors.add(&parent_topic_key,&err_msg_func(&format!("[[{}]]", topic.name)));
                         }
@@ -163,6 +164,7 @@ impl Topic {
                     errors.add(&topic_key,&err_msg_func(&format!("Combo category, so expected 2 parents, found {}.", parent_count)));
                 } else {
                     for parent_topic_key in topic.parents.iter() {
+                        assert!(model.topics.contains_key(parent_topic_key), "No topic found for parent key = \"{:?}\" in topic = \"{}\". This should have been caught earlier.", parent_topic_key, topic.name);
                         if !model.topics[parent_topic_key].combo_subtopics.contains(&topic_key) {
                             errors.add(&parent_topic_key, &err_msg_func(&format!("No combination link to child [[{}]].", topic.name)));
                         }
