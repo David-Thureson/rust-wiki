@@ -197,4 +197,21 @@ impl Wiki {
         AttributeType::get_typed_topics_for_attr_value(self, value_type, match_value, included_attr_names)
     }
 
+    pub fn get_topics_first_letter_map(&self) -> BTreeMap<String, Vec<TopicKey>> {
+        let mut map = BTreeMap::new();
+        for topic_key in self.topics.values().map(|topic| topic.get_key()) {
+            let first_char = topic_key.topic_name.to_uppercase().chars().next().unwrap();
+            let map_key = if first_char.is_numeric() {
+                '#'.to_string()
+            } else if first_char.is_ascii_alphabetic() {
+                first_char.to_string()
+            } else {
+                panic!("Topic name \"{}\" does not start with a number or ASCII letter.", topic_key.topic_name)
+            };
+            let entry = map.entry(map_key).or_insert(vec![]);
+            entry.push(topic_key);
+        }
+        map
+    }
+
 }

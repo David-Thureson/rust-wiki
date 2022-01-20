@@ -108,12 +108,12 @@ fn gen_tools_project_from_model(model: &model::Wiki, copy_image_files_to_local_w
         GenFromModel::copy_image_files(PATH_CT_EXPORT_IMAGES, &path_to, true);
     }
 
-    gen_sidebar_page(model);
-    gen_start_page(model);
     // gen_recent_topics_page();
-    gen_all_topics_page(model);
 
     let mut gen = GenFromModel::new(model);
+    gen_sidebar_page(model, &mut gen);
+    gen_start_page(model);
+    gen.gen_all_topics_page();
     gen.gen_categories_page();
     gen.gen_subtopics_page();
     gen.gen_attr_year_page();
@@ -125,10 +125,10 @@ fn gen_tools_project_from_model(model: &model::Wiki, copy_image_files_to_local_w
     println!("\nGenerating wiki from model: Done.");
 }
 
-fn gen_sidebar_page(model: &model::Wiki) {
+fn gen_sidebar_page(model: &model::Wiki, gen: &mut GenFromModel) {
     let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_ROOT), wiki::PAGE_NAME_SIDEBAR, None);
     add_main_page_links(&mut page, model,false, true);
-    add_links_to_all_topics(&mut page, &model);
+    gen.gen_topic_first_letter_links(&mut page);
     page.write();
 }
 
@@ -136,12 +136,6 @@ fn gen_start_page(model: &model::Wiki) {
     let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_ROOT), wiki::PAGE_NAME_START, Some(PROJECT_NAME));
     page.add_headline("Main Pages",2);
     add_main_page_links(&mut page, model, true, false);
-    page.write();
-}
-
-fn gen_all_topics_page(model: &model::Wiki) {
-    let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(&model.namespace_navigation()), wiki::PAGE_NAME_ALL_TOPICS,None);
-    add_links_to_all_topics(&mut page, model);
     page.write();
 }
 
@@ -189,6 +183,7 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Wiki, use_li
     }
 }
 
+/*
 fn add_links_to_all_topics(page: &mut wiki::WikiGenPage, model: &model::Wiki) {
     for topic_key in model.topic_keys_alphabetical_by_topic_name().iter() {
         //bg!(topic_key);
@@ -196,6 +191,7 @@ fn add_links_to_all_topics(page: &mut wiki::WikiGenPage, model: &model::Wiki) {
         page.add_line_with_break(&link);
     }
 }
+*/
 
 pub fn get_attr_to_index() -> Vec<&'static str> {
     vec!["Author", "Book", "Company", "Context", "Course", ATTRIBUTE_NAME_DOMAIN, "Domains", "Format", "Founder", "IDE", "Language", "License Type", "LinkedIn", "Narrator", "Operating System", "Organization", "PC Name", "Paradigm", "Platform", "School", "Series", "Status", "Translator"]

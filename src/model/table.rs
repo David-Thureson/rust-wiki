@@ -51,6 +51,21 @@ impl Table {
             .map(|row| row[col_index].text_block.get_unresolved_text())
             .collect()
     }
+
+    pub fn add_cells_flow_layout(&mut self, column_count: usize, mut cells: Vec<TableCell>) {
+        let mut row_index = 0;
+        let mut col_index = 0;
+        self.rows.push(vec![]);
+        for cell in cells.drain(..) {
+            if col_index >= column_count {
+                row_index += 1;
+                col_index = 0;
+                self.rows.push(vec![]);
+            }
+            self.rows[row_index].push(cell);
+            col_index += 1;
+        }
+    }
 }
 
 impl TableCell {

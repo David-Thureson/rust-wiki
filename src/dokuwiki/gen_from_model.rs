@@ -3,9 +3,9 @@ use crate::{model, Itertools};
 use crate::dokuwiki as wiki;
 use std::rc::Rc;
 use std::cell::RefCell;
-use crate::model::{AttributeValueType, TopicKey, Topic};
+use crate::model::{AttributeValueType, TopicKey, Topic, TableCell};
 use std::collections::BTreeMap;
-use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL};
+use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage};
 use std::fs;
 
 //const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
@@ -24,6 +24,45 @@ impl <'a> GenFromModel<'a> {
             current_topic_key: None,
             errors: model::TopicErrorList::new(),
         }
+    }
+
+    pub fn gen_all_topics_page(&self) {
+        let namespace = &self.model.qualify_namespace(&self.model.namespace_navigation());
+        let mut page = wiki::WikiGenPage::new(namespace, wiki::PAGE_NAME_ALL_TOPICS,None);
+        let first_letter_map = self.model.get_topics_first_letter_map();
+        for (map_key, topic_keys) in first_letter_map.iter() {
+            let section_name = if map_key.eq("#") { "Number" } else { map_key };
+            page.add_headline(section_name, 1);
+            for topic_key in topic_keys {
+                let link = Self::page_link(topic_key);
+                page.add_line_with_break(&link);
+            }
+        }
+        page.write();
+    }
+
+    pub fn gen_topic_first_letter_links(&mut self, page: &mut WikiGenPage) {
+        let namespace = &self.model.qualify_namespace(&self.model.namespace_navigation());
+        let first_letter_map = self.model.get_topics_first_letter_map();
+
+        let mut cells = vec![];
+        for map_key in first_letter_map.keys() {
+            let section_name = if map_key.eq("#") { "Number" } else { map_key };
+            let link = model::Link::new_section(Some(&map_key), namespace, wiki::PAGE_NAME_ALL_TOPICS, section_name);
+            let text_items = vec![model::TextItem::new_link(link)];
+            let cell = TableCell::new_text_block(model::TextBlock::new_resolved(text_items), false, &model::HorizontalAlignment::Center);
+            cells.push(cell);
+        }
+        let mut table = model::Table::new(false);
+        table.add_cells_flow_layout(6, cells);
+        self.add_table(page, &table);
+
+        /*
+        for map_key in first_letter_map.keys() {
+            let section_name = if map_key.eq("#") { "Number" } else { map_key };
+            page.add_section_link(namespace, wiki::PAGE_NAME_ALL_TOPICS, section_name, None);
+        }
+         */
     }
 
     pub fn gen_categories_page(&self) {
