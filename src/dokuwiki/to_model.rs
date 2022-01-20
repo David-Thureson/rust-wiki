@@ -40,33 +40,31 @@ impl BuildProcess {
         // Figure out the real nature of each paragraph.
         self.refine_paragraphs(&mut model);
 
-        /*
-        wiki.catalog_links();
-        self.check_links(&wiki);
-        self.check_subtopic_relationships(&mut wiki);
+        model.catalog_links();
+        self.check_links(&model);
+        self.check_subtopic_relationships(&mut model);
         self.errors.print(Some("First pass"));
         self.errors.list_missing_topics();
 
-        // WikiReport::new().categories().paragraphs().attributes().lists().go(&wiki);
-        // report_category_tree(&wiki);
-        // wiki.catalog_possible_list_types().print_by_count(0, None);
-        wiki.add_missing_category_topics();
-        wiki.catalog_links();
-        self.errors.clear();
-        self.check_links(&wiki);
-        self.errors.print(Some("After adding missing category topics."));
-        // Call the make tree functions after the last call to wiki.catalog_links().
-        wiki.make_category_tree();
-        wiki.make_subtopic_tree();
-        //bg!(&wiki.attributes);
-        let attr_errors = wiki.catalog_attributes();
-        attr_errors.print(Some("wiki.catalog_attributes()"));
-        if attr_errors.is_empty() {
-            //report_attributes(&wiki);
-        }
-        wiki.catalog_domains();
+        // modelReport::new().categories().paragraphs().attributes().lists().go(&model);
+        // report_category_tree(&model);
+        // model.catalog_possible_list_types().print_by_count(0, None);
 
-         */
+        model.add_missing_category_topics();
+        model.catalog_links();
+        self.errors.clear();
+        self.check_links(&model);
+        self.errors.print(Some("After adding missing category topics."));
+        // Call the make tree functions after the last call to model.catalog_links().
+        model.make_category_tree();
+        model.make_subtopic_tree();
+        //bg!(&model.attributes);
+        let attr_errors = model.catalog_attributes();
+        attr_errors.print(Some("model.catalog_attributes()"));
+        if attr_errors.is_empty() {
+            //report_attributes(&model);
+        }
+        model.catalog_domains();
         model
     }
 
@@ -330,52 +328,6 @@ impl BuildProcess {
     }
 
     /*
-    fn paragraph_as_attributes_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
-        // A paragraph with a list of attributes will look something like this:
-        //   {|
-        //   ||Domain||[[Domain:=Serverless]], [[Domain:=Function as a Service / FaaS]]||
-        //   ||Added||[[Added:=20201204]]||
-        let context = &format!("{} Seems to be an attributes paragraph.", context);
-        let lines = text.lines().collect::<Vec<_>>();
-        if lines[0].trim() == CT_TABLE_START
-            && lines.len() > 1
-            && lines[1].starts_with(CT_TABLE_DELIM)
-            && split_trim(lines[1], CT_TABLE_DELIM).len() == 4 {
-            // We're going to guess that this is a table of attributes.
-            for line_index in 1..lines.len() {
-                let line = lines[line_index].trim();
-                if line == CT_TABLE_END {
-                    break;
-                }
-                let line = between(line, CT_TABLE_DELIM, CT_TABLE_DELIM);
-                let split = split_trim(line, CT_TABLE_DELIM);
-                if split.len() != 2 {
-                    return Err(format!("{} Wrong number of table cells in \"{}\".", context, line));
-                }
-                let (name, values) = (split[0].to_string(), split[1].to_string());
-                let attribute = topic.attributes.entry(name.clone())
-                    .or_insert(vec![]);
-                let values = between(&values, CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT);
-                let bracket_delim_with_space = format!("{}, {}", CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT);
-                let bracket_delim_no_space = format!("{},{}", CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT);
-                let values = values.replace(&bracket_delim_with_space, &bracket_delim_no_space);
-                for value in values.split(&bracket_delim_no_space) {
-                    let mut value= value.trim().to_string();
-                    if value.contains("*") {
-                        value = "".to_string();
-                    }
-                    if attribute.contains(&value) {
-                        return Err(format!("{} In attribute \"{}\", duplicated value \"{}\".", context, name, value));
-                    }
-                    attribute.push(value);
-                }
-            }
-            Ok(Some(Paragraph::Attributes))
-        } else {
-            Ok(None)
-        }
-    }
-
     fn paragraph_as_list_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
         // if text.contains("Determine if number of messages") {
         //     dbg!(&text);
@@ -433,6 +385,7 @@ impl BuildProcess {
         let text_block = self.make_text_block_rc(&topic.name, text, context)?;
         Ok(Some(Paragraph::new_text(text_block)))
     }
+    */
 
     fn check_links(&mut self, wiki: &Wiki) {
         let mut link_errors = wiki.check_links();
@@ -443,7 +396,6 @@ impl BuildProcess {
         let mut subtopic_errors = wiki.check_subtopic_relationships();
         self.errors.append(&mut subtopic_errors);
     }
-    */
 
     fn make_text_block_rc(&self, text: &str, context: &str) -> Result<TextBlock, String> {
         let text = text.trim();
@@ -491,17 +443,20 @@ impl BuildProcess {
     fn clear_errors(&mut self) {
         self.errors.clear();
     }
+    */
 
+    /*
     fn add_error(&mut self, topic_name: &str, msg: &str) {
         let topic_key = TopicKey::new(&self.namespace_main, topic_name);
         let entry = self.errors.entry(topic_key).or_insert(vec![]);
         entry.push(msg.to_string());
     }
-    */
+
+     */
 }
 
 pub fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>, attributes_to_index: Vec<&str>) -> Wiki {
-    let mut bp = BuildProcess::new(name, namespace_main,gen::PATH_PAGES, topic_limit);
+    let mut bp = BuildProcess::new(name, namespace_main,PATH_PAGES, topic_limit);
     let mut model = bp.build();
     model.attributes.attributes_to_index = attributes_to_index.iter().map(|x| x.to_string()).collect::<Vec<_>>();
     model

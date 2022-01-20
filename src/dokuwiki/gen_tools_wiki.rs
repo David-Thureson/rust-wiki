@@ -1,7 +1,7 @@
 use crate::dokuwiki as wiki;
 use crate::model;
 use crate::connectedtext::to_model::build_model;
-use crate::model::{ATTRIBUTE_NAME_DOMAIN, FOLDER_PREFIX_WIKI_GEN_BACKUP, FOLDER_WIKI_GEN_BACKUP};
+use crate::model::{ATTRIBUTE_NAME_DOMAIN, FOLDER_PREFIX_WIKI_GEN_BACKUP, FOLDER_WIKI_GEN_BACKUP, FOLDER_WIKI_COMPARE_OLD, FOLDER_WIKI_COMPARE_NEW};
 use crate::dokuwiki::gen_from_model::GenFromModel;
 use crate::connectedtext::PATH_CT_EXPORT_IMAGES;
 use crate::dokuwiki::{PATH_MEDIA, PATH_PAGES};
@@ -14,32 +14,106 @@ pub fn main() {
     gen_from_connectedtext(copy_image_files, topic_limit);
 }
 
+pub fn gen_from_connectedtext_and_round_trip() {
+    println!("\nDokuWiki round trip test: Start.");
+
+    let path_pages_project = path_pages_project();
+
+    // Back up the existing DokuWiki pages.
+    if util::file::path_exists(&path_pages_project) {
+        let backup_folder_start = util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
+        println!("backup_folder_start = \"{}\".", util::file::path_name(&backup_folder_start));
+    }
+
+    gen_from_connectedtext(false, None);
+    assert!(util::file::path_exists(&path_pages_project));
+    // Back up the DokuWiki pages created from ConnectedText.
+    let backup_folder_from_connectedtext = util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
+    println!("backup_folder_from_connectedtext = \"{}\".", util::file::path_name(&backup_folder_from_connectedtext));
+    // Copy these pages to the "old" comparison folder.
+    util::file::copy_folder_recursive_overwrite_r(&path_pages_project, FOLDER_WIKI_COMPARE_OLD).unwrap();
+
+    // Create a model from the DokuWiki pages that were generated just now.
+    let model = super::to_model::build_model(PROJECT_NAME, &PROJECT_NAME.to_lowercase(), None, get_attr_to_index());
+
+    // Create DokuWiki pages from this new model.
+    gen_tools_project_from_model(&model, false);
+
+    // Back up the DokuWiki pages created with a round trip from DokuWiki.
+    let backup_folder_from_dokuwiki = util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
+    println!("backup_folder_from_dokuwiki = \"{}\".", util::file::path_name(&backup_folder_from_dokuwiki));
+    // Copy these pages to the "new" comparison folder.
+    util::file::copy_folder_recursive_overwrite_r(&path_pages_project, FOLDER_WIKI_COMPARE_NEW).unwrap();
+
+    println!("\nDokuWiki round trip test: Done.");
+}
+
+fn path_pages_project() -> String {
+    format!("{}/{}", PATH_PAGES, PROJECT_NAME)
+}
+
+fn path_media_project() -> String {
+    format!("{}/{}", PATH_MEDIA, PROJECT_NAME)
+}
+
+fn clean_up_tools_dokuwiki_files(include_images: bool) {
+    let path_pages_project = path_pages_project();
+    if util::file::path_exists(&path_pages_project) {
+        std::fs::remove_dir_all(&path_pages_project).unwrap();
+    }
+
+    // Delete the text files in the main DokuWiki pages folder such as start.txt and sidebar.txt.
+    for result_dir_entry in std::fs::read_dir(PATH_PAGES).unwrap() {
+        let dir_entry = result_dir_entry.unwrap();
+        if util::file::dir_entry_to_file_name(&dir_entry).to_lowercase().ends_with(".txt") {
+            std::fs::remove_file(dir_entry.path()).unwrap();
+        }
+    }
+
+    if include_images {
+        let path_media_project = path_media_project();
+        if util::file::path_exists(&path_media_project) {
+            std::fs::remove_dir_all(&path_media_project).unwrap();
+        }
+    }
+}
+
+fn create_tools_wiki_folders() {
+    util::file::path_create_if_necessary_r(path_pages_project()).unwrap();
+    util::file::path_create_if_necessary_r(path_media_project()).unwrap();
+    for namespace in ["book", "nav"].iter() {
+        let path = format!("{}/{}", path_pages_project(), namespace);
+        util::file::path_create_if_necessary_r(path).unwrap();
+    }
+}
+
 fn gen_from_connectedtext(copy_image_files_to_local_wiki: bool, topic_limit: Option<usize>) {
-    println!("\nGenerating wiki from ConnectedText...");
-
-    // Back up all of the generated *.txt files.
-    let path_pages_project = format!("{}/{}", PATH_PAGES, PROJECT_NAME);
-    util::date_time::print_elapsed(false, "back_up_folder_next_number_r", "", {
-        || { util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 3).unwrap(); }
-    });
-
+    println!("\nGenerating wiki from ConnectedText: Start.");
     let namespace_main = PROJECT_NAME.to_lowercase();
     let model = build_model(PROJECT_NAME, &namespace_main, topic_limit, get_attr_to_index());
-    // model.interpolate_added_date();
-    // model::report::report_attributes_with_multiple_values(&model); panic!();
+    gen_tools_project_from_model(&model, copy_image_files_to_local_wiki);
+    println!("\nGenerating wiki from ConnectedText: Done.");
+}
+
+fn gen_tools_project_from_model(model: &model::Wiki, copy_image_files_to_local_wiki: bool) {
+    println!("\nGenerating wiki from model: Start.");
+
+    let namespace_main = PROJECT_NAME.to_lowercase();
+
+    clean_up_tools_dokuwiki_files(copy_image_files_to_local_wiki);
+    create_tools_wiki_folders();
+
     if copy_image_files_to_local_wiki {
         let path_to = format!("{}/{}", PATH_MEDIA, namespace_main);
         GenFromModel::copy_image_files(PATH_CT_EXPORT_IMAGES, &path_to, true);
     }
-    gen_sidebar_page(&model);
-    gen_start_page(&model);
+
+    gen_sidebar_page(model);
+    gen_start_page(model);
     // gen_recent_topics_page();
-    gen_all_topics_page(&model);
+    gen_all_topics_page(model);
 
-    // category_tree.report_by_node_count();
-    // panic!();
-
-    let mut gen = GenFromModel::new(&model);
+    let mut gen = GenFromModel::new(model);
     gen.gen_categories_page();
     gen.gen_subtopics_page();
     gen.gen_attr_year_page();
@@ -48,7 +122,7 @@ fn gen_from_connectedtext(copy_image_files_to_local_wiki: bool, topic_limit: Opt
     gen.gen_attr_value_page();
     // gen_terms_page();
     gen.gen();
-    println!("\nDone generating wiki.");
+    println!("\nGenerating wiki from model: Done.");
 }
 
 fn gen_sidebar_page(model: &model::Wiki) {

@@ -74,4 +74,6 @@ pub const ATTRIBUTE_ORDER: [&str; 52] = ["School", "Title", "Series", "Course", 
 
 pub const FOLDER_WIKI_GEN_BACKUP: &str = r"C:\Wiki Gen Backup";
 pub const FOLDER_PREFIX_WIKI_GEN_BACKUP: &str = "Wiki Gen";
+pub const FOLDER_WIKI_COMPARE_OLD: &str = r"C:\Wiki Gen Backup\Old";
+pub const FOLDER_WIKI_COMPARE_NEW: &str = r"C:\Wiki Gen Backup\New";
 

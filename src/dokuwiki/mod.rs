@@ -17,6 +17,9 @@ pub use to_model::*;
 //pub mod model;
 //pub use model::*;
 
+pub const PATH_PAGES: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/pages";
+pub const PATH_MEDIA: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/media";
+
 pub const PAGE_NAME_SIDEBAR: &str = "Sidebar";
 pub const PAGE_NAME_MAIN: &str = "Main";
 pub const PAGE_NAME_START:   &str = "Start";

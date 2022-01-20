@@ -5,9 +5,6 @@ use crate::*;
 use std::hash::{Hasher, Hash};
 use super::*;
 
-pub const PATH_PAGES: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/pages";
-pub const PATH_MEDIA: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/media";
-
 pub enum WikiImageSize {
     Small,
     Medium,
