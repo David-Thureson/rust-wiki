@@ -14,8 +14,14 @@ struct BuildProcess {
     path_source: String,
     errors: TopicErrorList,
     topic_limit: Option<usize>,
-    in_code: bool,
-    in_non_code_marker: bool,
+    topic_parse_state: TopicParseState,
+}
+
+struct TopicParseState {
+    is_past_attributes: bool,
+    is_past_first_header: bool,
+    is_in_code: bool,
+    is_in_non_code_marker: bool,
     marker_exit_string: Option<String>,
 }
 
@@ -27,9 +33,7 @@ impl BuildProcess {
             path_source: path_source.to_string(),
             errors: TopicErrorList::new(),
             topic_limit,
-            in_code: false,
-            in_non_code_marker: false,
-            marker_exit_string: None,
+            topic_parse_state: TopicParseState::new(),
         }
     }
 
@@ -113,6 +117,7 @@ impl BuildProcess {
     fn refine_paragraphs(&mut self, model: &mut Wiki) {
         for topic in model.topics.values_mut() {
             let context = format!("Refining paragraphs for \"{}\".", topic.name);
+            self.topic_parse_state = TopicParseState::new();
             //rintln!("\n==================================================================\n\n{}\n", context);
             let paragraph_count = topic.paragraphs.len();
             for paragraph_index in 0..paragraph_count {
@@ -124,6 +129,7 @@ impl BuildProcess {
                     _ => (),
                 }
             }
+            self.topic_parse_state.check_end_of_topic();
         }
     }
 
@@ -158,7 +164,7 @@ impl BuildProcess {
         // or like this if it does not yet have a link (which will be added during the re-gen
         // process we're in):
         //   Category: Nonfiction Books
-        if self.in_code || self.in_non_code_marker {
+        if self.topic_parse_state.is_in_code || self.topic_parse_state.is_in_non_code_marker {
             return Ok(false);
         }
         let context = &format!("{} Seems to be a category paragraph.", context);
@@ -204,7 +210,7 @@ impl BuildProcess {
         // The level is between 0 and 5 where 0 is the main page title. The number of "=" is six
         // minus the level.
         // if text.starts_with("=LEFT(G6") { //bg!(text, self.in_code, self.in_non_code_marker, &self.marker_exit_string); }
-        if self.in_code || self.in_non_code_marker {
+        if self.topic_parse_state.is_in_code || self.topic_parse_state.is_in_non_code_marker {
             return Ok(false);
         }
         let context = &format!("{} Seems to be a section header paragraph.", context);
@@ -213,6 +219,11 @@ impl BuildProcess {
             Ok(Some((name, depth))) => {
                 //bg!(&name, depth);
                 topic.paragraphs[paragraph_index] = Paragraph::new_section_header(&name, depth);
+                //if topic.name.contains("A2") { dbg!(text, &name, depth); panic!() }
+                //bg!(&topic.name, text, &name, depth);
+                if depth > 0 {
+                    self.topic_parse_state.is_past_first_header = true;
+                }
                 Ok(true)
             },
             Ok(None) => {
@@ -235,7 +246,7 @@ impl BuildProcess {
         //   **[[tools:excel|Excel]] => Excel and MySQL <= [[tools:mysql|MySQL]]**
         // or:
         //   **tools:Excel => tools:Excel and MySQL <= MySQL**
-        if self.in_code || self.in_non_code_marker {
+        if self.topic_parse_state.is_in_code || self.topic_parse_state.is_in_non_code_marker {
             return Ok(false);
         }
         let context = &format!("{} Seems to be a breadcrumb paragraph.", context);
@@ -268,12 +279,12 @@ impl BuildProcess {
         // let debug = topic.name.eq("QuickBooks");
         // if debug { //rintln!("\n==================================================================\n"); }
         // if debug { //bg!(self.in_code, self.in_non_code_marker, self.marker_exit_string.as_ref(), text); }
-        if self.in_code || self.in_non_code_marker {
-            if text.trim().eq(*&self.marker_exit_string.as_ref().unwrap()) {
+        if self.topic_parse_state.is_in_code || self.topic_parse_state.is_in_non_code_marker {
+            if text.trim().eq(*&self.topic_parse_state.marker_exit_string.as_ref().unwrap()) {
                 topic.paragraphs[paragraph_index] = Paragraph::new_marker(&text);
-                self.in_code = false;
-                self.in_non_code_marker = false;
-                self.marker_exit_string = None;
+                self.topic_parse_state.is_in_code = false;
+                self.topic_parse_state.is_in_non_code_marker = false;
+                self.topic_parse_state.marker_exit_string = None;
                 // if debug { //bg!(self.in_code, self.in_non_code_marker, self.marker_exit_string.as_ref()); }
                 return Ok(true);
             }
@@ -285,11 +296,11 @@ impl BuildProcess {
             Ok(Some((text, marker_exit_string))) => {
                 topic.paragraphs[paragraph_index] = Paragraph::new_marker(&text);
                 if marker_exit_string.eq(MARKER_CODE_END) {
-                    self.in_code = true;
+                    self.topic_parse_state.is_in_code = true;
                 } else {
-                    self.in_non_code_marker = true;
+                    self.topic_parse_state.is_in_non_code_marker = true;
                 }
-                self.marker_exit_string = Some(marker_exit_string);
+                self.topic_parse_state.marker_exit_string = Some(marker_exit_string);
                 // if debug { //bg!(self.in_code, self.in_non_code_marker, self.marker_exit_string.as_ref()); }
                 Ok(true)
             },
@@ -317,15 +328,16 @@ impl BuildProcess {
         // and the date might be "2018-Jul-24", "2018-07-24", or some other supported format.
         // A regular table will look similar. The Terms page has a large example of a regular
         // table.
-        if self.in_code || self.in_non_code_marker {
+        if self.topic_parse_state.is_in_code || self.topic_parse_state.is_in_non_code_marker {
             return Ok(false);
         }
         let context = &format!("{} Seems to be a table paragraph.", context);
         let err_func = |msg: &str| Err(format!("{} paragraph_as_table_rc: {}: text = \"{}\".", context, msg, text));
         match parse_table_optional(text) {
             Ok(Some(temp_table)) => {
+                // if text.contains("tools:nav:dates|Added") { dbg!(text, &temp_table, temp_table.has_header, temp_table.get_column_count(), self.topic_parse_state.is_past_attributes, self.topic_parse_state.is_past_first_header); }
                 //bg!(&table);
-                if !temp_table.has_header && temp_table.get_column_count() == 2 {
+                if !self.topic_parse_state.is_past_attributes && !self.topic_parse_state.is_past_first_header && !temp_table.has_header && temp_table.get_column_count() == 2 {
                     // For now assume this is a table of attributes.
                     for row in temp_table.rows.iter() {
                         let text = row[0].text_block.get_unresolved_text();
@@ -335,13 +347,30 @@ impl BuildProcess {
                         let mut attr_values = vec![];
                         // let cell_items = row[1].text.split(",").collect::<Vec<_>>();
                         let text = row[1].text_block.get_unresolved_text();
-                        let cell_items = util::parse::split_outside_of_delimiters_rc(&text, ",", "\"", "\"", context).unwrap();
+
+                        // We want to split the attribute values using commas, but commas might be
+                        // part of a quoted string or inside a link, and in those cases we want to
+                        // avoid them during the split.
+                        // Replace any commas inside a quoted string with a placeholder.
+                        let text = util::parse::replace_within_delimiters_rc(&text,"\"", "\"", ",", TEMP_COMMA, context).unwrap();
+                        // Replace any commas inside a link with a placeholder.
+                        let text = util::parse::replace_within_delimiters_rc(&text,DELIM_LINK_START, DELIM_LINK_END, ",", TEMP_COMMA, context).unwrap();
+                        // Split the attribute values using the remaining commas, if any.
+                        let cell_items = util::parse::split_trim(&text, ",");
+                        // Put the commas back inside the quoted strings and links.
+                        let cell_items = cell_items.iter().map(|item| item.replace(TEMP_COMMA, ",")).collect::<Vec<_>>();
+                        // if topic.name.starts_with("Bayesian") { //bg!(&topic.name, &cell_items); }
+                        // let cell_items = util::parse::split_outside_of_delimiters_rc(&text, ",", "\"", "\"", context).unwrap();
+
                         for cell_item in cell_items.iter() {
-                            attr_values.push(text_or_topic_link_label(cell_item)?);
+                            let value = text_or_topic_link_label(cell_item)?;
+                            AttributeType::assert_legal_attribute_value(&value);
+                            attr_values.push(value);
                         }
                         //bg!(&attr_values);
                         topic.temp_attributes.insert(attr_type_name, attr_values);
                     }
+                    self.topic_parse_state.is_past_attributes = true;
                 } else {
                     // Assume this is a normal (non-attribute) table.
                     let mut table = Table::new(temp_table.assume_has_header());
@@ -349,11 +378,13 @@ impl BuildProcess {
                         let mut cells = vec![];
                         for temp_cell in temp_row.iter() {
                             let text = temp_cell.text_block.get_unresolved_text();
+                            //bg!(&topic.name, &text);
                             let text_block = self.make_text_block_rc(&text, context)?;
                             cells.push(TableCell::new_text_block(text_block, temp_cell.is_bold, &temp_cell.horizontal));
                         }
                         table.rows.push(cells);
                     }
+                    if text.contains("tools:nav:dates|Added") { dbg!(&table); panic!() }
                     let paragraph = Paragraph::new_table(table);
                     //bg!(&paragraph);
                     topic.paragraphs[paragraph_index] = paragraph;
@@ -435,6 +466,7 @@ impl BuildProcess {
     }
 
     fn make_text_block_rc(&self, text: &str, context: &str) -> Result<TextBlock, String> {
+        if text.contains("tools:nav") { dbg!(context, text); panic!() };
         let text = text.trim();
         // An image link will look like this:
         //   {{tools:antlr_plugin.png?direct}}
@@ -449,13 +481,15 @@ impl BuildProcess {
         let mut items = vec![];
         for (item_is_delimited, item_text) in delimited_splits.iter() {
             if *item_is_delimited {
+                //bg!(&item_text);
                 // Assume it's an internal or external link, or an image link.
-                let link_text = if text.starts_with(DELIM_IMAGE_START) {
+                let link_text = if item_text.starts_with(DELIM_IMAGE_START) {
                     item_text.clone()
                 } else {
                     // Put the brackets back on since the parsing function will expect them.
-                    format!("{}{}{}", DELIM_LINK_START, text, DELIM_LINK_END)
+                    format!("{}{}{}", DELIM_LINK_START, item_text, DELIM_LINK_END)
                 };
+                //bg!(&link_text);
                 let link = self.make_link_rc(&link_text, context)?;
                 items.push(TextItem::new_link(link));
             } else {
@@ -497,6 +531,24 @@ pub fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>,
     let mut model = bp.build();
     model.attributes.attributes_to_index = attributes_to_index.iter().map(|x| x.to_string()).collect::<Vec<_>>();
     model
+}
+
+impl TopicParseState {
+    fn new() -> Self {
+        Self {
+            is_past_attributes: false,
+            is_past_first_header: false,
+            is_in_code: false,
+            is_in_non_code_marker: false,
+            marker_exit_string: None,
+        }
+    }
+
+    fn check_end_of_topic(&self) {
+        assert!(!self.is_in_code);
+        assert!(!self.is_in_non_code_marker);
+        assert!(self.marker_exit_string.is_none());
+    }
 }
 
 /*

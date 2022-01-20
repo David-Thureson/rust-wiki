@@ -336,6 +336,7 @@ impl <'a> GenFromModel<'a> {
                     page.add_headline(name, *depth);
                 }
                 model::Paragraph::Table { table} => {
+                    //bg!(&topic.name);
                     self.add_table(page, table);
                 }
                 model::Paragraph::Text { text_block} => {

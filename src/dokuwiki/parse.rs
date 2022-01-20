@@ -155,7 +155,9 @@ pub fn parse_table_optional(text: &str) -> Result<Option<model::Table>, String> 
     //   ^ Platform | Android, Windows |
     //   ^ Added | Jul 24, 2018 |
     let context = "parse_table_optional()";
+    // let debug = text.contains("tools:nav:attributes#Language|Language");
     let text = text.trim();
+    // if debug { dbg!(text, text.starts_with(DELIM_TABLE_CELL), text.starts_with(DELIM_TABLE_CELL_BOLD)); }
     if text.starts_with(DELIM_TABLE_CELL) || text.starts_with(DELIM_TABLE_CELL_BOLD) {
         // This looks like a table.
         let lines = text.split(DELIM_LINEFEED).collect::<Vec<_>>();

@@ -78,6 +78,30 @@ impl AttributeType {
         });
     }
 
+    pub fn is_legal_attribute_value(value: &str) -> bool {
+        if value != value.trim() {
+            return false;
+        }
+        for c in value.chars() {
+            if c == '[' || c == ']' {
+                return false;
+            }
+        }
+        true
+    }
+
+    pub fn assert_legal_attribute_value(value: &str) {
+        if value != value.trim() {
+            panic!("Attribute value \"{}\" is not trimmed.", value);
+        }
+        value.chars().for_each(|c| {
+            // if !c.is_ascii_alphanumeric() && c != ' ' && c != '.' && c != '!' && c != ',' && c != '\'' && c != '@' && c != '+' && c != '/' && c != ';' && c != '&' && c != ':' && c != '%' && c != '-' && c != '(' && c != ')' {
+            if c == '[' || c == ']' {
+                panic!("Attribute value \"{}\" contains invalid characters.", value);
+            }
+        });
+    }
+
     pub fn add_value(&mut self, value: &str, topic_key: &TopicKey) -> Result<String, String> {
         let canonical_value = Self::value_to_canonical_form(&self.value_type, value)?;
         let entry = self.values.entry(canonical_value.clone())
@@ -196,8 +220,10 @@ impl AttributeType {
                     });
                 let mut values_for_topic = vec![];
                 for temp_value in temp_attr_values.iter() {
+                    AttributeType::assert_legal_attribute_value(temp_value);
                     match attribute_type.add_value(temp_value,&topic.get_key()) {
                         Ok(canonical_value) => {
+                            AttributeType::assert_legal_attribute_value(&canonical_value);
                             let values_entry = model.attributes.values.entry(canonical_value.clone()).or_insert(vec![]);
                             // Don't add a topic item if the topic has itself as an attribute.
                             if topic.name.ne(&canonical_value) {

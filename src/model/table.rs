@@ -37,7 +37,7 @@ impl Table {
     pub fn get_column_count(&self) -> usize {
         self.rows.iter()
             .map(|row| row.len())
-            .sum()
+            .max().unwrap()
     }
 
     pub fn get_row_values_as_text(&self, row_index: usize) -> Vec<String> {

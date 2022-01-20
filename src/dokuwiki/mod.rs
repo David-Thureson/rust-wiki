@@ -63,6 +63,7 @@ pub const MARKER_CODE_END: &str = "</code>";
 
 pub const TEMP_DELIM_IMG_START: &str = "[[{{";
 pub const TEMP_DELIM_IMG_END: &str = "}}]]";
+pub const TEMP_COMMA: &str = "~temp comma~";
 
 pub const PREFIX_CATEGORY: &str = "Category: ";
 pub const PREFIX_HTTPS: &str = "https://";

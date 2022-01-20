@@ -561,6 +561,9 @@ impl BuildProcess {
                             let value = util::parse::after(assignment, CT_ATTRIBUTE_ASSIGN).trim().to_string();
                             // if debug { //bg!(&value); }
                             if !value.contains("*") && !value.is_empty() {
+                                if !AttributeType::is_legal_attribute_value(&value) {
+                                    return Err(format!("{} In attribute \"{}\", value \"{}\" is invalid.", context, name, value));
+                                }
                                 if attribute.contains(&value) {
                                     return Err(format!("{} In attribute \"{}\", duplicated value \"{}\".", context, name, value));
                                 }
