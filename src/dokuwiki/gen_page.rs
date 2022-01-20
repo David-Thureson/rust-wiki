@@ -2,6 +2,7 @@ use std::fs;
 
 use super::*;
 use crate::Itertools;
+use crate::model::TopicKey;
 
 pub struct WikiGenPage {
     pub namespace: String,
@@ -11,6 +12,8 @@ pub struct WikiGenPage {
 
 impl WikiGenPage {
     pub fn new(namespace: &str, topic_name: &str, headline: Option<&str>) -> Self {
+        TopicKey::assert_legal_namespace(namespace);
+        TopicKey::assert_legal_topic_name(topic_name);
         let mut page = Self {
             namespace: namespace.to_string(),
             topic_name: topic_name.to_string(),
@@ -30,6 +33,7 @@ impl WikiGenPage {
 
     pub fn add_category(&mut self, qualified_namespace: &str, category_name: &str) {
         // Like "Category: [[APIs]]".
+        TopicKey::assert_legal_namespace(qualified_namespace);
         self.content.push_str(&format!("{}{}\n\n", PREFIX_CATEGORY, page_link(qualified_namespace, category_name, None)));
     }
 
@@ -75,11 +79,13 @@ impl WikiGenPage {
      */
     pub fn add_page_link(&mut self, namespace: &str, page_name: &str, label: Option<&str>) {
         // Like "[[nav:categories|Categories]]".
+        TopicKey::assert_legal_namespace(namespace);
         self.content.push_str(&format!("{}\n\n", page_link(namespace, page_name, label)));
     }
 
     pub fn add_section_link(&mut self, namespace: &str, page_name: &str, section_name: &str, label: Option<&str>) {
         // Like "[[nav:categories|Categories#Five]]".
+        TopicKey::assert_legal_namespace(namespace);
         self.content.push_str(&format!("{}\n\n", section_link(namespace, page_name, section_name, label)));
     }
 

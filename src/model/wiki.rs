@@ -21,6 +21,7 @@ pub struct Wiki {
 
 impl Wiki {
     pub fn new(name: &str, main_namespace: &str) -> Self {
+        TopicKey::assert_legal_namespace(main_namespace);
         let mut wiki = Self {
             name: name.to_string(),
             main_namespace: main_namespace.to_string(),
@@ -157,6 +158,7 @@ impl Wiki {
     }
 
     pub fn move_topics_to_namespace_by_category(&mut self, category_name: &str, namespace_name: &str) {
+        TopicKey::assert_legal_namespace(namespace_name);
         Category::move_topics_to_namespace_by_category(self, category_name, namespace_name)
     }
 

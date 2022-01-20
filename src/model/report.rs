@@ -83,6 +83,7 @@ impl WikiReport {
         let mut groups = util::group::Grouper::new("Attributes");
         for topic in wiki.topics.values() {
             for (name, values) in topic.temp_attributes.iter() {
+                AttributeType::assert_legal_attribute_type_name(&name);
                 groups.record_entry_with_count(name, values.len());
             }
         }

@@ -39,6 +39,7 @@ pub struct SectionKey {
 
 impl Topic {
     pub fn new(namespace: &str, name: &str) -> Self {
+        TopicKey::assert_legal_namespace(namespace);
         Self {
             parents: vec![],
             namespace: namespace.to_string(),
@@ -227,6 +228,7 @@ impl Topic {
     }
 
     pub fn set_attribute_date(&mut self, attr_type_name: &str, sequence: usize, value: &NaiveDate) {
+        AttributeType::assert_legal_attribute_type_name(attr_type_name);
         self.attributes.remove(attr_type_name);
         let mut attr_type = AttributeType::new(attr_type_name, &AttributeValueType::Date, sequence);
         attr_type.add_date_value(value, &self.get_key()).unwrap();
@@ -257,8 +259,8 @@ impl Ord for Topic {
 
 impl TopicKey {
     pub fn new(namespace: &str, topic_name: &str) -> Self {
-        assert!(!topic_name.contains(":="), "Topic name \"{}\" has a \":=\"", topic_name);
-        assert!(!topic_name.starts_with("_"), "Topic name \"{}\" starts with \"_\"", topic_name);
+        Self::assert_legal_namespace(namespace);
+        Self::assert_legal_topic_name(topic_name);
         Self {
             namespace: namespace.to_lowercase().to_string(),
             topic_name: topic_name.to_string(),
@@ -272,6 +274,30 @@ impl TopicKey {
     pub fn sort_topic_keys_by_name(vec: &mut Vec<TopicKey>) {
         vec.sort_by_cached_key(|topic_key| topic_key.topic_name.to_lowercase());
     }
+
+    pub fn assert_legal_topic_name(topic_name: &str) {
+        if topic_name != topic_name.trim() {
+            panic!("Topic name \"{}\" is not trimmed.", topic_name);
+        }
+        if topic_name.contains(":=")
+            || topic_name.contains("[")
+            || topic_name.contains("]")
+            || topic_name.starts_with("_") {
+            panic!("Topic name \"{}\" contains invalid characters.", topic_name);
+        }
+    }
+
+    pub fn assert_legal_namespace(namespace: &str) {
+        if namespace != namespace.trim() {
+            panic!("Namespace \"{}\" is not trimmed.", namespace);
+        }
+        namespace.chars().for_each(|c| {
+            if !(c.is_ascii_lowercase() || c == ':') {
+                panic!("Namespace name \"{}\" contains invalid characters.", namespace);
+            }
+        });
+    }
+
 }
 
 impl Display for TopicKey {
@@ -303,8 +329,8 @@ impl Ord for TopicKey {
 
 impl SectionKey {
     pub fn new(namespace: &str, topic_name: &str, section_name: &str) -> Self {
-        assert!(!topic_name.contains(":="), "Topic name \"{}\" has a \":=\"", topic_name);
-        assert!(!topic_name.starts_with("_"), "Topic name \"{}\" starts with \"_\"", topic_name);
+        TopicKey::assert_legal_namespace(namespace);
+        TopicKey::assert_legal_topic_name(topic_name);
 
         Self {
             topic_key: TopicKey::new(namespace, topic_name),

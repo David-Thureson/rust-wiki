@@ -266,6 +266,8 @@ impl AttributeValue {
 
 impl TopicReference {
     pub(crate) fn new(namespace: &str, topic_name: &str) -> Self {
+        TopicKey::assert_legal_namespace(namespace);
+        TopicKey::assert_legal_topic_name(topic_name);
         Self {
             namespace: namespace.to_string(),
             topic_name: topic_name.to_string()

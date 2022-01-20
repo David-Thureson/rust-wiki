@@ -57,12 +57,25 @@ impl AttributeList {
 
 impl AttributeType {
     pub fn new(name: &str, value_type: &AttributeValueType, sequence: usize) -> Self {
+        Self::assert_legal_attribute_type_name(name);
         Self {
             name: name.to_string(),
             value_type: value_type.clone(),
             sequence,
             values: Default::default(),
         }
+    }
+
+    pub fn assert_legal_attribute_type_name(name: &str) {
+        if name != name.trim() {
+            panic!("Attribute type name \"{}\" is not trimmed.", name);
+        }
+        name.chars().enumerate().for_each(|(i, c)| {
+            //bg!(i, c, c.is_ascii_uppercase(), c.is_ascii_lowercase());
+            if c != ' ' && ((i == 0 && !c.is_ascii_uppercase()) || (i != 0 && !c.is_ascii_alphabetic())) {
+                panic!("Attribute type name \"{}\" contains invalid characters.", name);
+            }
+        });
     }
 
     pub fn add_value(&mut self, value: &str, topic_key: &TopicKey) -> Result<String, String> {
@@ -168,6 +181,7 @@ impl AttributeType {
             topic.attributes.clear();
             for (temp_attr_name, temp_attr_values) in topic.temp_attributes.iter()
                     .filter(|(_name, values)| !values.is_empty()) {
+                AttributeType::assert_legal_attribute_type_name(temp_attr_name);
                 let attribute_type = model.attributes.attributes.entry(temp_attr_name.clone())
                     .or_insert({
                         let value_type = AttributeType::value_to_presumed_type(temp_attr_name,&*temp_attr_values[0]);

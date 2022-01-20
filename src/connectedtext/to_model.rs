@@ -219,6 +219,7 @@ impl BuildProcess {
         //   |}
         // The key difference from a normal table or an attribute block is that there is at least
         // one row within the start and end delimiters that does not end with "||".
+        TopicKey::assert_legal_topic_name(topic_name);
         // let debug = topic_text.contains("||Card Type||MC||");
         let mut new_text = "".to_string();
         let lines = topic_text.split("\n").collect::<Vec<_>>();
@@ -537,6 +538,7 @@ impl BuildProcess {
             if is_attributes {
                 for row in rows.iter_mut() {
                     let mut name = row.remove(0);
+                    AttributeType::assert_legal_attribute_type_name(&name);
                     if name.eq("Subject") {
                         name = ATTRIBUTE_NAME_DOMAIN.to_string();
                     }
@@ -714,6 +716,7 @@ impl BuildProcess {
     }
 
     fn make_text_block_rc(&self, topic_name: &str, text: &str, context: &str) -> Result<TextBlock, String> {
+        TopicKey::assert_legal_topic_name(topic_name);
         let text = text.trim();
         let mut items = vec![];
         let delimited_splits = util::parse::split_delimited_and_normal_rc(text, CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT, context)?;
@@ -733,6 +736,7 @@ impl BuildProcess {
     }
 
     fn make_link_rc(&self, topic_name: &str, text: &str, context: &str) -> Result<Option<Link>, String> {
+        TopicKey::assert_legal_topic_name(topic_name);
         let text = text.trim();
         let err_func = |msg: &str| Err(format!("{} make_link_rc: {}: text = \"{}\".", context, msg, text));
         // The brackets should have been removed by this point.

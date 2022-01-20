@@ -153,6 +153,7 @@ impl <'a> GenFromModel<'a> {
     }
 
     fn page_link_if_exists(&self, topic_name: &str) -> Option<String> {
+        TopicKey::assert_legal_topic_name(topic_name);
         let possible_topic_key = TopicKey::new(&self.model.main_namespace, topic_name);
         if self.model.has_topic(&possible_topic_key) {
             Some(self.page_link_simple(&possible_topic_key))

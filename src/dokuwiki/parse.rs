@@ -137,10 +137,12 @@ pub fn parse_marker_optional(text: &str) -> Result<Option<(String, String)>, Str
         if text.trim().contains(DELIM_LINEFEED) {
             return Err(format!("The text seems to be a marker but it has linefeeds: \"{}\".", text));
         }
-        let marker_exit_string = if text.contains(" ") {
-            format!("{}{}", util::parse::before(text, " "), MARKER_LINE_END)
+        // Switch the starting "<" to "</".
+        let exit_text = text.replace(MARKER_LINE_START, MARKER_LINE_START_CLOSE);
+        let marker_exit_string = if exit_text.contains(" ") {
+            format!("{}{}", util::parse::before(&exit_text, " "), MARKER_LINE_END)
         } else {
-            text.to_string()
+            exit_text
         };
         return Ok(Some((text.to_string(), marker_exit_string)));
     }

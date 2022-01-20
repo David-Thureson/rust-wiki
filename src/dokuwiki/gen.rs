@@ -4,6 +4,7 @@ use std::fs;
 use crate::*;
 use std::hash::{Hasher, Hash};
 use super::*;
+use crate::model::TopicKey;
 
 pub enum WikiImageSize {
     Small,
@@ -161,16 +162,19 @@ pub fn add_headline(page_text: &mut String, text: &str, level: usize) {
 }
 
 pub fn add_image_internal_link(page_text: &mut String, page_namespace: &str, page_name: &str, image_namespace: &str, image_file_name: &str, image_size: &WikiImageSize) {
+    TopicKey::assert_legal_namespace(page_namespace);
     let image_part = image_part(image_namespace, image_file_name, &WikiImageLinkType::NoLink, image_size);
     page_text.push_str(&format!("[[{}:{}|{}]]\n\n", page_namespace, legal_file_name(page_name), &image_part));
 }
 
 pub fn add_image_link_to_full_image(page_text: &mut String, image_namespace: &str, image_file_name: &str, image_size: &WikiImageSize) {
+    TopicKey::assert_legal_namespace(image_namespace);
     let image_part = image_part(image_namespace, image_file_name, &WikiImageLinkType::Direct, image_size);
     page_text.push_str(&format!("{}\n\n", &image_part));
 }
 
 pub fn add_image_table_row(page_text: &mut String, image_namespace: &str, image_size: &WikiImageSize, end_table: bool, image_file_names: &[&str]) {
+    TopicKey::assert_legal_namespace(image_namespace);
     let markup = format!("|{}", image_file_names.iter()
         .map(|file_name| format!(" {} |", image_part(image_namespace, file_name, &WikiImageLinkType::Direct, image_size)))
         .join(""));
@@ -179,6 +183,7 @@ pub fn add_image_table_row(page_text: &mut String, image_namespace: &str, image_
 }
 
 pub fn add_image_row(page_text: &mut String, image_namespace: &str, image_size: &WikiImageSize, image_file_names: &[&str]) {
+    TopicKey::assert_legal_namespace(image_namespace);
     let markup = image_file_names.iter()
         .map(|file_name| format!("{}\n", image_part(image_namespace, file_name, &WikiImageLinkType::Direct, image_size)))
         .join("");
@@ -186,6 +191,7 @@ pub fn add_image_row(page_text: &mut String, image_namespace: &str, image_size: 
 }
 
 pub(crate) fn image_part(image_namespace: &str, image_file_name: &str, image_link_type: &WikiImageLinkType, image_size: &WikiImageSize) -> String {
+    TopicKey::assert_legal_namespace(image_namespace);
     let link_type_string = image_link_type.suffix();
     let size_string = image_size.suffix();
     let suffix = match (link_type_string, size_string) {
@@ -200,11 +206,13 @@ pub(crate) fn image_part(image_namespace: &str, image_file_name: &str, image_lin
 
 pub fn add_page_link(page_text: &mut String, namespace: &str, page_name: &str, label: Option<&str>) {
     // Like "[[nav:categories|Categories]]".
+    TopicKey::assert_legal_namespace(namespace);
     page_text.push_str(&format!("{}\n\n", page_link(namespace, page_name, label)));
 }
 
 pub fn add_section_link(page_text: &mut String, namespace: &str, page_name: &str, section_name: &str, label: Option<&str>) {
     // Like "[[nav:categories|Categories#Five]]".
+    TopicKey::assert_legal_namespace(namespace);
     page_text.push_str(&format!("{}\n\n", section_link(namespace, page_name, section_name, label)));
 }
 
@@ -231,6 +239,7 @@ pub fn add_paragraph(page_text: &mut String, text: &str) {
 }
 
 pub fn namespace_prefix(namespace: &str) -> String {
+    TopicKey::assert_legal_namespace(namespace);
     if namespace.is_empty() {
         "".to_string()
     } else {
@@ -239,6 +248,7 @@ pub fn namespace_prefix(namespace: &str) -> String {
 }
 
 pub fn page_link(namespace: &str, page_name: &str, label: Option<&str>) -> String {
+    TopicKey::assert_legal_namespace(namespace);
     // format!("[[{}{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), label.map_or("".to_string(), |x| format!("|{}", x)))
     format!("[[{}{}{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), DELIM_LINK_LABEL, label.unwrap_or(page_name))
 }
@@ -249,6 +259,7 @@ pub fn section_link(namespace: &str, page_name: &str, section_name: &str, label:
     // if label.map_or(false, |label| label.contains("#")) {
     //     label = None;
     //}
+    TopicKey::assert_legal_namespace(namespace);
     // let label = label.unwrap_or(format!({}: {}))
     //format!("[[{}{}#{}|{}#{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, label.unwrap_or(page_name), section_name)
     //format!("[[{}{}#{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name)
@@ -300,14 +311,17 @@ pub fn legal_file_name(name: &str) -> String {
 }
 
 pub fn namespace_to_path(namespace: &str) -> String {
+    TopicKey::assert_legal_namespace(namespace);
     namespace.replace(":", "/")
 }
 
 pub fn write_page(folder: &str, namespace: &str, name: &str, text: &str) {
+    TopicKey::assert_legal_namespace(namespace);
     fs::write(format!("{}/{}/{}.txt", folder, namespace_to_path(namespace), legal_file_name(name)), text).unwrap();
 }
 
 pub fn copy_image_file(from_path: &str, from_file_name: &str, to_path: &str, to_namespace: &str, to_file_name: &str) {
+    TopicKey::assert_legal_namespace(to_namespace);
     let from_full_file_name = format!("{}/{}", from_path, from_file_name);
     let to_full_file_name = format!("{}/{}/{}", to_path, namespace_to_path(to_namespace), legal_file_name(to_file_name));
     println!("{} => {}", from_full_file_name, to_full_file_name);

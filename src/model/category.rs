@@ -63,6 +63,7 @@ impl Category {
     }
 
     pub fn move_topics_to_namespace_by_category(model: &mut Wiki, category_name: &str, namespace_name: &str) {
+        TopicKey::assert_legal_namespace(namespace_name);
         let topic_names = model.topics.values()
             .filter(|topic| topic.category.as_ref().map_or(false,|cat| cat.eq_ignore_ascii_case(category_name)))
             .map(|topic| topic.name.clone())

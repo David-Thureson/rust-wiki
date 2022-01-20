@@ -81,7 +81,7 @@ impl BuildProcess {
         // Read each page's text file and read it as a topic, then break each topic into
         // paragraphs. At this point we don't care about whether the paragraphs are plain or mixed
         // text, attribute tables, section headers, breadcrumbs, etc.
-
+        TopicKey::assert_legal_namespace(namespace_name);
         let mut topic_count = 0;
         let path_source = format!("{}/{}", self.path_source, gen::namespace_to_path(namespace_name));
         for dir_entry_result in fs::read_dir(path_source).unwrap() {
@@ -113,7 +113,7 @@ impl BuildProcess {
     fn refine_paragraphs(&mut self, model: &mut Wiki) {
         for topic in model.topics.values_mut() {
             let context = format!("Refining paragraphs for \"{}\".", topic.name);
-            println!("\n==================================================================\n\n{}\n", context);
+            //rintln!("\n==================================================================\n\n{}\n", context);
             let paragraph_count = topic.paragraphs.len();
             for paragraph_index in 0..paragraph_count {
                 match self.refine_one_paragraph_rc(topic, paragraph_index, &context) {
@@ -203,7 +203,7 @@ impl BuildProcess {
         //   ===Section Name===
         // The level is between 0 and 5 where 0 is the main page title. The number of "=" is six
         // minus the level.
-        if text.starts_with("=LEFT(G6") { dbg!(text, self.in_code, self.in_non_code_marker, &self.marker_exit_string); }
+        // if text.starts_with("=LEFT(G6") { //bg!(text, self.in_code, self.in_non_code_marker, &self.marker_exit_string); }
         if self.in_code || self.in_non_code_marker {
             return Ok(false);
         }
@@ -265,12 +265,16 @@ impl BuildProcess {
         //   </code>;
         // Or it might specify the language, like "<code rust>". Other markers are "<html>" and
         // "<php>".
+        // let debug = topic.name.eq("QuickBooks");
+        // if debug { //rintln!("\n==================================================================\n"); }
+        // if debug { //bg!(self.in_code, self.in_non_code_marker, self.marker_exit_string.as_ref(), text); }
         if self.in_code || self.in_non_code_marker {
             if text.trim().eq(*&self.marker_exit_string.as_ref().unwrap()) {
                 topic.paragraphs[paragraph_index] = Paragraph::new_marker(&text);
                 self.in_code = false;
                 self.in_non_code_marker = false;
                 self.marker_exit_string = None;
+                // if debug { //bg!(self.in_code, self.in_non_code_marker, self.marker_exit_string.as_ref()); }
                 return Ok(true);
             }
         }
@@ -286,6 +290,7 @@ impl BuildProcess {
                     self.in_non_code_marker = true;
                 }
                 self.marker_exit_string = Some(marker_exit_string);
+                // if debug { //bg!(self.in_code, self.in_non_code_marker, self.marker_exit_string.as_ref()); }
                 Ok(true)
             },
             Ok(None) => {
@@ -326,6 +331,7 @@ impl BuildProcess {
                         let text = row[0].text_block.get_unresolved_text();
                         let attr_type_name = text_or_topic_link_label(&text)?;
                         //bg!(&attr_type_name);
+                        AttributeType::assert_legal_attribute_type_name(&attr_type_name);
                         let mut attr_values = vec![];
                         // let cell_items = row[1].text.split(",").collect::<Vec<_>>();
                         let text = row[1].text_block.get_unresolved_text();

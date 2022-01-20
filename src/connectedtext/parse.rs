@@ -24,6 +24,7 @@ pub fn get_topic_text_both_namespaces(topic_limit_tools: Option<usize>, topic_li
 }
 
 fn get_topic_text_one_namespace(topics: &mut BTreeMap<TopicReference, Vec<String>>, namespace: &str, export_path: &str, topic_limit: Option<usize>) {
+    TopicKey::assert_legal_namespace(namespace);
     for path in fs::read_dir(export_path).unwrap() {
         if let Some(topic_limit) = topic_limit {
             if topics.len() == topic_limit {

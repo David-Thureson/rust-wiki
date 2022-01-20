@@ -53,6 +53,7 @@ pub const DELIM_TABLE_CELL: &str = "|";
 pub const DELIM_TABLE_CELL_BOLD: &str = "^";
 
 pub const MARKER_LINE_START: &str = "<";
+pub const MARKER_LINE_START_CLOSE: &str = "</";
 pub const MARKER_LINE_END: &str = ">";
 pub const MARKER_QUOTE_START: &str = "<WRAP round box>";
 pub const MARKER_QUOTE_START_PREFIX: &str = "<WRAP";

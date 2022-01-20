@@ -109,6 +109,8 @@ impl Link {
     }
 
     pub fn new_section(label: Option<&str>, namespace_name: &str, topic_name: &str, section_name: &str) -> Self {
+        TopicKey::assert_legal_namespace(namespace_name);
+        TopicKey::assert_legal_topic_name(topic_name);
         let section_key = SectionKey::new(namespace_name, topic_name, section_name);
         let type_ = LinkType::Section {
             section_key,
@@ -117,6 +119,8 @@ impl Link {
     }
 
     pub fn new_topic(label: Option<&str>, namespace_name: &str, topic_name: &str) -> Self {
+        TopicKey::assert_legal_namespace(namespace_name);
+        TopicKey::assert_legal_topic_name(topic_name);
         let topic_key = TopicKey::new(namespace_name, topic_name);
         let type_ = LinkType::Topic {
             topic_key,
@@ -300,6 +304,7 @@ impl Link {
 
 impl ImageSource {
     pub fn new_internal(namespace: &str, file_name: &str) -> Self {
+        TopicKey::assert_legal_namespace(namespace);
         Self::Internal {
             namespace: namespace.to_string(),
             file_name: file_name.to_string(),
