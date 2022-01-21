@@ -95,7 +95,7 @@ fn gen_from_connectedtext(copy_image_files_to_local_wiki: bool, topic_limit: Opt
     println!("\nGenerating wiki from ConnectedText: Done.");
 }
 
-fn gen_tools_project_from_model(model: &model::Wiki, copy_image_files_to_local_wiki: bool) {
+fn gen_tools_project_from_model(model: &model::Model, copy_image_files_to_local_wiki: bool) {
     println!("\nGenerating wiki from model: Start.");
 
     let namespace_main = PROJECT_NAME.to_lowercase();
@@ -125,14 +125,14 @@ fn gen_tools_project_from_model(model: &model::Wiki, copy_image_files_to_local_w
     println!("\nGenerating wiki from model: Done.");
 }
 
-fn gen_sidebar_page(model: &model::Wiki, gen: &mut GenFromModel) {
+fn gen_sidebar_page(model: &model::Model, gen: &mut GenFromModel) {
     let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_ROOT), wiki::PAGE_NAME_SIDEBAR, None);
     add_main_page_links(&mut page, model,false, true);
-    gen.gen_topic_first_letter_links(&mut page);
+    gen.gen_topic_first_letter_links(&mut page, 6);
     page.write();
 }
 
-fn gen_start_page(model: &model::Wiki) {
+fn gen_start_page(model: &model::Model) {
     let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_ROOT), wiki::PAGE_NAME_START, Some(PROJECT_NAME));
     page.add_headline("Main Pages",2);
     add_main_page_links(&mut page, model, true, false);
@@ -152,7 +152,7 @@ fn gen_category_subtree(page: &mut wiki::WikiGenPage, depth: usize, node: Ref<mo
 }
 */
 
-fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Wiki, use_list: bool, include_start_page: bool) {
+fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Model, use_list: bool, include_start_page: bool) {
     let mut links = vec![];
     if include_start_page {
         links.push(wiki::page_link(model::NAMESPACE_ROOT, wiki::PAGE_NAME_START, None));

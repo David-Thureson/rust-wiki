@@ -72,8 +72,8 @@ impl BuildProcess {
         }
     }
 
-    pub fn build(&mut self) -> Wiki {
-        let mut wiki = Wiki::new(&self.wiki_name, &self.namespace_main);
+    pub fn build(&mut self) -> Model {
+        let mut wiki = Model::new(&self.wiki_name, &self.namespace_main);
         wiki.add_namespace(&wiki.namespace_book());
         // wiki.add_namespace(NAMESPACE_CATEGORY);
         wiki.add_namespace(&wiki.namespace_navigation());
@@ -108,7 +108,7 @@ impl BuildProcess {
         wiki
     }
 
-    fn parse_from_text_file(&mut self, wiki: &mut Wiki) {
+    fn parse_from_text_file(&mut self, wiki: &mut Model) {
         // Read the single topic file from disk and break it into topics, then break each topic
         // into paragraphs. At this point we don't care about whether the paragraphs are plain or
         // mixed text, attribute tables, section headers, breadcrumbs, etc.
@@ -117,7 +117,7 @@ impl BuildProcess {
         self.refine_paragraphs(wiki);
     }
 
-    fn read_text_file_as_topics(&mut self, wiki: &mut Wiki) {
+    fn read_text_file_as_topics(&mut self, wiki: &mut Model) {
         let path_export_file = PathBuf::from(&self.export_path).join(&self.export_file_name);
 
         // Back up the export file.
@@ -165,7 +165,7 @@ impl BuildProcess {
                             let entry_text = entry_text.trim_start_matches("\n").trim_end_matches("\n");
                             let language_marker = "".to_string();
                             // for language in CT_CODING_LANGUAGES.iter() {
-                            //     if topic.name.starts_with(language) {
+                            //     if topic.get_name().starts_with(language) {
                             //         language_marker = format!(" {}", language);
                             //     }
                             //     break;
@@ -173,7 +173,7 @@ impl BuildProcess {
                             let marker_start = format!("{}{}{}",
                                                        crate::dokuwiki::MARKER_CODE_START_PREFIX,
                                                        language_marker, crate::dokuwiki::MARKER_LINE_END);
-                            // if !marker_start.eq("<code>") { //rintln!("read_text_file_as_topics(): topic = \"{}\", marker = \"{}\".", topic.name, marker_start); }
+                            // if !marker_start.eq("<code>") { //rintln!("read_text_file_as_topics(): topic = \"{}\", marker = \"{}\".", topic.get_name(), marker_start); }
                             topic.add_paragraph(Paragraph::new_marker(&marker_start));
                             let items = vec![TextItem::new_text(&entry_text)];
                             let text_block = TextBlock::new_resolved(items);
@@ -312,14 +312,14 @@ impl BuildProcess {
         new_text
     }
 
-    fn refine_paragraphs(&mut self, wiki: &mut Wiki) {
-        for topic in wiki.topics.values_mut() {
-            let context = format!("Refining paragraphs for \"{}\".", topic.name);
-            let paragraph_count = topic.paragraphs.len();
+    fn refine_paragraphs(&mut self, wiki: &mut Model) {
+        for topic in wiki.get_topics_mut().values_mut() {
+            let context = format!("Refining paragraphs for \"{}\".", topic.get_name());
+            let paragraph_count = topic.get_paragraphs().len();
             for paragraph_index in 0..paragraph_count {
                 match self.refine_one_paragraph_rc(topic, paragraph_index, &context) {
                     Err(msg) => {
-                        let topic_key = TopicKey::new(&self.namespace_main, &topic.name);
+                        let topic_key = TopicKey::new(&self.namespace_main, &topic.get_name());
                         self.errors.add(&topic_key, &msg);
                     },
                     _ => (),
@@ -329,8 +329,8 @@ impl BuildProcess {
     }
 
     fn refine_one_paragraph_rc(&mut self, topic: &mut Topic, paragraph_index: usize, context: &str) -> Result<(), String> {
-        let source_paragraph= std::mem::replace(&mut topic.paragraphs[paragraph_index], Paragraph::Placeholder);
-        // if topic.name.contains("Zero") { //bg!("source_paragraph", &source_paragraph.get_variant_name()); }
+        let source_paragraph= topic.replace_paragraph_with_placeholder(paragraph_index);
+        // if topic.get_name().contains("Zero") { //bg!("source_paragraph", &source_paragraph.get_variant_name()); }
         /* let new_paragraph = match source_paragraph {
             Paragraph::Unknown { text } => {
                 self.paragraph_as_category_rc(topic, &text, context)?
@@ -348,42 +348,42 @@ impl BuildProcess {
         match source_paragraph {
             Paragraph::Unknown { text } => {
                 if let Some(new_paragraph) = self.paragraph_as_category_rc(topic, &text, context)? {
-                    topic.paragraphs[paragraph_index] = new_paragraph;
+                    topic.replace_paragraph(paragraph_index, new_paragraph);
                     return Ok(());
                 }
                 if let Some(new_paragraph) = self.paragraph_as_section_header_rc(topic, &text, context)? {
-                    topic.paragraphs[paragraph_index] = new_paragraph;
+                    topic.replace_paragraph(paragraph_index, new_paragraph);
                     return Ok(());
                 }
                 if let Some(new_paragraph) = self.paragraph_as_bookmark_rc(topic, &text, context)? {
-                    topic.paragraphs[paragraph_index] = new_paragraph;
+                    topic.replace_paragraph(paragraph_index, new_paragraph);
                     return Ok(());
                 }
                 if let Some(new_paragraph) = self.paragraph_as_quote_start_or_end_rc(topic, &text, context)? {
-                    topic.paragraphs[paragraph_index] = new_paragraph;
+                    topic.replace_paragraph(paragraph_index, new_paragraph);
                     return Ok(());
                 }
                 if let Some(new_paragraph) = self.paragraph_as_table_rc(topic, &text, context)? {
-                    topic.paragraphs[paragraph_index] = new_paragraph;
+                    topic.replace_paragraph(paragraph_index, new_paragraph);
                     return Ok(());
                 }
                 if let Some(new_paragraph) = self.paragraph_as_list_rc(topic, &text, context)? {
-                    topic.paragraphs[paragraph_index] = new_paragraph;
+                    topic.replace_paragraph(paragraph_index, new_paragraph);
                     return Ok(());
                 }
                 if let Some(new_paragraph) = self.paragraph_as_text_rc(topic, &text, context)? {
-                    topic.paragraphs[paragraph_index] = new_paragraph;
+                    topic.replace_paragraph(paragraph_index, new_paragraph);
                     return Ok(());
                 }
                 let new_paragraph = self.paragraph_as_text_unresolved(&text);
-                topic.paragraphs[paragraph_index] = new_paragraph;
+                topic.replace_paragraph(paragraph_index, new_paragraph);
                 return Ok(());
             },
             _ => {},
         };
-        // if topic.name.contains("Zero") { dbg!("new_paragraph", &new_paragraph.get_variant_name()); }
+        // if topic.get_name().contains("Zero") { dbg!("new_paragraph", &new_paragraph.get_variant_name()); }
         // topic.paragraphs[paragraph_index] = new_paragraph;
-        topic.paragraphs[paragraph_index] = source_paragraph;
+        topic.replace_paragraph(paragraph_index, source_paragraph);
         Ok(())
     }
 
@@ -392,7 +392,7 @@ impl BuildProcess {
         //   [[$CATEGORY:Books]]
         Ok(util::parse::between_optional_trim(text, CT_CATEGORY_PREFIX, CT_BRACKETS_RIGHT)
             .map(|category_name| {
-                topic.category = Some(category_name.to_string());
+                topic.set_category(category_name);
                 Paragraph::Category
             }))
     }
@@ -473,9 +473,9 @@ impl BuildProcess {
             };
             for parent in parents.iter() {
                 let parent = remove_brackets_rc(parent, context)?;
-                topic.parents.push(TopicKey::new(NAMESPACE_TOOLS, &parent));
+                topic.add_parent(&TopicKey::new(NAMESPACE_TOOLS, &parent));
             }
-            //bg!(&topic.name, &parents, &topic.parents);
+            //bg!(topic.get_name(), &parents, &topic.parents);
             Ok(Some(Paragraph::Breadcrumbs))
         } else {
             Ok(None)
@@ -493,8 +493,8 @@ impl BuildProcess {
     }
 
     fn paragraph_as_table_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
-        //if topic.name.contains("Zero") {
-            //bg!(&topic.name, text);
+        //if topic.get_name().contains("Zero") {
+            //bg!(topic.get_name(), text);
         //}
         // A paragraph with a list of attributes will look something like this:
         //   {|
@@ -517,7 +517,7 @@ impl BuildProcess {
                 return Err(format!("{} Seems to be the start of a table but there are no rows.", context));
             }
             let is_attributes = lines[1].contains(CT_ATTRIBUTE_ASSIGN);
-            // if topic.name.contains("Zero") { //bg!(is_attributes); }
+            // if topic.get_name().contains("Zero") { //bg!(is_attributes); }
 
             let mut rows = vec![];
             for line_index in 1..lines.len() {
@@ -549,8 +549,7 @@ impl BuildProcess {
                     let values = row.remove(0);
                     // let debug = name.eq("Date") && values.eq("[[Date:=20160824]], [[Date:=20160505]]");
                     assert!(row.is_empty());
-                    let attribute = topic.temp_attributes.entry(name.clone())
-                        .or_insert(vec![]);
+                    let attribute = topic.add_or_find_temp_attribute(&name);
                     let values = between(&values, CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT);
                     let bracket_delim_with_space = format!("{}, {}", CT_BRACKETS_RIGHT, CT_BRACKETS_LEFT);
                     let bracket_delim_no_space = format!("{},{}", CT_BRACKETS_RIGHT, CT_BRACKETS_LEFT);
@@ -572,7 +571,7 @@ impl BuildProcess {
                         }
                     }
                 }
-                // if topic.name.contains("Zero") { //bg!(&topic.attributes); }
+                // if topic.get_name().contains("Zero") { //bg!(&topic.attributes); }
                 Ok(Some(Paragraph::Attributes))
             } else {
                 // Normal (non-attribute) table.
@@ -586,10 +585,10 @@ impl BuildProcess {
                         let cell = cell.replace(CT_FORMAT_BOLD, "");
                         let horizontal = if cell.contains(TAG_ALIGN_RIGHT) { HorizontalAlignment::Right } else { HorizontalAlignment::Left };
                         let cell = cell.replace(TAG_ALIGN_RIGHT, "").trim().to_string();
-                        let text_block= self.make_text_block_rc(&topic.name, &cell, context)?;
+                        let text_block= self.make_text_block_rc(topic.get_name(), &cell, context)?;
                         table_cells.push(TableCell::new_text_block(text_block, is_bold, &horizontal));
                     }
-                    table.rows.push(table_cells);
+                    table.add_row(table_cells);
                 }
                 Ok(Some(Paragraph::new_table(table)))
             }
@@ -675,14 +674,14 @@ impl BuildProcess {
         let type_ = ListType::from_header(lines[0].trim());
         // The header may be a simple label like "Subtopics:" but it could also be a longer piece
         // of text containing links and other markup.
-        let header = self.make_text_block_rc(&topic.name, lines[0], context)?;
+        let header = self.make_text_block_rc(topic.get_name(), lines[0], context)?;
         let mut items = vec![];
         for line in lines.iter().skip(1) {
             // The depth of the list item is the number of spaces before the asterisk.
             match line.find("*") {
                 Some(depth) => {
                     let item_text = line[depth + 1..].trim();
-                    let item_text_block = self.make_text_block_rc(&topic.name, item_text, context)?;
+                    let item_text_block = self.make_text_block_rc(topic.get_name(), item_text, context)?;
                     items.push(ListItem::new(depth, item_text_block));
                 },
                 None => {
@@ -700,7 +699,7 @@ impl BuildProcess {
 
     fn paragraph_as_text_rc(&self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
         let context = &format!("{} Seems to be a text paragraph.", context);
-        let text_block = self.make_text_block_rc(&topic.name, text, context)?;
+        let text_block = self.make_text_block_rc(topic.get_name(), text, context)?;
         Ok(Some(Paragraph::new_text(text_block)))
     }
 
@@ -708,12 +707,12 @@ impl BuildProcess {
         Paragraph::new_text_unresolved(text)
     }
 
-    fn check_links(&mut self, wiki: &Wiki) {
+    fn check_links(&mut self, wiki: &Model) {
         let mut link_errors = wiki.check_links();
         self.errors.append(&mut link_errors);
     }
 
-    fn check_subtopic_relationships(&mut self, wiki: &mut Wiki) {
+    fn check_subtopic_relationships(&mut self, wiki: &mut Model) {
         let mut subtopic_errors = wiki.check_subtopic_relationships();
         self.errors.append(&mut subtopic_errors);
     }
@@ -833,10 +832,10 @@ impl BuildProcess {
 
 }
 
-pub fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>, attributes_to_index: Vec<&str>) -> Wiki {
+pub fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>, attributes_to_index: Vec<&str>) -> Model {
     let mut bp = BuildProcess::new(name, namespace_main,PATH_CT_EXPORT,FILE_NAME_EXPORT_TOOLS, topic_limit);
     let mut model = bp.build();
-    model.attributes.attributes_to_index = attributes_to_index.iter().map(|x| x.to_string()).collect::<Vec<_>>();
+    model.set_attributes_to_index(attributes_to_index.iter().map(|x| x.to_string()).collect::<Vec<_>>());
     model
 }
 

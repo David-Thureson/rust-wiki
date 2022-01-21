@@ -55,7 +55,7 @@ pub fn get_categories() -> BTreeMap<String, Topic> {
                 category_topic_names: vec![],
                 indirect_topic_count: 0,
             });
-            entry.category_topic_names.push(topic.name.clone());
+            entry.category_topic_names.push(topic.get_name().clone());
             entry.indirect_topic_count += 1;
         }
     }
@@ -66,7 +66,7 @@ pub fn get_categories() -> BTreeMap<String, Topic> {
         .for_each(|topic| {
             let mut new_topic = topic.clone();
             new_topic.category_topic_names.sort();
-            categories.insert(topic.name.clone(), new_topic);
+            categories.insert(topic.get_name().clone(), new_topic);
         });
     //bg!(&categories);
     categories
@@ -80,10 +80,10 @@ pub fn report_category_tree() {
 }
 
 fn report_category_tree_one(categories: &BTreeMap<String, Topic>, depth: usize, topic: &Topic) {
-    let line = format!("{}: topics: {}", topic.name, topic.category_topic_names.len());
+    let line = format!("{}: topics: {}", topic.get_name(), topic.category_topic_names.len());
     format::println_indent_tab(depth, &line);
     categories.values()
-        .filter(|category| category.category_name == Some(topic.name.clone()))
+        .filter(|category| category.category_name == Some(topic.get_name().clone()))
         .for_each(|category| report_category_tree_one(&categories, depth + 1, category));
 }
 
@@ -96,7 +96,7 @@ pub fn report_categories_by_topic_count() {
                 Some(category_name) => format!(" ({})", category_name),
                 None => "".to_string()
             };
-            println!("{}{}: {}", topic.name, topic_category, topic.category_topic_names.len());
+            println!("{}{}: {}", topic.get_name(), topic_category, topic.category_topic_names.len());
         });
 }
 

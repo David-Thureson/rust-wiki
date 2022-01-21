@@ -5,8 +5,8 @@ use std::collections::BTreeMap;
 
 #[derive(Clone, Debug)]
 pub struct Link {
-    pub label: Option<String>,
-    pub type_: LinkType,
+    label: Option<String>,
+    type_: LinkType,
 }
 
 #[derive(Clone, Debug)]
@@ -118,6 +118,16 @@ impl Link {
         Self::new(label, type_)
     }
 
+    pub fn new_section_internal(label: Option<&str>, namespace_name: &str, topic_name: &str, section_name: &str) -> Self {
+        TopicKey::assert_legal_namespace(namespace_name);
+        TopicKey::assert_legal_topic_name(topic_name);
+        let section_key = SectionKey::new(namespace_name, topic_name, section_name);
+        let type_ = LinkType::Section {
+            section_key,
+        };
+        Self::new(label, type_)
+    }
+
     pub fn new_topic(label: Option<&str>, namespace_name: &str, topic_name: &str) -> Self {
         TopicKey::assert_legal_namespace(namespace_name);
         TopicKey::assert_legal_topic_name(topic_name);
@@ -128,7 +138,15 @@ impl Link {
         Self::new(label, type_)
     }
 
-    pub fn catalog_links(model: &mut Wiki) {
+    pub fn get_label(&self) -> &Option<&str> {
+        &self.label.map(|label| label.as_str())
+    }
+
+    pub fn get_type(&self) -> &LinkType {
+        &self.type_
+    }
+
+    pub fn catalog_links(model: &mut Model) {
         for topic in model.topics.values_mut() {
             topic.outbound_links.clear();
             topic.inbound_topic_keys.clear();
@@ -229,7 +247,7 @@ impl Link {
         }
     }
 
-    pub fn check_links(model: &Wiki) -> TopicErrorList {
+    pub fn check_links(model: &Model) -> TopicErrorList {
         //bg!(model.topics.keys());
         let mut errors = TopicErrorList::new();
         for topic in model.topics.values() {
@@ -257,7 +275,7 @@ impl Link {
         errors
     }
 
-    pub fn update_internal_links(model: &mut Wiki, keys: &Vec<(TopicKey, TopicKey)>) {
+    pub fn update_internal_links(model: &mut Model, keys: &Vec<(TopicKey, TopicKey)>) {
         //bg!(&keys);
         // For each entry in keys, the first TopicKey is the old value and the second is the new
         // value.

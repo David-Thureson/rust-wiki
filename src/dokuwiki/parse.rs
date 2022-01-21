@@ -27,9 +27,9 @@ pub fn parse_link_optional(text: &str) -> Result<Option<model::Link>, String> {
             let (topic_ref, section_name) = util::parse::split_1_or_2(dest, DELIM_LINK_SECTION);
             let topic_key = topic_ref_to_topic_key(topic_ref)?;
             if let Some(section_name) = section_name {
-                model::Link::new_section(label, &topic_key.namespace, &topic_key.topic_name, section_name)
+                model::Link::new_section(label, topic_key.get_namespace(), topic_key.get_topic_name(), section_name)
             } else {
-                model::Link::new_topic(label, &topic_key.namespace, &topic_key.topic_name)
+                model::Link::new_topic(label, topic_key.get_namespace(), topic_key.get_topic_name())
             }
         };
         //bg!(&link);
@@ -200,10 +200,10 @@ pub fn parse_table_optional(text: &str) -> Result<Option<model::Table>, String> 
                 let cell_text = cell_text.trim();
                 row.push(model::TableCell::new_unresolved_text(cell_text, is_bold, &horizontal));
             }
-            table.rows.push(row);
+            table.add_row(row);
         }
         if table.assume_has_header() {
-            table.has_header = true;
+            table.set_has_header(true);
         }
         return Ok(Some(table));
     }
@@ -253,17 +253,17 @@ pub fn text_or_topic_link_label(text: &str) -> Result<String, String> {
     // attribute value to its string form without any links.
     let label = match parse_link_optional(text)? {
         Some(link) => {
-            let label = link.label.clone();
-            label.unwrap_or(match link.type_ {
-                model::LinkType::Topic { topic_key} => topic_key.topic_name,
-                model::LinkType::Section { section_key} => section_key.section_name,
+            let label = link.get_label();
+            label.unwrap_or(match link.get_type() {
+                model::LinkType::Topic { topic_key} => topic_key.get_topic_name(),
+                model::LinkType::Section { section_key} => section_key.get_section_name(),
                 _ => {
                     dbg!(&text, &link);
                     unimplemented!()
                 },
             })
         },
-        None => text.to_string(),
+        None => text,
     };
     let label = util::parse::unquote(&label);
     Ok(label.to_string())

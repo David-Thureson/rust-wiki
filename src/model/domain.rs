@@ -1,17 +1,17 @@
 use std::collections::BTreeMap;
-use crate::model::{TopicErrorList, ATTRIBUTE_NAME_DOMAIN, Wiki};
+use crate::model::{TopicErrorList, ATTRIBUTE_NAME_DOMAIN, Model};
 use crate::Itertools;
 
 #[derive(Debug)]
 pub struct DomainList {
-    pub domains: BTreeMap<String, Domain>,
+    domains: BTreeMap<String, Domain>,
 }
 
 #[derive(Debug)]
 pub struct Domain {
-    pub name: String,
-    pub related: BTreeMap<String, usize>,
-    pub related_by_count: Vec<String>,
+    name: String,
+    related: BTreeMap<String, usize>,
+    related_by_count: Vec<String>,
 }
 
 impl DomainList {
@@ -27,13 +27,21 @@ impl DomainList {
         }
     }
 
+    pub fn get_domains(&self) -> &BTreeMap<String, Domain> {
+        &self.domains
+    }
+
+    pub fn get_domain(&self, name: &str) -> Option<&Domain> {
+        self.domains.get(name)
+    }
+
     pub fn add_related_domain(&mut self, domain_name: &str, related_name: &str) {
         let domain= self.domains.get_mut(domain_name).unwrap();
         let entry = domain.related.entry(related_name.to_string()).or_insert(0);
         *entry += 1;
     }
 
-    pub fn catalog_domains(model: &mut Wiki) -> TopicErrorList {
+    pub fn catalog_domains(model: &mut Model) -> TopicErrorList {
         // This must be run after catalog_attributes().
         debug_assert!(!model.attributes.attributes.is_empty());
         let errors = TopicErrorList::new();
@@ -101,6 +109,10 @@ impl Domain {
             .collect::<Vec<_>>();
         sorted.sort_by(|a, b| a.1.cmp(b.1).reverse().then(a.0.cmp(&b.0)));
         self.related_by_count = sorted.drain(..).map(|(name, _count)| name).collect::<Vec<_>>();
+    }
+
+    pub fn get_related_by_count(&self) -> &Vec<String> {
+        &self.related_by_count
     }
 
     pub fn max_related_count(&self) -> usize {

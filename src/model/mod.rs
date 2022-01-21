@@ -47,8 +47,8 @@ pub use topic::*;
 pub mod topic_error_list;
 pub use topic_error_list::*;
 
-pub mod wiki;
-pub use wiki::*;
+pub mod model;
+pub use model::*;
 
 pub type TopicTree = util::tree::Tree<TopicKey>;
 pub type TopicTreeNode = util::tree::TreeNode<TopicKey>;

@@ -4,15 +4,15 @@ use crate::model::TextBlock;
 // model, use Paragraph::Table.
 #[derive(Clone, Debug)]
 pub struct Table {
-    pub rows: Vec<Vec<TableCell>>,
-    pub has_header: bool,
+    rows: Vec<Vec<TableCell>>,
+    has_header: bool,
 }
 
 #[derive(Clone, Debug)]
 pub struct TableCell {
-    pub text_block: TextBlock,
-    pub is_bold: bool,
-    pub horizontal: HorizontalAlignment,
+    text_block: TextBlock,
+    is_bold: bool,
+    horizontal: HorizontalAlignment,
 }
 
 #[derive(Clone, Debug)]
@@ -28,6 +28,26 @@ impl Table {
             rows: vec![],
             has_header,
         }
+    }
+
+    pub fn add_row(&mut self, row: Vec<TableCell>) {
+        self.rows.push(row);
+    }
+
+    pub fn get_rows(&self) -> &Vec<Vec<TableCell>> {
+        &self.rows
+    }
+
+    pub fn has_header(&self) -> bool {
+        self.has_header
+    }
+
+    pub fn set_has_header(&mut self, has_header: bool) {
+        self.has_header = has_header;
+    }
+
+    pub fn get_cell(&self, row_index: usize, col_index: usize) -> &TableCell {
+        &self.rows[row_index][col_index]
     }
 
     pub fn assume_has_header(&self) -> bool {
@@ -83,6 +103,18 @@ impl TableCell {
             is_bold,
             horizontal: horizontal.clone(),
         }
+    }
+
+    pub fn is_bold(&self) -> bool {
+        self.is_bold
+    }
+
+    pub fn get_horizontal(&self) -> &HorizontalAlignment {
+        &self.horizontal
+    }
+
+    pub fn get_text_block(&self) -> &TextBlock {
+        &self.text_block
     }
 }
 

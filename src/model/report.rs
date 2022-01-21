@@ -37,7 +37,7 @@ impl WikiReport {
         self
     }
 
-    pub fn go(&self, wiki: &Wiki) {
+    pub fn go(&self, wiki: &Model) {
         let namespace_count = wiki.namespaces.len();
         let topic_count = wiki.topics.len();
         let category_count = wiki.categories.len();
@@ -59,7 +59,7 @@ impl WikiReport {
         }
     }
 
-    fn category_breakdown(&self, wiki: &Wiki, depth: usize) {
+    fn category_breakdown(&self, wiki: &Model, depth: usize) {
         let mut groups = util::group::Grouper::new("Categories");
         for topic in wiki.topics.values() {
             if let Some(category) = &topic.category {
@@ -69,7 +69,7 @@ impl WikiReport {
         groups.print_by_count(depth, Some(5));
     }
 
-    fn paragraph_breakdown(&self, wiki: &Wiki, depth: usize) {
+    fn paragraph_breakdown(&self, wiki: &Model, depth: usize) {
         let mut groups = util::group::Grouper::new("Paragraph Types");
         for topic in wiki.topics.values() {
             for paragraph in topic.paragraphs.iter() {
@@ -79,7 +79,7 @@ impl WikiReport {
         groups.print_by_count(depth, None);
     }
 
-    fn attribute_breakdown(&self, wiki: &Wiki, depth: usize) {
+    fn attribute_breakdown(&self, wiki: &Model, depth: usize) {
         let mut groups = util::group::Grouper::new("Attributes");
         for topic in wiki.topics.values() {
             for (name, values) in topic.temp_attributes.iter() {
@@ -90,7 +90,7 @@ impl WikiReport {
         groups.print_by_count(depth, Some(5));
     }
 
-    fn list_breakdown(&self, wiki: &Wiki, depth: usize) {
+    fn list_breakdown(&self, wiki: &Model, depth: usize) {
         let mut groups = util::group::Grouper::new("List Types");
         for topic in wiki.topics.values() {
             for paragraph in topic.paragraphs.iter() {
@@ -107,7 +107,7 @@ impl WikiReport {
 
 }
 
-pub fn report_attributes(wiki: &Wiki) {
+pub fn report_attributes(wiki: &Model) {
     for attribute_type in wiki.attributes.attributes.values() {
         println!("\n{}: {} ({})", attribute_type.name, attribute_type.value_type.get_variant_name(), attribute_type.get_topic_count());
         for (value, topics) in attribute_type.values.iter() {
@@ -125,7 +125,7 @@ pub fn report_attributes(wiki: &Wiki) {
     // println!("{}", wiki.attributes.iter().filter(|(_name, type_)| type_.value_type == AttributeValueType::Year).map(|(name, _type_)| format!("\"{}\"", name)).join(", "));
 }
 
-pub fn report_attributes_with_multiple_values(wiki: &Wiki) {
+pub fn report_attributes_with_multiple_values(wiki: &Model) {
     // For round-trip parsing/generating of the wiki, we need conventions for handling multiple
     // attributes separated by commas, since commas can also appear inside a value. First simply do
     // a survey of attributes that appear to have multiple values within a given topic but might

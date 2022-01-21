@@ -11,14 +11,14 @@ use std::fs;
 //const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
 
 pub struct GenFromModel<'a> {
-    model: &'a model::Wiki,
+    model: &'a model::Model,
     current_topic_key: Option<model::TopicKey>,
     errors: model::TopicErrorList,
 }
 
 impl <'a> GenFromModel<'a> {
 
-    pub fn new(model: &'a model::Wiki) -> Self {
+    pub fn new(model: &'a model::Model) -> Self {
         Self {
             model: model,
             current_topic_key: None,
@@ -26,13 +26,14 @@ impl <'a> GenFromModel<'a> {
         }
     }
 
-    pub fn gen_all_topics_page(&self) {
+    pub fn gen_all_topics_page(&mut self) {
         let namespace = &self.model.qualify_namespace(&self.model.namespace_navigation());
         let mut page = wiki::WikiGenPage::new(namespace, wiki::PAGE_NAME_ALL_TOPICS,None);
         let first_letter_map = self.model.get_topics_first_letter_map();
         for (map_key, topic_keys) in first_letter_map.iter() {
             let section_name = if map_key.eq("#") { "Number" } else { map_key };
             page.add_headline(section_name, 1);
+            self.gen_topic_first_letter_links(&mut page, 9);
             for topic_key in topic_keys {
                 let link = Self::page_link(topic_key);
                 page.add_line_with_break(&link);
@@ -41,7 +42,7 @@ impl <'a> GenFromModel<'a> {
         page.write();
     }
 
-    pub fn gen_topic_first_letter_links(&mut self, page: &mut WikiGenPage) {
+    pub fn gen_topic_first_letter_links(&mut self, page: &mut WikiGenPage, column_count: usize) {
         let namespace = &self.model.qualify_namespace(&self.model.namespace_navigation());
         let first_letter_map = self.model.get_topics_first_letter_map();
 
@@ -54,7 +55,7 @@ impl <'a> GenFromModel<'a> {
             cells.push(cell);
         }
         let mut table = model::Table::new(false);
-        table.add_cells_flow_layout(6, cells);
+        table.add_cells_flow_layout(column_count, cells);
         self.add_table(page, &table);
 
         /*
@@ -88,11 +89,14 @@ impl <'a> GenFromModel<'a> {
 
     pub fn gen_attr_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR,None);
-        for attribute_type in self.model.attributes.attributes.values()
-            .filter(|attribute_type| attribute_type.value_type != AttributeValueType::Date && attribute_type.value_type != AttributeValueType::Year)
-            .filter(|attribute_type| self.model.attributes.attributes_to_index.contains(&attribute_type.name)) {
-            page.add_headline(&attribute_type.name,1);
-            for (value, topic_keys) in attribute_type.values.iter() {
+        for attribute_type in self.model.get_attributes().values()
+            .filter(|attribute_type| {
+                let value_type = attribute_type.get_value_type();
+                AttributeValueType::Date.ne(value_type) && AttributeValueType::Year.ne(value_type)
+            })
+            .filter(|attribute_type| self.model.is_attribute_indexed(attribute_type.get_name())) {
+            page.add_headline(attribute_type.get_name(),1);
+            for (value, topic_keys) in attribute_type.get_values().iter() {
                 page.add_headline(&attribute_type.get_value_display_string(value), 2);
                 if let Some(link) = self.page_link_if_exists(value) {
                     page.add_paragraph(&link);
@@ -112,12 +116,12 @@ impl <'a> GenFromModel<'a> {
     pub fn gen_attr_value_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR_VALUE,None);
         let mut map = BTreeMap::new();
-        for attribute_type in self.model.attributes.attributes.values()
-                .filter(|attribute_type| self.model.attributes.attributes_to_index.contains(&attribute_type.name)) {
-            for (value, topic_keys) in attribute_type.values.iter() {
+        for attribute_type in self.model.get_attributes().values()
+                .filter(|attribute_type| self.model.is_attribute_indexed(attribute_type.get_name())) {
+            for (value, topic_keys) in attribute_type.get_values().iter() {
                 let entry = map.entry(value).or_insert(vec![]);
                 for topic_key in topic_keys.iter() {
-                    entry.push((attribute_type.name.clone(), topic_key.clone()));
+                    entry.push((attribute_type.get_name().to_string(), topic_key.clone()));
                 }
             }
         }
@@ -128,7 +132,7 @@ impl <'a> GenFromModel<'a> {
             }
             self.add_related_domains_optional(&mut page,value, true);
             // Sort by topic name, then attribute type name.
-            list.sort_by(|a, b| a.1.topic_name.cmp(&b.1.topic_name).then(a.0.cmp(&b.0)));
+            list.sort_by(|a, b| a.1.get_topic_name().to_lowercase().cmp(&b.1.get_topic_name().to_lowercase()).then(a.0.cmp(&b.0)));
             page.add_line("Topics:");
             for (attribute_type_name, topic_key) in list.drain(..) {
                 let link = self.page_link_simple(&topic_key);
@@ -141,9 +145,10 @@ impl <'a> GenFromModel<'a> {
     }
 
     fn add_related_domains_optional(&self, page: &mut wiki::WikiGenPage, attribute_value_name: &str, on_attribute_value_page: bool) {
-        if let Some(domain) = self.model.domains.domains.get(attribute_value_name) {
-            if !domain.related_by_count.is_empty() {
-                let related_link_list = domain.related_by_count.iter()
+        if let Some(domain) = self.model.get_domain(attribute_value_name) {
+            let related_by_count = domain.get_related_by_count();
+            if !related_by_count.is_empty() {
+                let related_link_list = related_by_count.iter()
                     .map(|related_name| self.domain_link(related_name, on_attribute_value_page))
                     .join(", ");
                 let line = format!("Related: {}", related_link_list);
@@ -193,7 +198,7 @@ impl <'a> GenFromModel<'a> {
 
     fn page_link_if_exists(&self, topic_name: &str) -> Option<String> {
         TopicKey::assert_legal_topic_name(topic_name);
-        let possible_topic_key = TopicKey::new(&self.model.main_namespace, topic_name);
+        let possible_topic_key = TopicKey::new(&self.model.get_main_namespace(), topic_name);
         if self.model.has_topic(&possible_topic_key) {
             Some(self.page_link_simple(&possible_topic_key))
         } else {
@@ -214,7 +219,7 @@ impl <'a> GenFromModel<'a> {
                 page.add_headline(&display_value, 2);
                 let match_value = model::AttributeType::date_to_canonical_value(date);
                 for topic_key in self.model.get_topics_for_attr_value(&AttributeValueType::Date, &match_value, None) {
-                    let link = wiki::page_link(&self.model.qualify_namespace(&topic_key.namespace), &topic_key.topic_name, None);
+                    let link = wiki::page_link(&self.model.qualify_namespace(topic_key.get_namespace()), topic_key.get_topic_name(), None);
                     page.add_list_item_unordered(1, &link);
                 }
             }
@@ -224,10 +229,10 @@ impl <'a> GenFromModel<'a> {
     */
 
     pub fn gen(&mut self) {
-        for topic in self.model.topics.values() {
+        for topic in self.model.get_topics().values() {
             self.current_topic_key = Some(topic.get_key());
             //bg!(&self.current_topic_key);
-            let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(&topic.namespace), &topic.name, None);
+            let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(topic.get_namespace()), topic.get_name(), None);
             self.add_breadcrumbs_optional(&mut page, &topic);
             self.add_category_optional(&mut page, &topic);
             self.add_attributes_optional(&mut page, &topic);
@@ -239,29 +244,29 @@ impl <'a> GenFromModel<'a> {
     }
 
     fn add_breadcrumbs_optional(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
-        // if topic.name.starts_with("Test ") {
-        //     /bg!(&topic.name, &topic.parents);
+        // if topic.get_name().starts_with("Test ") {
+        //     /bg!(topic.get_name(), &topic.parents);
         // }
-        match topic.parents.len() {
+        match topic.get_parent_count() {
             0 => {},
             1 => {
-                //bg!(&topic.name, &topic.parents);
+                //bg!(topic.get_name(), &topic.parents);
                 let mut topic_keys = vec![];
-                let mut parent_topic_key = topic.parents[0].clone();
+                let mut parent_topic_key = topic.get_parent(0).clone();
                 loop {
                     //bg!(&parent_topic_key);
                     topic_keys.push(parent_topic_key.clone());
-                    let parent_topic = self.model.topics.get(&parent_topic_key).unwrap();
-                    //bg!(&parent_topic.name, &parent_topic.parents);
-                    match parent_topic.parents.len() {
+                    let parent_topic = self.model.get_topics().get(&parent_topic_key).unwrap();
+                    //bg!(&parent_topic.get_name(), &parent_topic.parents);
+                    match parent_topic.get_parent_count() {
                         0 => {
                             break;
                         },
                         1 => {
-                            parent_topic_key = parent_topic.parents[0].clone();
+                            parent_topic_key = parent_topic.get_parent(0).clone();
                         },
                         _ => {
-                            panic!("Unexpected number of parent topics for topic \"{}\".", parent_topic.name);
+                            panic!("Unexpected number of parent topics for topic \"{}\".", parent_topic.get_name());
                         }
                     }
                 }
@@ -270,51 +275,52 @@ impl <'a> GenFromModel<'a> {
                 let breadcrumbs = topic_keys.iter()
                     .map(|topic_key| self.page_link_simple(topic_key))
                     .join(&format!(" {} ", wiki::DELIM_BREADCRUMB_RIGHT));
-                let breadcrumbs = format!("{}{} {} {}{}", wiki::DELIM_BOLD, breadcrumbs, wiki::DELIM_BREADCRUMB_RIGHT, topic.name, wiki::DELIM_BOLD);
+                let breadcrumbs = format!("{}{} {} {}{}", wiki::DELIM_BOLD, breadcrumbs, wiki::DELIM_BREADCRUMB_RIGHT, topic.get_name(), wiki::DELIM_BOLD);
                 page.add_paragraph(&breadcrumbs);
             },
             2 => {
                 // Combination topic.
-                let link_a = self.page_link_simple(&topic.parents[0]);
-                let link_b = self.page_link_simple(&topic.parents[1]);
-                let breadcrumbs = format!("{}{} {} {} {} {}{}", wiki::DELIM_BOLD, link_a, wiki::DELIM_BREADCRUMB_RIGHT, topic.name, wiki::DELIM_BREADCRUMB_LEFT, link_b, wiki::DELIM_BOLD);
+                let link_a = self.page_link_simple(&topic.get_parent(0));
+                let link_b = self.page_link_simple(&topic.get_parent(1));
+                let breadcrumbs = format!("{}{} {} {} {} {}{}", wiki::DELIM_BOLD, link_a, wiki::DELIM_BREADCRUMB_RIGHT, topic.get_name(), wiki::DELIM_BREADCRUMB_LEFT, link_b, wiki::DELIM_BOLD);
                 page.add_paragraph(&breadcrumbs);
             },
             _ => {
-                panic!("Unexpected number of parent topics for topic \"{}\".", topic.name);
+                panic!("Unexpected number of parent topics for topic \"{}\".", topic.get_name());
             },
         }
     }
 
     fn add_category_optional(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
-        if let Some(category) = topic.category.as_ref() {
-            page.add_category(&self.model.main_namespace,category);
+        if let Some(category) = topic.get_category() {
+            page.add_category(&self.model.get_main_namespace(),category);
         }
     }
 
     fn add_attributes_optional(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
-        if !topic.attributes.is_empty() {
+        if !topic.get_attribute_count() > 0 {
             let namespace_navigation = &self.model.namespace_navigation();
             let mut table = WikiAttributeTable::new();
-            for attr_instance in topic.attributes.values()
-                    .sorted_by_key(|attr_instance| attr_instance.sequence) {
-                let attr_type = self.model.attributes.attributes.get(&attr_instance.attribute_type_name).unwrap();
-                let attr_type_link = match attr_type.value_type {
-                    AttributeValueType::Date => wiki::page_link(&namespace_navigation, PAGE_NAME_ATTR_DATE,Some(&attr_type.name)),
-                    AttributeValueType::Year => wiki::page_link(&namespace_navigation, PAGE_NAME_ATTR_YEAR,Some(&attr_type.name)),
-                    _ => if self.model.attributes.attributes_to_index.contains(&attr_type.name) {
-                        wiki::section_link(&namespace_navigation, PAGE_NAME_ATTR, &attr_type.name, Some(&attr_type.name))
+            for attr_instance in topic.get_attributes().values()
+                    .sorted_by_key(|attr_instance| attr_instance.get_sequence()) {
+                let attr_type = self.model.get_attribute(attr_instance.get_attribute_type_name()).unwrap();
+                let attr_type_name = attr_type.get_name();
+                let attr_type_link = match attr_type.get_value_type() {
+                    AttributeValueType::Date => wiki::page_link(&namespace_navigation, PAGE_NAME_ATTR_DATE,Some(attr_type_name)),
+                    AttributeValueType::Year => wiki::page_link(&namespace_navigation, PAGE_NAME_ATTR_YEAR,Some(attr_type_name)),
+                    _ => if self.model.is_attribute_indexed(attr_type_name) {
+                        wiki::section_link(&namespace_navigation, PAGE_NAME_ATTR, attr_type_name, Some(attr_type_name))
                     } else {
-                        attr_type.name.clone()
+                        attr_type_name.to_string()
                     },
                 };
-                let value_list = attr_instance.values.iter()
+                let value_list = attr_instance.get_values().iter()
                     .map(|value| {
                         let label = attr_type.get_value_display_string(value);
-                        match attr_type.value_type {
+                        match attr_type.get_value_type() {
                             AttributeValueType::Date => wiki::section_link(&namespace_navigation, PAGE_NAME_ATTR_DATE,&label,Some(&label)),
                             AttributeValueType::Year => wiki::section_link(&namespace_navigation, PAGE_NAME_ATTR_YEAR,&label,Some(&label)),
-                            _ => if self.model.attributes.attributes_to_index.contains(&attr_type.name) {
+                            _ => if self.model.is_attribute_indexed(attr_type_name) {
                                 wiki::section_link(&namespace_navigation, PAGE_NAME_ATTR_VALUE, &label, Some(&label))
                             } else {
                                 // A raw, unindexed attribute value such as a book title may
@@ -341,7 +347,7 @@ impl <'a> GenFromModel<'a> {
         let msg_func_unexpected = |variant_name: &str| format!("In gen_from_model::add_paragraph(), unexpected Paragraph variant = \"{}\"", variant_name);
         // let add_error_unexpected = |paragraph_variant: &str| self.add_error(&msg_func_unexpected(paragraph_variant));
         let mut generated_navigation_paragraphs_added = false;
-        for paragraph in topic.paragraphs.iter() {
+        for paragraph in topic.get_paragraphs().iter() {
             // First see if it's necessary to add generated navigation paragraphs like subtopics
             // and subcategories.
             match paragraph {
@@ -375,7 +381,7 @@ impl <'a> GenFromModel<'a> {
                     page.add_headline(name, *depth);
                 }
                 model::Paragraph::Table { table} => {
-                    //bg!(&topic.name);
+                    //bg!(topic.get_name());
                     self.add_table(page, table);
                 }
                 model::Paragraph::Text { text_block} => {
@@ -414,7 +420,7 @@ impl <'a> GenFromModel<'a> {
         }
         // Self::add_topic_list(page, &topic.subtopics,model::LIST_LABEL_SUBTOPICS);
         self.add_subtopic_tree(page, topic);
-        self.add_topic_list(page,&topic.combo_subtopics,model::LIST_LABEL_COMBINATIONS);
+        self.add_topic_list(page,&topic.get_combo_subtopics(),model::LIST_LABEL_COMBINATIONS);
     }
 
     fn add_topic_list(&self, page: &mut wiki::WikiGenPage, topic_keys: &Vec<model::TopicKey>, label: &str) {
@@ -435,7 +441,7 @@ impl <'a> GenFromModel<'a> {
                 let node = b!(node_rc);
                 let topic_count = node.subtree_leaf_count();
                 let topic_key = &node.item;
-                let page_link = page_link(&topic_key.namespace, &topic_key.topic_name, None);
+                let page_link = page_link(topic_key.get_namespace(), topic_key.get_topic_name(), None);
                 page.add_list_item_unordered(1, &format!("{} ({})", &page_link, topic_count));
             }
             page.add_linefeed();
@@ -444,23 +450,23 @@ impl <'a> GenFromModel<'a> {
      */
 
     fn add_subcategory_tree(&self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
-        let node_rc = topic.category_tree_node.as_ref().unwrap();
+        let node_rc = topic.get_category_tree_node().unwrap();
         let node = b!(&node_rc);
         if node.height() > 2 {
             // let filter_func = |node: Ref<TopicTreeNode>| node.height() > 1;
             // let max_depth = node.max_depth_for_max_count_filtered(SUBCATEGORY_TREE_MAX_SIZE, &filter_func);
             let nodes = node.unroll_to_depth(None, None);
-            //bg!(&topic.name, node.description_line(), max_depth, nodes.len());
+            //bg!(topic.get_name(), node.description_line(), max_depth, nodes.len());
             self.gen_partial_topic_tree(page, &nodes, node.depth(), true, Some(model::LIST_LABEL_SUBCATEGORIES));
         }
     }
 
     fn add_subtopic_tree(&self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
-        if let Some(node_rc) = &topic.subtopic_tree_node {
+        if let Some(node_rc) = &topic.get_subtopic_tree_node() {
             let node = b!(&node_rc);
             if node.height() > 1 {
                 let nodes = node.unroll_to_depth(None, None);
-                //bg!(&topic.name, node.description_line(), max_depth, nodes.len());
+                //bg!(topic.get_name(), node.description_line(), max_depth, nodes.len());
                 self.gen_partial_topic_tree(page, &nodes, node.depth(), false, Some(model::LIST_LABEL_SUBTOPICS));
             }
         }
@@ -471,7 +477,7 @@ impl <'a> GenFromModel<'a> {
             if let Some(label) = label {
                 page.add_line(label);
             }
-            for node_rc in nodes.iter().sorted_by_key(|node| b!(node).item.topic_name.to_lowercase()) {
+            for node_rc in nodes.iter().sorted_by_key(|node| b!(node).item.get_topic_name().to_lowercase()) {
                 let node = b!(node_rc);
                 let use_this_node = if is_category { !node.is_leaf() } else { true };
                 if use_this_node {
@@ -520,8 +526,8 @@ impl <'a> GenFromModel<'a> {
                 page.add(&self.text_block_to_markup(header));
                 page.add_linefeed();
                 for item in items.iter() {
-                    let markup = &self.text_block_to_markup(&item.block);
-                    page.add_list_item_unordered(item.depth, markup);
+                    let markup = &self.text_block_to_markup(item.get_text_block());
+                    page.add_list_item_unordered(item.get_depth(), markup);
                 }
                 page.add_linefeed();
             }
@@ -529,9 +535,9 @@ impl <'a> GenFromModel<'a> {
     }
 
     fn add_table(&mut self, page: &mut wiki::WikiGenPage, table: &model::Table) {
-        for (row_index, cells) in table.rows.iter().enumerate() {
+        for (row_index, cells) in table.get_rows().iter().enumerate() {
             let cells_as_markup = cells.iter()
-                .map(|cell| self.text_block_to_markup(&cell.text_block))
+                .map(|cell| self.text_block_to_markup(cell.get_text_block()))
                 .collect::<Vec<_>>();
             self.add_table_row(page, table, row_index, &cells_as_markup);
         }
@@ -543,12 +549,12 @@ impl <'a> GenFromModel<'a> {
         //   ^ Color ^ Blue ^
         // A regular table row should look something like:
         //   | Color | Blue |
-        let last_delimiter = if table.has_header && row_index == 0 { DELIM_TABLE_CELL_BOLD } else { DELIM_TABLE_CELL };
+        let last_delimiter = if table.has_header() && row_index == 0 { DELIM_TABLE_CELL_BOLD } else { DELIM_TABLE_CELL };
         let markup = format!("{}{}\n", cells.iter().enumerate()
-            .map(|(cell_index, cell_text)| {
-                let cell_info = &table.rows[row_index][cell_index];
-                let delimiter = if cell_info.is_bold { DELIM_TABLE_CELL_BOLD } else { DELIM_TABLE_CELL };
-                match cell_info.horizontal {
+            .map(|(col_index, cell_text)| {
+                let cell_info = table.get_cell(row_index, col_index);
+                let delimiter = if cell_info.is_bold() { DELIM_TABLE_CELL_BOLD } else { DELIM_TABLE_CELL };
+                match cell_info.get_horizontal() {
                     model::HorizontalAlignment::Center => {
                         format!("{}  {}  ", delimiter, cell_text.trim())
                     },
@@ -568,23 +574,20 @@ impl <'a> GenFromModel<'a> {
 
     fn link_to_markup(&mut self, link: &model::Link) -> String {
         let msg_func_unexpected = |type_, variant: &str| format!("In gen_from_model::add_link(), unexpected {} variant = \"{}\"", type_, variant);
-        let label = match &link.label {
-            Some(label) => Some(label.as_str()),
-            None => None,
-        };
-        match &link.type_ {
+        let label = link.get_label();
+        match link.get_type() {
             model::LinkType::Topic { topic_key } => {
-                let page_name = self.model.topic_name(&topic_key);
-                let text = wiki::gen::page_link(&self.model.qualify_namespace(&topic_key.namespace), &page_name, label);
+                let page_name = self.model.get_topic_name(&topic_key);
+                let text = wiki::gen::page_link(&self.model.qualify_namespace(topic_key.get_namespace()), &page_name, *label);
                 text
             },
             model::LinkType::Section { section_key } => {
-                let text = wiki::gen::section_link(&self.model.qualify_namespace(section_key.namespace()),section_key.topic_name(), &section_key.section_name, label);
+                let text = wiki::gen::section_link(&self.model.qualify_namespace(section_key.get_namespace()),section_key.get_topic_name(), &section_key.get_section_name(), *label);
                 //bg!(&text);
                 text
             },
             model::LinkType::External { url } => {
-                let text = wiki::gen::external_link(&url, label);
+                let text = wiki::gen::external_link(&url, *label);
                 text
             },
             model::LinkType::Image { source, alignment: _, size: _, type_: _ } => {
@@ -611,8 +614,8 @@ impl <'a> GenFromModel<'a> {
     }
 
     pub fn add_inbound_links_section_optional(&self, page: &mut wiki::WikiGenPage, topic: &Topic) {
-        let has_attribute_links = self.model.attributes.has_attribute_links(&page.topic_name);
-        let has_inbound_links = !topic.inbound_topic_keys.is_empty();
+        let has_attribute_links = self.model.has_attribute_links(&page.topic_name);
+        let has_inbound_links = topic.get_inbound_topic_keys_count() > 0;
         if has_attribute_links || has_inbound_links {
             page.add_headline("Inbound Links", 1);
             self.add_attribute_value_topics_list_optional(page);
@@ -621,7 +624,7 @@ impl <'a> GenFromModel<'a> {
     }
 
     pub fn add_attribute_value_topics_list_optional(&self, page: &mut wiki::WikiGenPage) {
-        if let Some(list) = self.model.attributes.values.get(&page.topic_name) {
+        if let Some(list) = self.model.get_topics_with_attribute_value(&page.topic_name) {
             if !list.is_empty() {
                 page.add_line("Topics with this attribute:");
                 for (topic_key, attribute_type_name) in list.iter() {
@@ -635,9 +638,9 @@ impl <'a> GenFromModel<'a> {
     }
 
     pub fn add_inbound_links_optional(&self, page: &mut wiki::WikiGenPage, topic: &Topic) {
-        if !topic.inbound_topic_keys.is_empty() {
+        if topic.get_inbound_topic_keys_count() > 0 {
             page.add_line("Inbound links:");
-            for topic_key in topic.inbound_topic_keys.iter() {
+            for topic_key in topic.get_inbound_topic_keys().iter() {
                 let link = self.page_link_simple(&topic_key);
                 page.add_list_item_unordered(1, &link);
             }
@@ -668,12 +671,12 @@ impl <'a> GenFromModel<'a> {
     }
 
     pub fn page_link(topic_key: &model::TopicKey) -> String {
-        let link = wiki::page_link(&topic_key.namespace, &topic_key.topic_name, None);
+        let link = wiki::page_link(&topic_key.get_namespace(), &topic_key.get_topic_name(), None);
         link
     }
 
     pub fn section_link(topic_key: &model::TopicKey, section_name: &str) -> String {
-        let link = wiki::section_link(&topic_key.namespace, &topic_key.topic_name, section_name, None);
+        let link = wiki::section_link(&topic_key.get_namespace(), &topic_key.get_topic_name(), section_name, None);
         link
     }
 

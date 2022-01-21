@@ -37,8 +37,8 @@ impl BuildProcess {
         }
     }
 
-    pub fn build(&mut self) -> Wiki {
-        let mut model = Wiki::new(&self.wiki_name, &self.namespace_main);
+    pub fn build(&mut self) -> Model {
+        let mut model = Model::new(&self.wiki_name, &self.namespace_main);
         let namespace_main = self.namespace_main.clone();
         let namespace_book = model.namespace_book();
         model.add_namespace(&namespace_book);
@@ -81,7 +81,7 @@ impl BuildProcess {
         model
     }
 
-    fn parse_from_folder(&mut self, model: &mut Wiki, namespace_name: &str, topic_limit: Option<usize>) {
+    fn parse_from_folder(&mut self, model: &mut Model, namespace_name: &str, topic_limit: Option<usize>) {
         // Read each page's text file and read it as a topic, then break each topic into
         // paragraphs. At this point we don't care about whether the paragraphs are plain or mixed
         // text, attribute tables, section headers, breadcrumbs, etc.
@@ -114,16 +114,16 @@ impl BuildProcess {
         }
     }
 
-    fn refine_paragraphs(&mut self, model: &mut Wiki) {
-        for topic in model.topics.values_mut() {
-            let context = format!("Refining paragraphs for \"{}\".", topic.name);
+    fn refine_paragraphs(&mut self, model: &mut Model) {
+        for topic in model.get_topics().values_mut() {
+            let context = format!("Refining paragraphs for \"{}\".", topic.get_name());
             self.topic_parse_state = TopicParseState::new();
             //rintln!("\n==================================================================\n\n{}\n", context);
-            let paragraph_count = topic.paragraphs.len();
+            let paragraph_count = topic.get_paragraph_count();
             for paragraph_index in 0..paragraph_count {
                 match self.refine_one_paragraph_rc(topic, paragraph_index, &context) {
                     Err(msg) => {
-                        let topic_key = TopicKey::new(&self.namespace_main, &topic.name);
+                        let topic_key = TopicKey::new(&self.namespace_main, topic.get_name());
                         self.errors.add(&topic_key, &msg);
                     },
                     _ => (),
@@ -134,7 +134,7 @@ impl BuildProcess {
     }
 
     fn refine_one_paragraph_rc(&mut self, topic: &mut Topic, paragraph_index: usize, context: &str) -> Result<(), String> {
-        let source_paragraph= std::mem::replace(&mut topic.paragraphs[paragraph_index], Paragraph::Placeholder);
+        let source_paragraph = topic.replace_paragraph_with_placeholder(paragraph_index);
         match source_paragraph {
             Paragraph::Unknown { text } => {
                 if !(self.paragraph_as_category_rc(topic, &text, context)?
@@ -146,15 +146,15 @@ impl BuildProcess {
                     // || self.paragraph_as_text_rc(topic, &text, context)? {
                 ) {
                     let new_paragraph = Paragraph::new_text_unresolved(&text);
-                    topic.paragraphs[paragraph_index] = new_paragraph;
+                    topic.replace_paragraph(paragraph_index, new_paragraph);
                 }
                 return Ok(());
             },
             _ => {},
         };
-        // if topic.name.contains("Zero") { dbg!("new_paragraph", &new_paragraph.get_variant_name()); }
+        // if topic.get_name().contains("Zero") { dbg!("new_paragraph", &new_paragraph.get_variant_name()); }
         // topic.paragraphs[paragraph_index] = new_paragraph;
-        topic.paragraphs[paragraph_index] = source_paragraph;
+        topic.replace_paragraph(paragraph_index, source_paragraph);
         Ok(())
     }
 
@@ -176,11 +176,11 @@ impl BuildProcess {
                 let category_part = util::parse::after(text, PREFIX_CATEGORY).trim().to_string();
                 match parse_link_optional(&category_part) {
                     Ok(Some(link)) => {
-                        match link.label {
+                        match link.get_label() {
                             Some(label) => {
                                 let category_name = label;
-                                //rintln!("\"{}\" in \"{}\"", topic.name, category_name);
-                                topic.category = Some(category_name);
+                                //rintln!("\"{}\" in \"{}\"", topic.get_name(), category_name);
+                                topic.set_category(category_name);
                                 return Ok(true);
                             },
                             None => {
@@ -190,8 +190,8 @@ impl BuildProcess {
                     },
                     Ok(None) => {
                         let category_name = category_part;
-                        println!("\"{}\" in \"{}\"", topic.name, category_name);
-                        topic.category = Some(category_name);
+                        println!("\"{}\" in \"{}\"", topic.get_name(), category_name);
+                        topic.set_category(&category_name);
                         return Ok(true);
                     },
                     Err(msg) => {
@@ -218,9 +218,9 @@ impl BuildProcess {
         match parse_header_optional(text) {
             Ok(Some((name, depth))) => {
                 //bg!(&name, depth);
-                topic.paragraphs[paragraph_index] = Paragraph::new_section_header(&name, depth);
-                //if topic.name.contains("A2") { dbg!(text, &name, depth); panic!() }
-                //bg!(&topic.name, text, &name, depth);
+                topic.replace_paragraph(paragraph_index, Paragraph::new_section_header(&name, depth));
+                //if topic.get_name().contains("A2") { dbg!(text, &name, depth); panic!() }
+                //bg!(topic.get_name(), text, &name, depth);
                 if depth > 0 {
                     self.topic_parse_state.is_past_first_header = true;
                 }
@@ -254,7 +254,7 @@ impl BuildProcess {
         match parse_breadcrumb_optional(text) {
             Ok(Some(parent_topic_keys)) => {
                 //bg!(&parent_topic_keys);
-                topic.parents = parent_topic_keys;
+                topic.set_parents(parent_topic_keys);
                 Ok(true)
             },
             Ok(None) => {
@@ -276,12 +276,12 @@ impl BuildProcess {
         //   </code>;
         // Or it might specify the language, like "<code rust>". Other markers are "<html>" and
         // "<php>".
-        // let debug = topic.name.eq("QuickBooks");
+        // let debug = topic.get_name().eq("QuickBooks");
         // if debug { //rintln!("\n==================================================================\n"); }
         // if debug { //bg!(self.in_code, self.in_non_code_marker, self.marker_exit_string.as_ref(), text); }
         if self.topic_parse_state.is_in_code || self.topic_parse_state.is_in_non_code_marker {
             if text.trim().eq(*&self.topic_parse_state.marker_exit_string.as_ref().unwrap()) {
-                topic.paragraphs[paragraph_index] = Paragraph::new_marker(&text);
+                topic.replace_paragraph(paragraph_index, Paragraph::new_marker(&text));
                 self.topic_parse_state.is_in_code = false;
                 self.topic_parse_state.is_in_non_code_marker = false;
                 self.topic_parse_state.marker_exit_string = None;
@@ -294,7 +294,7 @@ impl BuildProcess {
         let text = text.trim();
         match parse_marker_optional(text) {
             Ok(Some((text, marker_exit_string))) => {
-                topic.paragraphs[paragraph_index] = Paragraph::new_marker(&text);
+                topic.replace_paragraph(paragraph_index, Paragraph::new_marker(&text));
                 if marker_exit_string.eq(MARKER_CODE_END) {
                     self.topic_parse_state.is_in_code = true;
                 } else {
@@ -337,16 +337,16 @@ impl BuildProcess {
             Ok(Some(temp_table)) => {
                 // if text.contains("tools:nav:dates|Added") { dbg!(text, &temp_table, temp_table.has_header, temp_table.get_column_count(), self.topic_parse_state.is_past_attributes, self.topic_parse_state.is_past_first_header); }
                 //bg!(&table);
-                if !self.topic_parse_state.is_past_attributes && !self.topic_parse_state.is_past_first_header && !temp_table.has_header && temp_table.get_column_count() == 2 {
+                if !self.topic_parse_state.is_past_attributes && !self.topic_parse_state.is_past_first_header && !temp_table.has_header() && temp_table.get_column_count() == 2 {
                     // For now assume this is a table of attributes.
-                    for row in temp_table.rows.iter() {
-                        let text = row[0].text_block.get_unresolved_text();
+                    for row in temp_table.get_rows().iter() {
+                        let text = row[0].get_text_block().get_unresolved_text();
                         let attr_type_name = text_or_topic_link_label(&text)?;
                         //bg!(&attr_type_name);
                         AttributeType::assert_legal_attribute_type_name(&attr_type_name);
                         let mut attr_values = vec![];
                         // let cell_items = row[1].text.split(",").collect::<Vec<_>>();
-                        let text = row[1].text_block.get_unresolved_text();
+                        let text = row[1].get_text_block().get_unresolved_text();
 
                         // We want to split the attribute values using commas, but commas might be
                         // part of a quoted string or inside a link, and in those cases we want to
@@ -359,7 +359,7 @@ impl BuildProcess {
                         let cell_items = util::parse::split_trim(&text, ",");
                         // Put the commas back inside the quoted strings and links.
                         let cell_items = cell_items.iter().map(|item| item.replace(TEMP_COMMA, ",")).collect::<Vec<_>>();
-                        // if topic.name.starts_with("Bayesian") { //bg!(&topic.name, &cell_items); }
+                        // if topic.get_name().starts_with("Bayesian") { //bg!(topic.get_name(), &cell_items); }
                         // let cell_items = util::parse::split_outside_of_delimiters_rc(&text, ",", "\"", "\"", context).unwrap();
 
                         for cell_item in cell_items.iter() {
@@ -368,26 +368,26 @@ impl BuildProcess {
                             attr_values.push(value);
                         }
                         //bg!(&attr_values);
-                        topic.temp_attributes.insert(attr_type_name, attr_values);
+                        topic.add_temp_attribute_values(attr_type_name, attr_values);
                     }
                     self.topic_parse_state.is_past_attributes = true;
                 } else {
                     // Assume this is a normal (non-attribute) table.
                     let mut table = Table::new(temp_table.assume_has_header());
-                    for temp_row in temp_table.rows.iter() {
+                    for temp_row in temp_table.get_rows().iter() {
                         let mut cells = vec![];
                         for temp_cell in temp_row.iter() {
-                            let text = temp_cell.text_block.get_unresolved_text();
-                            //bg!(&topic.name, &text);
+                            let text = temp_cell.get_text_block().get_unresolved_text();
+                            dbg!(topic.get_name(), &text);
                             let text_block = self.make_text_block_rc(&text, context)?;
-                            cells.push(TableCell::new_text_block(text_block, temp_cell.is_bold, &temp_cell.horizontal));
+                            cells.push(TableCell::new_text_block(text_block, temp_cell.is_bold(), &temp_cell.get_horizontal()));
                         }
-                        table.rows.push(cells);
+                        table.add_row(cells);
                     }
                     if text.contains("tools:nav:dates|Added") { dbg!(&table); panic!() }
                     let paragraph = Paragraph::new_table(table);
                     //bg!(&paragraph);
-                    topic.paragraphs[paragraph_index] = paragraph;
+                    topic.replace_paragraph(paragraph_index, paragraph);
                 }
                 Ok(true)
             },
@@ -430,14 +430,14 @@ impl BuildProcess {
         let type_ = ListType::from_header(lines[0].trim());
         // The header may be a simple label like "Subtopics:" but it could also be a longer piece
         // of text containing links and other markup.
-        let header = self.make_text_block_rc(&topic.name, lines[0], context)?;
+        let header = self.make_text_block_rc(topic.get_name(), lines[0], context)?;
         let mut items = vec![];
         for line in lines.iter().skip(1) {
             // The depth of the list item is the number of spaces before the asterisk.
             match line.find("*") {
                 Some(depth) => {
                     let item_text = line[depth + 1..].trim();
-                    let item_text_block = self.make_text_block_rc(&topic.name, item_text, context)?;
+                    let item_text_block = self.make_text_block_rc(topic.get_name(), item_text, context)?;
                     items.push(ListItem::new(depth, item_text_block));
                 },
                 None => {
@@ -455,12 +455,12 @@ impl BuildProcess {
 
     fn paragraph_as_text_rc(&self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
         let context = &format!("{} Seems to be a text paragraph.", context);
-        let text_block = self.make_text_block_rc(&topic.name, text, context)?;
+        let text_block = self.make_text_block_rc(topic.get_name(), text, context)?;
         Ok(Some(Paragraph::new_text(text_block)))
     }
     */
 
-    fn check_links(&mut self, wiki: &Wiki) {
+    fn check_links(&mut self, wiki: &Model) {
         let mut link_errors = wiki.check_links();
         self.errors.append(&mut link_errors);
     }
@@ -526,10 +526,10 @@ impl BuildProcess {
      */
 }
 
-pub fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>, attributes_to_index: Vec<&str>) -> Wiki {
+pub fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>, attributes_to_index: Vec<&str>) -> Model {
     let mut bp = BuildProcess::new(name, namespace_main,PATH_PAGES, topic_limit);
     let mut model = bp.build();
-    model.attributes.attributes_to_index = attributes_to_index.iter().map(|x| x.to_string()).collect::<Vec<_>>();
+    model.set_attributes_to_index(attributes_to_index.iter().map(|x| x.to_string()).collect::<Vec<_>>());
     model
 }
 

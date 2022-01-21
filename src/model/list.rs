@@ -30,8 +30,8 @@ pub enum ListType {
 
 #[derive(Clone, Debug)]
 pub struct ListItem {
-    pub depth: usize,
-    pub block: TextBlock,
+    depth: usize,
+    text_block: TextBlock,
 }
 
 impl ListType {
@@ -93,7 +93,7 @@ impl ListType {
         }
     }
 
-    pub fn catalog_possible_list_types(model: &Wiki) -> util::group::Grouper<String> {
+    pub fn catalog_possible_list_types(model: &Model) -> util::group::Grouper<String> {
         let mut group = util::group::Grouper::new("Possible List Types");
         for topic in model.topics.values() {
             for paragraph in topic.paragraphs.iter() {
@@ -127,7 +127,16 @@ impl ListItem {
     pub fn new(depth: usize, block: TextBlock) -> Self {
         Self {
             depth,
-            block,
+            text_block: block,
         }
     }
+
+    pub fn get_depth(&self) -> usize {
+        self.depth
+    }
+
+    pub fn get_text_block(&self) -> &TextBlock {
+        &self.text_block
+    }
+
 }
