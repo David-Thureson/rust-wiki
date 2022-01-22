@@ -95,8 +95,8 @@ impl ListType {
 
     pub fn catalog_possible_list_types(model: &Model) -> util::group::Grouper<String> {
         let mut group = util::group::Grouper::new("Possible List Types");
-        for topic in model.topics.values() {
-            for paragraph in topic.paragraphs.iter() {
+        for topic in model.get_topics().values() {
+            for paragraph in topic.get_paragraphs().iter() {
                 match paragraph {
                     Paragraph::List { type_, header, .. } => {
                         match type_ {
@@ -120,7 +120,6 @@ impl ListType {
         }
         group
     }
-
 }
 
 impl ListItem {
@@ -137,6 +136,10 @@ impl ListItem {
 
     pub fn get_text_block(&self) -> &TextBlock {
         &self.text_block
+    }
+
+    pub fn get_text_block_mut(&self) -> &mut TextBlock {
+        &mut self.text_block
     }
 
 }

@@ -52,7 +52,7 @@ impl BuildProcess {
 
         model.catalog_links();
         self.check_links(&model);
-        //bg!(model.topics.keys());
+        //bg!(model.get_topics().keys());
         // It's not necessary to check whether parents link to subtopics, since those links will be
         // generated.
         // self.check_subtopic_relationships(&mut model);

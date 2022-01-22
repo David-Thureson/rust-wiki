@@ -41,6 +41,10 @@ impl Model {
         &self.main_namespace
     }
 
+    pub fn get_namespaces(&self) -> &BTreeMap<String, String> {
+        &self.namespaces
+    }
+
     pub fn add_namespace(&mut self, name: &str) {
         assert!(!self.namespaces.contains_key(name));
         self.namespaces.insert(name.to_string(), name.to_string());
@@ -74,6 +78,10 @@ impl Model {
 
     pub fn get_topics_mut(&mut self) -> &mut BTreeMap<TopicKey, Topic> {
         &mut self.topics
+    }
+
+    pub fn get_topic_mut(&mut self, topic_key: &TopicKey) -> &Option<&mut Topic> {
+        &self.topics.get_mut(topic_key)
     }
 
     pub fn add_topic(&mut self, topic: Topic) {
@@ -142,6 +150,10 @@ impl Model {
         self.attribute_list.clear_attributes();
     }
 
+    pub fn get_attribute_list(&self) -> &AttributeList {
+        &self.attribute_list
+    }
+
     pub fn get_topics_with_attribute_value(&self, value: &str) -> &Option<&Vec<(TopicKey, String)>> {
         self.attribute_list.get_topics_with_attribute_value(value)
     }
@@ -159,7 +171,7 @@ impl Model {
     }
 
     pub fn check_links(&self) -> TopicErrorList {
-        Link::check_links(self)
+        Topic::check_links(self)
     }
 
     pub fn check_topic_link(&self, errors: &mut TopicErrorList, list_name: &str, this_topic_key: &TopicKey, ref_topic_key: &TopicKey) {
@@ -169,7 +181,9 @@ impl Model {
     }
 
     pub fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
-        Link::update_internal_links(self, keys)
+        for topic in self.topics.values_mut() {
+            topic.update_internal_links(&mut self, keys);
+        }
     }
 
     pub fn check_subtopic_relationships(&self) -> TopicErrorList {
@@ -215,6 +229,10 @@ impl Model {
             Some(sequence) => Ok(*sequence),
             None => Err(format!("No sequence found for attribute type \"{}\".", attr_type_name)),
         }
+    }
+
+    pub fn set_domain_list(&mut self, domain_list: DomainList) {
+        self.domain_list = domain_list;
     }
 
     /*

@@ -147,15 +147,15 @@ impl Link {
     }
 
     pub fn catalog_links(model: &mut Model) {
-        for topic in model.topics.values_mut() {
-            topic.outbound_links.clear();
-            topic.inbound_topic_keys.clear();
-            topic.listed_topics.clear();
-            topic.subtopics.clear();
-            topic.combo_subtopics.clear();
+        for topic in model.get_topics_mut().values_mut() {
+            topic.clear_outbound_links();
+            topic.clear_inbound_topic_keys();
+            topic.clear_listed_topics();
+            topic.clear_subtopics();
+            topic.clear_combo_subtopics();
         }
-        for topic in model.topics.values_mut() {
-            for paragraph in topic.paragraphs.iter() {
+        for topic in model.get_topics_mut().values_mut() {
+            for paragraph in topic.get_paragraphs().iter() {
                 match paragraph {
                     Paragraph::List { type_, header, items } => {
                         let (is_combos, is_subtopics) = match type_ {
@@ -163,32 +163,30 @@ impl Link {
                             ListType::Subtopics => (false, true),
                             _ => (false, false),
                         };
-                        topic.outbound_links.append(&mut Self::catalog_links_text_block(header));
+                        topic.add_outbound_links(Self::catalog_links_text_block(header));
                         for list_item in items.iter() {
-                            if list_item.depth == 1 {
-                                let mut links = Self::catalog_links_text_block(&list_item.block);
+                            if list_item.get_depth() == 1 {
+                                let mut links = Self::catalog_links_text_block(&list_item.get_text_block());
                                 for link in links.iter() {
                                     match &link.type_ {
                                         LinkType::Topic { topic_key } => {
-                                            if !topic.listed_topics.contains(&topic_key) {
-                                                topic.listed_topics.push(topic_key.clone());
-                                            }
+                                            topic.add_listed_topic_optional(topic_key);
                                             if is_combos {
-                                                topic.combo_subtopics.push(topic_key.clone());
+                                                topic.add_combo_subtopic(topic_key.clone());
                                             } else if is_subtopics {
-                                                topic.subtopics.push(topic_key.clone());
+                                                topic.add_subtopic(topic_key.clone());
                                             }
                                             break;
                                         },
                                         _ => {},
                                     }
                                 }
-                                topic.outbound_links.append(&mut links);
+                                topic.add_outbound_links(links);
                             }
                         }
                     },
                     Paragraph::Text { text_block} => {
-                        topic.outbound_links.append(&mut Self::catalog_links_text_block(text_block));
+                        topic.add_outbound_links(Self::catalog_links_text_block(text_block));
                     },
                     _ => {},
                 }
@@ -197,12 +195,12 @@ impl Link {
 
         // Set inbound links.
         let mut map = BTreeMap::new();
-        for topic in model.topics.values() {
+        for topic in model.get_topics().values() {
             let topic_key = topic.get_key();
-            for link in topic.outbound_links.iter() {
+            for link in topic.get_outbound_links().iter() {
                 let outbound_topic_key = match &link.type_ {
                     LinkType::Topic { topic_key } => Some(topic_key.clone()),
-                    LinkType::Section { section_key } => Some(section_key.topic_key.clone()),
+                    LinkType::Section { section_key } => Some(section_key.get_topic_key().clone()),
                     _ => None,
                 };
                 if let Some(outbound_topic_key) = outbound_topic_key {
@@ -214,18 +212,14 @@ impl Link {
             }
         }
         for (topic_key, mut inbound_topic_keys) in map.drain_filter(|_k, _v| true) {
-            if let Some(topic) = model.topics.get_mut(&topic_key) {
-                topic.inbound_topic_keys.append(&mut inbound_topic_keys);
+            if let Some(topic) = model.get_topic_mut(&topic_key) {
+                topic.add_inbound_topic_keys(inbound_topic_keys);
             }
         }
 
         // Sort all of the vectors of TopicKeys.
-        for topic in model.topics.values_mut() {
-            // topic.outbound_links.sort();
-            TopicKey::sort_topic_keys_by_name(&mut topic.inbound_topic_keys);
-            TopicKey::sort_topic_keys_by_name(&mut topic.subtopics);
-            TopicKey::sort_topic_keys_by_name(&mut topic.combo_subtopics);
-            TopicKey::sort_topic_keys_by_name(&mut topic.listed_topics);
+        for topic in model.get_topics().values_mut() {
+            topic.sort_topic_key_lists();
         }
     }
 
@@ -247,77 +241,6 @@ impl Link {
         }
     }
 
-    pub fn check_links(model: &Model) -> TopicErrorList {
-        //bg!(model.topics.keys());
-        let mut errors = TopicErrorList::new();
-        for topic in model.topics.values() {
-            let this_topic_key = topic.get_key();
-            for link in topic.outbound_links.iter() {
-                match &link.type_ {
-                    LinkType::Topic { topic_key } => {
-                        model.check_topic_link(&mut errors, "outbound_links", &this_topic_key, topic_key);
-                    },
-                    LinkType::Section { section_key } => {
-                        //bg!(&section_key);
-                        if !model.has_section(section_key) {
-                            errors.add(&topic.get_key(), &format!("wiki::check_links(): Section link {} not found.", section_key));
-                        }
-                    },
-                    _ => {},
-                }
-            }
-            topic.parents.iter().for_each(|ref_topic_key| { model.check_topic_link(&mut errors, "parents", &this_topic_key, ref_topic_key); } );
-            topic.inbound_topic_keys.iter().for_each(|ref_topic_key| { model.check_topic_link(&mut errors, "inbound_topic_keys", &this_topic_key, ref_topic_key); } );
-            topic.subtopics.iter().for_each(|ref_topic_key| { model.check_topic_link(&mut errors, "subtopics", &this_topic_key, ref_topic_key); } );
-            topic.combo_subtopics.iter().for_each(|ref_topic_key| { model.check_topic_link(&mut errors, "combo_subtopics", &this_topic_key, ref_topic_key); } );
-            topic.listed_topics.iter().for_each(|ref_topic_key| { model.check_topic_link(&mut errors, "listed_topics", &this_topic_key, ref_topic_key); } );
-        }
-        errors
-    }
-
-    pub fn update_internal_links(model: &mut Model, keys: &Vec<(TopicKey, TopicKey)>) {
-        //bg!(&keys);
-        // For each entry in keys, the first TopicKey is the old value and the second is the new
-        // value.
-        for topic in model.topics.values_mut() {
-            for paragraph in topic.paragraphs.iter_mut() {
-                match paragraph {
-                    Paragraph::List { type_: _, header, items} => {
-                        header.update_internal_links(keys);
-                        for item in items.iter_mut() {
-                            item.block.update_internal_links(keys);
-                        }
-                    },
-                    Paragraph::Table { table} => {
-                        for row in table.rows.iter_mut() {
-                            for cell in row.iter_mut() {
-                                cell.text_block.update_internal_links(keys);
-                            }
-                        }
-                    },
-                    Paragraph::Text { text_block} => {
-                        text_block.update_internal_links(keys);
-                    },
-                    _ => {},
-                }
-            }
-            if !topic.parents.is_empty() {
-                let old_parents = topic.parents.clone();
-                topic.parents.clear();
-                for parent_topic_key in old_parents.iter() {
-                    let mut new_parent_topic_key = parent_topic_key.clone();
-                    for (topic_key_old, topic_key_new) in keys.iter() {
-                        if parent_topic_key.eq(&topic_key_old) {
-                            new_parent_topic_key = topic_key_new.clone();
-                            break;
-                        }
-                    }
-                    topic.parents.push(new_parent_topic_key);
-                }
-            }
-        }
-    }
-    
 }
 
 impl ImageSource {

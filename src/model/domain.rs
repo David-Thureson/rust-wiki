@@ -43,29 +43,30 @@ impl DomainList {
 
     pub fn catalog_domains(model: &mut Model) -> TopicErrorList {
         // This must be run after catalog_attributes().
-        debug_assert!(!model.attributes.attributes.is_empty());
+        debug_assert!(!model.get_attribute_list().get_attributes().is_empty());
         let errors = TopicErrorList::new();
-        model.domains = DomainList::new();
-        for topic in model.topics.values_mut() {
-            if let Some(attribute_instance) = topic.attributes.get(ATTRIBUTE_NAME_DOMAIN) {
-                if attribute_instance.values.len() == 1 {
-                    model.domains.add_domain_optional(&attribute_instance.values[0]);
+        let mut domain_list = DomainList::new();
+        for topic in model.get_topics().values_mut() {
+            if let Some(attribute_instance) = topic.get_attribute(ATTRIBUTE_NAME_DOMAIN) {
+                if attribute_instance.get_values().len() == 1 {
+                    domain_list.add_domain_optional(&attribute_instance.get_values()[0]);
                 } else {
-                    let values = attribute_instance.values.clone();
+                    let values = attribute_instance.get_values().clone();
                     for i in 0..values.len() {
-                        model.domains.add_domain_optional(&attribute_instance.values[i]);
+                        domain_list.add_domain_optional(&attribute_instance.get_values()[i]);
                         for j in 0..values.len() {
                             if i != j {
-                                model.domains.add_related_domain(&attribute_instance.values[i], &attribute_instance.values[j]);
+                                domain_list.add_related_domain(&attribute_instance.get_values()[i], &attribute_instance.get_values()[j]);
                             }
                         }
                     }
                 }
             }
         }
-        for domain in model.domains.domains.values_mut() {
+        for domain in domain_list.domains.values_mut() {
             domain.fill_related_by_count();
         }
+        model.set_domain_list(domain_list);
         // model.domains.print();
         // model.domains.print_strong_relationships();
         errors

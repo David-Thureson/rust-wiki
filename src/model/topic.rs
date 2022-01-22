@@ -113,8 +113,8 @@ impl Topic {
         entry.append(&mut values);
     }
 
-    pub fn add_or_find_temp_attribute(&mut self, name: &str) -> Vec<String> {
-        self.temp_attributes.entry(name.to_string).or_insert(vec![])
+    pub fn add_or_find_temp_attribute(&mut self, name: &str) -> &Vec<String> {
+        self.temp_attributes.entry(name.to_string()).or_insert(vec![])
     }
 
     pub fn get_attribute_count(&self) -> usize {
@@ -125,10 +125,14 @@ impl Topic {
         &self.attributes
     }
 
+    pub fn get_attribute(&self, attr_type_name: &str) -> &Option<&AttributeInstance> {
+        &self.attributes.get(attr_type_name)
+    }
+
     pub fn add_attribute(&mut self, attr_instance: AttributeInstance) {
-        let key = attr_instance.get_attribute_type_name.clone();
+        let key = attr_instance.get_attribute_type_name();
         assert!(!self.attributes.contains_key(key));
-        self.attributes.insert(key, attr_instance);
+        self.attributes.insert(key.to_string(), attr_instance);
     }
 
     pub fn clear_attributes(&mut self) {
@@ -159,12 +163,36 @@ impl Topic {
         self.paragraphs.push(paragraph);
     }
 
+    pub fn get_outbound_links(&self) -> &Vec<Link> {
+        &self.outbound_links
+    }
+
+    pub fn add_outbound_link(&mut self, link: Link) {
+        self.outbound_links.push(link)
+    }
+
+    pub fn add_outbound_links(&mut self, mut links: Vec<Link>) {
+        self.outbound_links.append(&mut links)
+    }
+
+    pub fn clear_outbound_links(&mut self) {
+        self.outbound_links.clear();
+    }
+
     pub fn get_inbound_topic_keys(&self) -> &Vec<TopicKey> {
         &self.inbound_topic_keys
     }
 
     pub fn get_inbound_topic_keys_count(&self) -> usize {
         self.inbound_topic_keys.len()
+    }
+
+    pub fn add_inbound_topic_keys(&mut self, mut topic_keys: Vec<TopicKey>) {
+        self.inbound_topic_keys.append(&mut topic_keys);
+    }
+
+    pub fn clear_inbound_topic_keys(&mut self) {
+        self.inbound_topic_keys.clear();
     }
 
     pub fn get_category_tree_node(&self) -> &Option<Rc<RefCell<TopicTreeNode>>> {
@@ -175,12 +203,38 @@ impl Topic {
         self.category_tree_node = node
     }
 
+    pub fn add_subtopic(&mut self, topic_key: TopicKey) {
+        self.subtopics.push(topic_key);
+    }
+
+    pub fn clear_subtopics(&mut self) {
+        self.subtopics.clear();
+    }
+
     pub fn get_subtopic_tree_node(&self) -> &Option<Rc<RefCell<TopicTreeNode>>> {
         &self.subtopic_tree_node
     }
 
     pub fn get_combo_subtopics(&self) -> &Vec<TopicKey> {
         &self.combo_subtopics
+    }
+
+    pub fn add_combo_subtopic(&mut self, topic_key: TopicKey) {
+        self.combo_subtopics.push(topic_key);
+    }
+
+    pub fn clear_combo_subtopics(&mut self) {
+        self.combo_subtopics.clear()
+    }
+
+    pub fn add_listed_topic_optional(&mut self, topic_key: &TopicKey) {
+        if !self.listed_topics.contains(topic_key) {
+            self.listed_topics.push(topic_key.clone());
+        }
+    }
+
+    pub fn clear_listed_topics(&mut self) {
+        self.listed_topics.clear();
     }
 
     pub fn is_category(&self) -> bool {
@@ -259,7 +313,7 @@ impl Topic {
         let mut errors = TopicErrorList::new();
         let err_msg_func = |msg: &str| format!("Topic::check_subtopic_relationships: {}", msg);
         let cat_combo = "Combinations".to_string();
-        for topic in model.topics.values() {
+        for topic in model.get_topics().values() {
             let topic_key = topic.get_key();
             let parent_count = topic.parents.len();
             if topic.category.as_ref().is_none() || topic.category.as_ref().unwrap().to_string() != cat_combo {
@@ -269,8 +323,8 @@ impl Topic {
                 } else {
                     for parent_topic_key in topic.parents.iter() {
                         //bg!(topic.get_name(), parent_topic_key);
-                        assert!(model.topics.contains_key(parent_topic_key), "No topic found for parent key = \"{:?}\" in topic = \"{}\". This should have been caught earlier.", parent_topic_key, topic.get_name());
-                        if !model.topics[parent_topic_key].listed_topics.contains(&topic_key) {
+                        assert!(model.get_topics().contains_key(parent_topic_key), "No topic found for parent key = \"{:?}\" in topic = \"{}\". This should have been caught earlier.", parent_topic_key, topic.get_name());
+                        if !model.get_topics()[parent_topic_key].listed_topics.contains(&topic_key) {
                             errors.add(&parent_topic_key,&err_msg_func(&format!("[[{}]]", topic.get_name())));
                         }
                     }
@@ -281,8 +335,8 @@ impl Topic {
                     errors.add(&topic_key,&err_msg_func(&format!("Combo category, so expected 2 parents, found {}.", parent_count)));
                 } else {
                     for parent_topic_key in topic.parents.iter() {
-                        assert!(model.topics.contains_key(parent_topic_key), "No topic found for parent key = \"{:?}\" in topic = \"{}\". This should have been caught earlier.", parent_topic_key, topic.get_name());
-                        if !model.topics[parent_topic_key].combo_subtopics.contains(&topic_key) {
+                        assert!(model.get_topics().contains_key(parent_topic_key), "No topic found for parent key = \"{:?}\" in topic = \"{}\". This should have been caught earlier.", parent_topic_key, topic.get_name());
+                        if !model.get_topics()[parent_topic_key].combo_subtopics.contains(&topic_key) {
                             errors.add(&parent_topic_key, &err_msg_func(&format!("No combination link to child [[{}]].", topic.get_name())));
                         }
                     }
@@ -293,13 +347,13 @@ impl Topic {
     }
 
     pub fn make_subtopic_tree(model: &mut Model) -> TopicTree {
-        for topic in model.topics.values_mut() {
+        for topic in model.get_topics().values_mut() {
             topic.subtopics.clear();
             topic.combo_subtopics.clear();
         }
         let mut parent_child_pairs = vec![];
         let mut parent_combo_pairs = vec![];
-        for topic in model.topics.values() {
+        for topic in model.get_topics().values() {
             let topic_key = topic.get_key();
             match topic.parents.len() {
                 0 => {
@@ -323,19 +377,19 @@ impl Topic {
             }
         }
         for (parent_topic_key, child_topic_key) in parent_child_pairs.iter() {
-            model.topics.get_mut(&parent_topic_key).unwrap().subtopics.push(child_topic_key.clone());
+            model.get_topics().get_mut(&parent_topic_key).unwrap().subtopics.push(child_topic_key.clone());
         }
         for (parent_topic_key, combo_topic_key) in parent_combo_pairs.iter() {
-            model.topics.get_mut(&parent_topic_key).unwrap().combo_subtopics.push(combo_topic_key.clone());
+            model.get_topics().get_mut(&parent_topic_key).unwrap().combo_subtopics.push(combo_topic_key.clone());
         }
-        for topic in model.topics.values_mut() {
+        for topic in model.get_topics().values_mut() {
             topic.subtopics.sort_by_cached_key(|topic_key| topic_key.topic_name.clone());
             topic.combo_subtopics.sort_by_cached_key(|topic_key| topic_key.topic_name.clone());
         }
         let mut tree = util::tree::Tree::create(parent_child_pairs, true);
         Topic::sort_topic_tree(&mut tree);
         // Have each topic with a subtopic point to its node in the subtopic tree.
-        for topic in model.topics.values_mut() {
+        for topic in model.get_topics().values_mut() {
             topic.subtopic_tree_node = tree.get_node(&topic.get_key());
         }
         // tree.print_counts_to_depth();
@@ -348,6 +402,83 @@ impl Topic {
         self.attributes.remove(attr_type_name);
         let mut attr_type = AttributeType::new(attr_type_name, &AttributeValueType::Date, sequence);
         attr_type.add_date_value(value, &self.get_key()).unwrap();
+    }
+
+    pub fn sort_topic_key_lists(&mut self) {
+        // Sort all of the vectors of TopicKeys.
+        TopicKey::sort_topic_keys_by_name(&mut self.inbound_topic_keys);
+        TopicKey::sort_topic_keys_by_name(&mut self.subtopics);
+        TopicKey::sort_topic_keys_by_name(&mut self.combo_subtopics);
+        TopicKey::sort_topic_keys_by_name(&mut self.listed_topics);
+    }
+
+    pub fn check_links(model: &Model) -> TopicErrorList {
+        //bg!(model.get_topics().keys());
+        let mut errors = TopicErrorList::new();
+        for topic in model.get_topics().values() {
+            let this_topic_key = topic.get_key();
+            for link in topic.outbound_links.iter() {
+                match &link.get_type() {
+                    LinkType::Topic { topic_key } => {
+                        model.check_topic_link(&mut errors, "outbound_links", &this_topic_key, topic_key);
+                    },
+                    LinkType::Section { section_key } => {
+                        //bg!(&section_key);
+                        if !model.has_section(section_key) {
+                            errors.add(&topic.get_key(), &format!("wiki::check_links(): Section link {} not found.", section_key));
+                        }
+                    },
+                    _ => {},
+                }
+            }
+            topic.parents.iter().for_each(|ref_topic_key| { model.check_topic_link(&mut errors, "parents", &this_topic_key, ref_topic_key); } );
+            topic.inbound_topic_keys.iter().for_each(|ref_topic_key| { model.check_topic_link(&mut errors, "inbound_topic_keys", &this_topic_key, ref_topic_key); } );
+            topic.subtopics.iter().for_each(|ref_topic_key| { model.check_topic_link(&mut errors, "subtopics", &this_topic_key, ref_topic_key); } );
+            topic.combo_subtopics.iter().for_each(|ref_topic_key| { model.check_topic_link(&mut errors, "combo_subtopics", &this_topic_key, ref_topic_key); } );
+            topic.listed_topics.iter().for_each(|ref_topic_key| { model.check_topic_link(&mut errors, "listed_topics", &this_topic_key, ref_topic_key); } );
+        }
+        errors
+    }
+
+    pub fn update_internal_links(&mut self, model: &mut Model, keys: &Vec<(TopicKey, TopicKey)>) {
+        //bg!(&keys);
+        // For each entry in keys, the first TopicKey is the old value and the second is the new
+        // value.
+        for paragraph in self.paragraphs.iter_mut() {
+            match paragraph {
+                Paragraph::List { type_: _, header, items} => {
+                    header.update_internal_links(keys);
+                    for item in items.iter_mut() {
+                        item.get_text_block_mut().update_internal_links(keys);
+                    }
+                },
+                Paragraph::Table { table} => {
+                    for row in table.get_rows().iter_mut() {
+                        for cell in row.iter_mut() {
+                            cell.get_text_block().update_internal_links(keys);
+                        }
+                    }
+                },
+                Paragraph::Text { text_block} => {
+                    text_block.update_internal_links(keys);
+                },
+                _ => {},
+            }
+        }
+        if !self.parents.is_empty() {
+            let old_parents = self.parents.clone();
+            self.parents.clear();
+            for parent_topic_key in old_parents.iter() {
+                let mut new_parent_topic_key = parent_topic_key.clone();
+                for (topic_key_old, topic_key_new) in keys.iter() {
+                    if parent_topic_key.eq(&topic_key_old) {
+                        new_parent_topic_key = topic_key_new.clone();
+                        break;
+                    }
+                }
+                self.parents.push(new_parent_topic_key);
+            }
+        }
     }
 
 }
@@ -461,6 +592,10 @@ impl SectionKey {
             topic_key: TopicKey::new(namespace, topic_name),
             section_name: section_name.to_string(),
         }
+    }
+
+    pub fn get_topic_key(&self) -> &TopicKey {
+        &self.topic_key
     }
 
     pub fn get_namespace(&self) -> &str {
