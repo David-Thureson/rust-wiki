@@ -10,7 +10,7 @@ use std::fs;
 
 //const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
 
-pub struct GenFromModel<'a> {
+pub(crate) struct GenFromModel<'a> {
     model: &'a model::Model,
     current_topic_key: Option<model::TopicKey>,
     errors: model::TopicErrorList,
@@ -18,7 +18,7 @@ pub struct GenFromModel<'a> {
 
 impl <'a> GenFromModel<'a> {
 
-    pub fn new(model: &'a model::Model) -> Self {
+    pub(crate) fn new(model: &'a model::Model) -> Self {
         Self {
             model: model,
             current_topic_key: None,
@@ -26,7 +26,7 @@ impl <'a> GenFromModel<'a> {
         }
     }
 
-    pub fn gen_all_topics_page(&mut self) {
+    pub(crate) fn gen_all_topics_page(&mut self) {
         let namespace = &self.model.qualify_namespace(&self.model.namespace_navigation());
         let mut page = wiki::WikiGenPage::new(namespace, wiki::PAGE_NAME_ALL_TOPICS,None);
         let first_letter_map = self.model.get_topics_first_letter_map();
@@ -42,7 +42,7 @@ impl <'a> GenFromModel<'a> {
         page.write();
     }
 
-    pub fn gen_topic_first_letter_links(&mut self, page: &mut WikiGenPage, column_count: usize) {
+    pub(crate) fn gen_topic_first_letter_links(&mut self, page: &mut WikiGenPage, column_count: usize) {
         let namespace = &self.model.qualify_namespace(&self.model.namespace_navigation());
         let first_letter_map = self.model.get_topics_first_letter_map();
 
@@ -66,7 +66,7 @@ impl <'a> GenFromModel<'a> {
          */
     }
 
-    pub fn gen_categories_page(&self) {
+    pub(crate) fn gen_categories_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_CATEGORIES,None);
         let nodes = self.model.category_tree().unroll_to_depth(None);
 
@@ -80,14 +80,14 @@ impl <'a> GenFromModel<'a> {
         page.write();
     }
 
-    pub fn gen_subtopics_page(&self) {
+    pub(crate) fn gen_subtopics_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_SUBTOPICS,None);
         let nodes = self.model.subtopic_tree().unroll_to_depth(None);
         self.gen_partial_topic_tree(&mut page, &nodes, 0, false, None);
         page.write();
     }
 
-    pub fn gen_attr_page(&self) {
+    pub(crate) fn gen_attr_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR,None);
         for attribute_type in self.model.get_attribute_types().values()
             .filter(|attribute_type| {
@@ -113,7 +113,7 @@ impl <'a> GenFromModel<'a> {
         page.write();
     }
 
-    pub fn gen_attr_value_page(&self) {
+    pub(crate) fn gen_attr_value_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR_VALUE,None);
         let mut map = BTreeMap::new();
         for attribute_type in self.model.get_attribute_types().values()
@@ -157,7 +157,7 @@ impl <'a> GenFromModel<'a> {
         }
     }
 
-    pub fn gen_attr_year_page(&self) {
+    pub(crate) fn gen_attr_year_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR_YEAR,None);
         let values = self.model.get_distinct_attr_values(&AttributeValueType::Year);
         for value in values.iter() {
@@ -172,7 +172,7 @@ impl <'a> GenFromModel<'a> {
         page.write();
     }
 
-    pub fn gen_attr_date_page(&self) {
+    pub(crate) fn gen_attr_date_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR_DATE,None);
         let values = self.model.get_distinct_attr_values(&AttributeValueType::Date);
         let dates = values.iter().map(|value| model::AttributeType::value_to_date(value)).collect::<Vec<_>>();
@@ -207,7 +207,7 @@ impl <'a> GenFromModel<'a> {
     }
 
     /*
-    pub fn gen_attr_date_page(&self) {
+    pub(crate) fn gen_attr_date_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(model::NAMESPACE_NAVIGATION), wiki::PAGE_NAME_ATTR_DATE,None);
         let values = self.model.get_distinct_attr_values(&AttributeValueType::Date);
         let dates = values.iter().map(|value| model::AttributeType::value_to_date(value)).collect::<Vec<_>>();
@@ -228,7 +228,7 @@ impl <'a> GenFromModel<'a> {
     }
     */
 
-    pub fn gen(&mut self) {
+    pub(crate) fn gen(&mut self) {
         for topic in self.model.get_topics().values() {
             self.current_topic_key = Some(topic.get_key());
             //bg!(&self.current_topic_key);
@@ -472,7 +472,7 @@ impl <'a> GenFromModel<'a> {
         }
     }
 
-    pub fn gen_partial_topic_tree(&self, page: &mut wiki::WikiGenPage, nodes: &Vec<Rc<RefCell<model::TopicTreeNode>>>, start_depth: usize, is_category: bool, label: Option<&str>) {
+    pub(crate) fn gen_partial_topic_tree(&self, page: &mut wiki::WikiGenPage, nodes: &Vec<Rc<RefCell<model::TopicTreeNode>>>, start_depth: usize, is_category: bool, label: Option<&str>) {
         if !nodes.is_empty() {
             if let Some(label) = label {
                 page.add_line(label);
@@ -544,7 +544,7 @@ impl <'a> GenFromModel<'a> {
         page.end_paragraph();
     }
 
-    pub fn add_table_row(&mut self, page: &mut wiki::WikiGenPage, table: &model::Table, row_index: usize, cells: &Vec<String>) {
+    pub(crate) fn add_table_row(&mut self, page: &mut wiki::WikiGenPage, table: &model::Table, row_index: usize, cells: &Vec<String>) {
         // A table header row should look something like:
         //   ^ Color ^ Blue ^
         // A regular table row should look something like:
@@ -613,7 +613,7 @@ impl <'a> GenFromModel<'a> {
         }
     }
 
-    pub fn add_inbound_links_section_optional(&self, page: &mut wiki::WikiGenPage, topic: &Topic) {
+    pub(crate) fn add_inbound_links_section_optional(&self, page: &mut wiki::WikiGenPage, topic: &Topic) {
         let has_attribute_links = self.model.has_attribute_links(&page.topic_name);
         let has_inbound_links = topic.get_inbound_topic_keys_count() > 0;
         if has_attribute_links || has_inbound_links {
@@ -623,7 +623,7 @@ impl <'a> GenFromModel<'a> {
         }
     }
 
-    pub fn add_attribute_value_topics_list_optional(&self, page: &mut wiki::WikiGenPage) {
+    pub(crate) fn add_attribute_value_topics_list_optional(&self, page: &mut wiki::WikiGenPage) {
         let list = self.model.get_topics_with_attribute_value(&page.topic_name);
         if !list.is_empty() {
             page.add_line("Topics with this attribute:");
@@ -636,7 +636,7 @@ impl <'a> GenFromModel<'a> {
         }
     }
 
-    pub fn add_inbound_links_optional(&self, page: &mut wiki::WikiGenPage, topic: &Topic) {
+    pub(crate) fn add_inbound_links_optional(&self, page: &mut wiki::WikiGenPage, topic: &Topic) {
         if topic.get_inbound_topic_keys_count() > 0 {
             page.add_line("Inbound links:");
             for topic_key in topic.get_inbound_topic_keys().iter() {
@@ -651,17 +651,18 @@ impl <'a> GenFromModel<'a> {
         self.errors.add(&self.current_topic_key.as_ref().unwrap(),msg);
     }
 
-    pub fn page_link_simple(&self, topic_key: &model::TopicKey) -> String {
+    pub(crate) fn page_link_simple(&self, topic_key: &model::TopicKey) -> String {
         //ebug_assert!(self.model.has_topic(topic_key), "Topic key not found: {}", topic_key.to_string());
         Self::page_link(topic_key)
     }
 
-    pub fn section_link_simple(&self, topic_key: &model::TopicKey, section_name: &str) -> String {
+    #[allow(dead_code)]
+    pub(crate) fn section_link_simple(&self, topic_key: &model::TopicKey, section_name: &str) -> String {
         //ebug_assert!(self.model.has_topic(topic_key), "Topic key not found: {}", topic_key.to_string());
         Self::section_link(topic_key, section_name)
     }
 
-    pub fn domain_link(&self, domain_name: &str, on_attribute_value_page: bool) -> String {
+    pub(crate) fn domain_link(&self, domain_name: &str, on_attribute_value_page: bool) -> String {
         if on_attribute_value_page {
             wiki::section_link_same_page(&domain_name, None)
         } else {
@@ -669,17 +670,18 @@ impl <'a> GenFromModel<'a> {
         }
     }
 
-    pub fn page_link(topic_key: &model::TopicKey) -> String {
+    pub(crate) fn page_link(topic_key: &model::TopicKey) -> String {
         let link = wiki::page_link(&topic_key.get_namespace(), &topic_key.get_topic_name(), None);
         link
     }
 
-    pub fn section_link(topic_key: &model::TopicKey, section_name: &str) -> String {
+    #[allow(dead_code)]
+    pub(crate) fn section_link(topic_key: &model::TopicKey, section_name: &str) -> String {
         let link = wiki::section_link(&topic_key.get_namespace(), &topic_key.get_topic_name(), section_name, None);
         link
     }
 
-    pub fn copy_image_files(path_from: &str, path_to: &str, print: bool) {
+    pub(crate) fn copy_image_files(path_from: &str, path_to: &str, print: bool) {
         dbg!(&path_from, &path_to);
         for path in fs::read_dir(path_from).unwrap() {
             let dir_entry = path.as_ref().unwrap();

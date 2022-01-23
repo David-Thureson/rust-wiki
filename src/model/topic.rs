@@ -6,7 +6,7 @@ use std::rc::Rc;
 use std::cell::{RefCell, Ref};
 use chrono::NaiveDate;
 
-pub struct Topic {
+pub(crate) struct Topic {
     parents: Vec<TopicKey>,
     namespace: String,
     name: String,
@@ -24,19 +24,19 @@ pub struct Topic {
 }
 
 #[derive(Clone, Debug)]
-pub struct TopicKey {
+pub(crate) struct TopicKey {
     namespace: String,
     topic_name: String,
 }
 
 #[derive(Clone, Debug)]
-pub struct SectionKey {
+pub(crate) struct SectionKey {
     topic_key: TopicKey,
     section_name: String,
 }
 
 impl Topic {
-    pub fn new(namespace: &str, name: &str) -> Self {
+    pub(crate) fn new(namespace: &str, name: &str) -> Self {
         TopicKey::assert_legal_namespace(namespace);
         Self {
             parents: vec![],
@@ -57,44 +57,40 @@ impl Topic {
         }
     }
 
-    pub fn get_key(&self) -> TopicKey {
+    pub(crate) fn get_key(&self) -> TopicKey {
         TopicKey::new(&self.namespace, &self.name)
     }
 
-    pub fn add_parent(&mut self, topic_key: &TopicKey) {
+    pub(crate) fn add_parent(&mut self, topic_key: &TopicKey) {
         assert!(!self.parents.contains(topic_key));
         assert!(self.parents.len() < 2);
         self.parents.push(topic_key.clone());
     }
 
-    pub fn set_parents(&mut self, parents: Vec<TopicKey>) {
+    pub(crate) fn set_parents(&mut self, parents: Vec<TopicKey>) {
         assert!(self.parents.is_empty());
         assert!(!parents.is_empty());
         assert!(parents.len() <= 2);
         self.parents = parents;
     }
 
-    pub fn get_parent_count(&self) -> usize {
+    pub(crate) fn get_parent_count(&self) -> usize {
         self.parents.len()
     }
 
-    pub fn get_parent(&self, index: usize) -> &TopicKey {
+    pub(crate) fn get_parent(&self, index: usize) -> &TopicKey {
         &self.parents[index]
     }
 
-    pub fn get_namespace(&self) -> &str {
+    pub(crate) fn get_namespace(&self) -> &str {
         &self.namespace
     }
 
-    pub fn set_namespace(&mut self, namespace: String) {
-        self.namespace = namespace;
-    }
-
-    pub fn get_name(&self) -> &str {
+    pub(crate) fn get_name(&self) -> &str {
         &self.name
     }
 
-    pub fn get_category(&self) -> Option<String> {
+    pub(crate) fn get_category(&self) -> Option<String> {
         if let Some(category) = &self.category {
             Some(category.clone())
         } else {
@@ -102,16 +98,17 @@ impl Topic {
         }
     }
 
-    pub fn set_category(&mut self, category: &str) {
+    pub(crate) fn set_category(&mut self, category: &str) {
         debug_assert!(self.category.is_none());
         self.category = Some(category.to_string());
     }
 
-    pub fn get_temp_attributes(&self) -> &BTreeMap<String, Vec<String>> {
+    #[allow(dead_code)]
+    pub(crate) fn get_temp_attributes(&self) -> &BTreeMap<String, Vec<String>> {
         &self.temp_attributes
     }
 
-    pub fn catalog_attributes(&mut self, errors: &mut TopicErrorList, attribute_types: &mut BTreeMap<String, AttributeType>, attribute_values: &mut BTreeMap<String, Vec<(TopicKey, String)>>, attribute_orders: &BTreeMap<String, usize>) {
+    pub(crate) fn catalog_attributes(&mut self, errors: &mut TopicErrorList, attribute_types: &mut BTreeMap<String, AttributeType>, attribute_values: &mut BTreeMap<String, Vec<(TopicKey, String)>>, attribute_orders: &BTreeMap<String, usize>) {
         // At this point we should have only temp attributes, not references to attribute types
         // held by the model.
         assert!(self.attributes.is_empty());
@@ -171,153 +168,164 @@ impl Topic {
         }
     }
 
-    pub fn add_temp_attribute_values(&mut self, attr_type_name: String, mut values: Vec<String>) {
+    pub(crate) fn add_temp_attribute_values(&mut self, attr_type_name: String, mut values: Vec<String>) {
         let entry = self.temp_attributes.entry(attr_type_name).or_insert(vec![]);
         entry.append(&mut values);
     }
 
-    pub fn add_or_find_temp_attribute(&mut self, name: &str) -> &mut Vec<String> {
+    pub(crate) fn add_or_find_temp_attribute(&mut self, name: &str) -> &mut Vec<String> {
         self.temp_attributes.entry(name.to_string()).or_insert(vec![])
     }
 
-    pub fn get_attribute_count(&self) -> usize {
+    pub(crate) fn get_attribute_count(&self) -> usize {
         self.attributes.len()
     }
 
-    pub fn get_attribute_value_count(&self, attr_type_name: &str) -> usize {
+    #[allow(dead_code)]
+    pub(crate) fn get_attribute_value_count(&self, attr_type_name: &str) -> usize {
         self.attributes.get(attr_type_name).map_or(0, |attr_instance| attr_instance.get_values().len())
     }
 
-    pub fn get_attributes(&self) -> &BTreeMap<String, AttributeInstance> {
+    pub(crate) fn get_attributes(&self) -> &BTreeMap<String, AttributeInstance> {
         &self.attributes
     }
 
     /*
-    pub fn get_attribute(&self, attr_type_name: &str) -> &Option<&AttributeInstance> {
+    pub(crate) fn get_attribute(&self, attr_type_name: &str) -> &Option<&AttributeInstance> {
         &self.attributes.get(attr_type_name)
     }
      */
 
-    pub fn add_attribute(&mut self, attr_instance: AttributeInstance) {
+    pub(crate) fn add_attribute(&mut self, attr_instance: AttributeInstance) {
         let key = attr_instance.get_attribute_type_name();
         assert!(!self.attributes.contains_key(key));
         self.attributes.insert(key.to_string(), attr_instance);
     }
 
-    pub fn clear_attributes(&mut self) {
+    /*
+    pub(crate) fn clear_attributes(&mut self) {
         self.attributes.clear()
     }
+    */
 
-    pub fn get_paragraph_count(&self) -> usize {
+    pub(crate) fn get_paragraph_count(&self) -> usize {
         self.paragraphs.len()
     }
 
-    pub fn get_paragraphs(&self) -> &Vec<Paragraph> {
+    pub(crate) fn get_paragraphs(&self) -> &Vec<Paragraph> {
         &self.paragraphs
     }
 
-    pub fn get_paragraphs_mut(&mut self) -> &mut Vec<Paragraph> {
+    /*
+    pub(crate) fn get_paragraphs_mut(&mut self) -> &mut Vec<Paragraph> {
         &mut self.paragraphs
     }
+    */
 
-    pub fn get_paragraph(&self, index: usize) -> &Paragraph {
+    /*
+    pub(crate) fn get_paragraph(&self, index: usize) -> &Paragraph {
         &self.paragraphs[index]
     }
+    */
 
-    pub fn replace_paragraph(&mut self, paragraph_index: usize, paragraph: Paragraph) -> Paragraph {
+    pub(crate) fn replace_paragraph(&mut self, paragraph_index: usize, paragraph: Paragraph) -> Paragraph {
         std::mem::replace(&mut self.paragraphs[paragraph_index], paragraph)
     }
 
-    pub fn replace_paragraph_with_placeholder(&mut self, paragraph_index: usize) -> Paragraph {
+    pub(crate) fn replace_paragraph_with_placeholder(&mut self, paragraph_index: usize) -> Paragraph {
         self.replace_paragraph(paragraph_index,Paragraph::Placeholder)
     }
 
-    pub fn add_paragraph(&mut self, paragraph: Paragraph) {
+    pub(crate) fn add_paragraph(&mut self, paragraph: Paragraph) {
         self.paragraphs.push(paragraph);
     }
 
-    pub fn get_outbound_links(&self) -> &Vec<Link> {
+    /*
+    pub(crate) fn get_outbound_links(&self) -> &Vec<Link> {
         &self.outbound_links
     }
+    */
 
     /*
-    pub fn add_outbound_link(&mut self, link: Link) {
+    pub(crate) fn add_outbound_link(&mut self, link: Link) {
         self.outbound_links.push(link)
     }
 
-    pub fn add_outbound_links(&mut self, mut links: Vec<Link>) {
+    pub(crate) fn add_outbound_links(&mut self, mut links: Vec<Link>) {
         self.outbound_links.append(&mut links)
     }
+    */
 
-     */
-
-    pub fn clear_outbound_links(&mut self) {
+    /*
+    pub(crate) fn clear_outbound_links(&mut self) {
         self.outbound_links.clear();
     }
+    */
 
-    pub fn get_inbound_topic_keys(&self) -> &Vec<TopicKey> {
+    pub(crate) fn get_inbound_topic_keys(&self) -> &Vec<TopicKey> {
         &self.inbound_topic_keys
     }
 
-    pub fn get_inbound_topic_keys_count(&self) -> usize {
+    pub(crate) fn get_inbound_topic_keys_count(&self) -> usize {
         self.inbound_topic_keys.len()
     }
 
-    pub fn add_inbound_topic_keys(&mut self, mut topic_keys: Vec<TopicKey>) {
+    pub(crate) fn add_inbound_topic_keys(&mut self, mut topic_keys: Vec<TopicKey>) {
         self.inbound_topic_keys.append(&mut topic_keys);
     }
 
-    pub fn clear_inbound_topic_keys(&mut self) {
+    /*
+    pub(crate) fn clear_inbound_topic_keys(&mut self) {
         self.inbound_topic_keys.clear();
     }
+    */
 
-    pub fn get_category_tree_node(&self) -> &Option<Rc<RefCell<TopicTreeNode>>> {
+    pub(crate) fn get_category_tree_node(&self) -> &Option<Rc<RefCell<TopicTreeNode>>> {
         &self.category_tree_node
     }
 
-    pub fn set_category_tree_node(&mut self, node: Option<Rc<RefCell<TopicTreeNode>>>) {
+    pub(crate) fn set_category_tree_node(&mut self, node: Option<Rc<RefCell<TopicTreeNode>>>) {
         self.category_tree_node = node
     }
 
-    pub fn add_subtopic(&mut self, topic_key: TopicKey) {
+    /*
+    pub(crate) fn add_subtopic(&mut self, topic_key: TopicKey) {
         self.subtopics.push(topic_key);
     }
+    */
 
-    pub fn clear_subtopics(&mut self) {
+    /*
+    pub(crate) fn clear_subtopics(&mut self) {
         self.subtopics.clear();
     }
+    */
 
-    pub fn get_subtopic_tree_node(&self) -> &Option<Rc<RefCell<TopicTreeNode>>> {
+    pub(crate) fn get_subtopic_tree_node(&self) -> &Option<Rc<RefCell<TopicTreeNode>>> {
         &self.subtopic_tree_node
     }
 
-    pub fn get_combo_subtopics(&self) -> &Vec<TopicKey> {
+    pub(crate) fn get_combo_subtopics(&self) -> &Vec<TopicKey> {
         &self.combo_subtopics
     }
 
-    pub fn add_combo_subtopic(&mut self, topic_key: TopicKey) {
+    /*
+    pub(crate) fn add_combo_subtopic(&mut self, topic_key: TopicKey) {
         self.combo_subtopics.push(topic_key);
     }
+    */
 
-    pub fn clear_combo_subtopics(&mut self) {
+    /*
+    pub(crate) fn clear_combo_subtopics(&mut self) {
         self.combo_subtopics.clear()
     }
+    */
 
-    pub fn add_listed_topic_optional(&mut self, topic_key: &TopicKey) {
-        if !self.listed_topics.contains(topic_key) {
-            self.listed_topics.push(topic_key.clone());
-        }
-    }
-
-    pub fn clear_listed_topics(&mut self) {
-        self.listed_topics.clear();
-    }
-
-    pub fn is_category(&self) -> bool {
+    pub(crate) fn is_category(&self) -> bool {
         self.category_tree_node.as_ref().map_or(false, |node| b!(&node).height() > 1)
     }
 
-    pub fn direct_subcategory_nodes(&self) -> Vec<Rc<RefCell<TopicTreeNode>>> {
+    /*
+    pub(crate) fn direct_subcategory_nodes(&self) -> Vec<Rc<RefCell<TopicTreeNode>>> {
         // Get all of the topics corresponding to the non-leaf nodes directly under this one.
         match &self.category_tree_node {
             Some(node_rc) => {
@@ -332,8 +340,9 @@ impl Topic {
             None => vec![],
         }
     }
+    */
 
-    pub fn direct_topics_in_category(&self) -> Vec<TopicKey> {
+    pub(crate) fn direct_topics_in_category(&self) -> Vec<TopicKey> {
         match &self.category_tree_node {
             Some(node_rc) => {
                 let node = b!(node_rc);
@@ -348,7 +357,7 @@ impl Topic {
         }
     }
 
-    pub fn indirect_topics_in_category(&self) -> Vec<TopicKey> {
+    pub(crate) fn indirect_topics_in_category(&self) -> Vec<TopicKey> {
         match &self.category_tree_node {
             Some(node_rc) => {
                 let node = b!(node_rc);
@@ -361,7 +370,7 @@ impl Topic {
         }
     }
 
-    pub fn has_section(&self, section_name: &str) -> bool {
+    pub(crate) fn has_section(&self, section_name: &str) -> bool {
         let section_name = section_name.to_lowercase();
         // let debug = section_name.contains("cognitive");
         // if debug { //bg!(&self.name, &section_name); }
@@ -381,11 +390,11 @@ impl Topic {
         false
     }
 
-    pub fn sort_topic_tree(tree: &mut TopicTree) {
+    pub(crate) fn sort_topic_tree(tree: &mut TopicTree) {
         tree.sort_recursive(&|node: &Rc<RefCell<TopicTreeNode>>| b!(node).item.topic_name.clone());
     }
 
-    pub fn check_subtopic_relationships(model: &Model) -> TopicErrorList {
+    pub(crate) fn check_subtopic_relationships(model: &Model) -> TopicErrorList {
         let mut errors = TopicErrorList::new();
         let err_msg_func = |msg: &str| format!("Topic::check_subtopic_relationships: {}", msg);
         let cat_combo = "Combinations".to_string();
@@ -422,7 +431,7 @@ impl Topic {
         errors
     }
 
-    pub fn make_subtopic_tree(model: &mut Model) -> TopicTree {
+    pub(crate) fn make_subtopic_tree(model: &mut Model) -> TopicTree {
         for topic in model.get_topics_mut().values_mut() {
             topic.subtopics.clear();
             topic.combo_subtopics.clear();
@@ -473,7 +482,7 @@ impl Topic {
         tree
     }
 
-    pub fn catalog_outbound_links(&mut self) {
+    pub(crate) fn catalog_outbound_links(&mut self) {
         self.outbound_links.clear();
         self.listed_topics.clear();
         self.subtopics.clear();
@@ -527,7 +536,7 @@ impl Topic {
         TopicKey::sort_topic_keys_by_name(&mut self.listed_topics);
     }
 
-    pub fn get_topic_links_as_topic_keys(&self) -> Vec<TopicKey> {
+    pub(crate) fn get_topic_links_as_topic_keys(&self) -> Vec<TopicKey> {
         self.outbound_links.iter()
             .filter_map(|link| {
                 match link.get_type() {
@@ -539,19 +548,15 @@ impl Topic {
             .collect()
     }
 
-    pub fn set_attribute_date(&mut self, attr_type_name: &str, sequence: usize, value: &NaiveDate) {
+    #[allow(dead_code)]
+    pub(crate) fn set_attribute_date(&mut self, attr_type_name: &str, sequence: usize, value: &NaiveDate) {
         AttributeType::assert_legal_attribute_type_name(attr_type_name);
         self.attributes.remove(attr_type_name);
         let mut attr_type = AttributeType::new(attr_type_name, &AttributeValueType::Date, sequence);
         attr_type.add_date_value(value, &self.get_key()).unwrap();
     }
 
-    pub fn sort_topic_key_lists(&mut self) {
-        // Sort all of the vectors of TopicKeys.
-        TopicKey::sort_topic_keys_by_name(&mut self.inbound_topic_keys);
-    }
-
-    pub fn check_links(model: &Model) -> TopicErrorList {
+    pub(crate) fn check_links(model: &Model) -> TopicErrorList {
         //bg!(model.get_topics().keys());
         let mut errors = TopicErrorList::new();
         for topic in model.get_topics().values() {
@@ -579,7 +584,8 @@ impl Topic {
         errors
     }
 
-    pub fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
+    /*
+    pub(crate) fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
         //bg!(&keys);
         // For each entry in keys, the first TopicKey is the old value and the second is the new
         // value.
@@ -619,6 +625,7 @@ impl Topic {
             }
         }
     }
+     */
 
 }
 
@@ -644,7 +651,7 @@ impl Ord for Topic {
 }
 
 impl TopicKey {
-    pub fn new(namespace: &str, topic_name: &str) -> Self {
+    pub(crate) fn new(namespace: &str, topic_name: &str) -> Self {
         if topic_name.eq("functional_programming") { panic!() }
         Self::assert_legal_namespace(namespace);
         Self::assert_legal_topic_name(topic_name);
@@ -654,23 +661,23 @@ impl TopicKey {
         }
     }
 
-    pub fn get_key(&self) -> String {
+    pub(crate) fn get_key(&self) -> String {
         format!("[{}:{}]", self.namespace.to_lowercase(), self.topic_name.to_lowercase())
     }
 
-    pub fn get_namespace(&self) -> &str {
+    pub(crate) fn get_namespace(&self) -> &str {
         &self.namespace
     }
 
-    pub fn get_topic_name(&self) -> &str {
+    pub(crate) fn get_topic_name(&self) -> &str {
         &self.topic_name
     }
 
-    pub fn sort_topic_keys_by_name(vec: &mut Vec<TopicKey>) {
+    pub(crate) fn sort_topic_keys_by_name(vec: &mut Vec<TopicKey>) {
         vec.sort_by_cached_key(|topic_key| topic_key.topic_name.to_lowercase());
     }
 
-    pub fn assert_legal_topic_name(topic_name: &str) {
+    pub(crate) fn assert_legal_topic_name(topic_name: &str) {
         if topic_name != topic_name.trim() {
             panic!("Topic name \"{}\" is not trimmed.", topic_name);
         }
@@ -682,7 +689,7 @@ impl TopicKey {
         }
     }
 
-    pub fn assert_legal_namespace(namespace: &str) {
+    pub(crate) fn assert_legal_namespace(namespace: &str) {
         if namespace != namespace.trim() {
             panic!("Namespace \"{}\" is not trimmed.", namespace);
         }
@@ -723,7 +730,7 @@ impl Ord for TopicKey {
 }
 
 impl SectionKey {
-    pub fn new(namespace: &str, topic_name: &str, section_name: &str) -> Self {
+    pub(crate) fn new(namespace: &str, topic_name: &str, section_name: &str) -> Self {
         TopicKey::assert_legal_namespace(namespace);
         TopicKey::assert_legal_topic_name(topic_name);
 
@@ -733,19 +740,19 @@ impl SectionKey {
         }
     }
 
-    pub fn get_topic_key(&self) -> &TopicKey {
+    pub(crate) fn get_topic_key(&self) -> &TopicKey {
         &self.topic_key
     }
 
-    pub fn get_namespace(&self) -> &str {
+    pub(crate) fn get_namespace(&self) -> &str {
         self.topic_key.get_namespace()
     }
 
-    pub fn get_topic_name(&self) -> &str {
+    pub(crate) fn get_topic_name(&self) -> &str {
         self.topic_key.get_topic_name()
     }
 
-    pub fn get_section_name(&self) -> &str {
+    pub(crate) fn get_section_name(&self) -> &str {
         &self.section_name
     }
 }

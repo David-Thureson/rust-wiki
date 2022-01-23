@@ -1,82 +1,80 @@
-use crate::model::{TextBlock, TopicKey};
+use crate::model::TextBlock;
 
 // This is a simple table abstraction used during parsing. It's not part of the model. In the
 // model, use Paragraph::Table.
 #[derive(Clone, Debug)]
-pub struct Table {
+pub(crate) struct Table {
     rows: Vec<Vec<TableCell>>,
     has_header: bool,
 }
 
 #[derive(Clone, Debug)]
-pub struct TableCell {
+pub(crate) struct TableCell {
     text_block: TextBlock,
     is_bold: bool,
     horizontal: HorizontalAlignment,
 }
 
 #[derive(Clone, Debug)]
-pub enum HorizontalAlignment {
+pub(crate) enum HorizontalAlignment {
     Center,
     Left,
     Right,
 }
 
 impl Table {
-    pub fn new(has_header: bool) -> Self{
+    pub(crate) fn new(has_header: bool) -> Self{
         Self {
             rows: vec![],
             has_header,
         }
     }
 
-    pub fn add_row(&mut self, row: Vec<TableCell>) {
+    pub(crate) fn add_row(&mut self, row: Vec<TableCell>) {
         self.rows.push(row);
     }
 
-    pub fn get_rows(&self) -> &Vec<Vec<TableCell>> {
+    pub(crate) fn get_rows(&self) -> &Vec<Vec<TableCell>> {
         &self.rows
     }
 
-    pub fn get_rows_mut(&mut self) -> &mut Vec<Vec<TableCell>> {
-        &mut self.rows
-    }
-
-    pub fn has_header(&self) -> bool {
+    pub(crate) fn has_header(&self) -> bool {
         self.has_header
     }
 
-    pub fn set_has_header(&mut self, has_header: bool) {
+    pub(crate) fn set_has_header(&mut self, has_header: bool) {
         self.has_header = has_header;
     }
 
-    pub fn get_cell(&self, row_index: usize, col_index: usize) -> &TableCell {
+    pub(crate) fn get_cell(&self, row_index: usize, col_index: usize) -> &TableCell {
         &self.rows[row_index][col_index]
     }
 
-    pub fn assume_has_header(&self) -> bool {
+    pub(crate) fn assume_has_header(&self) -> bool {
         !self.rows.is_empty() && self.rows[0].iter().all(|cell| cell.is_bold)
     }
 
-    pub fn get_column_count(&self) -> usize {
+    pub(crate) fn get_column_count(&self) -> usize {
         self.rows.iter()
             .map(|row| row.len())
             .max().unwrap()
     }
 
-    pub fn get_row_values_as_text(&self, row_index: usize) -> Vec<String> {
+    /*
+    pub(crate) fn get_row_values_as_text(&self, row_index: usize) -> Vec<String> {
         self.rows[row_index].iter()
             .map(|cell| cell.text_block.get_unresolved_text())
             .collect()
     }
 
-    pub fn get_column_values_as_text(&self, col_index: usize) -> Vec<String> {
+    pub(crate) fn get_column_values_as_text(&self, col_index: usize) -> Vec<String> {
         self.rows.iter()
             .map(|row| row[col_index].text_block.get_unresolved_text())
             .collect()
     }
+    */
 
-    pub fn add_cells_flow_layout(&mut self, column_count: usize, mut cells: Vec<TableCell>) {
+    pub(crate) fn add_cells_flow_layout(&mut self, column_count: usize, mut cells: Vec<TableCell>) {
         let mut row_index = 0;
         let mut col_index = 0;
         self.rows.push(vec![]);
@@ -93,7 +91,7 @@ impl Table {
 }
 
 impl TableCell {
-    pub fn new_unresolved_text(text: &str, is_bold: bool, horizontal: &HorizontalAlignment) -> Self {
+    pub(crate) fn new_unresolved_text(text: &str, is_bold: bool, horizontal: &HorizontalAlignment) -> Self {
         Self {
             text_block: TextBlock::new_unresolved(text),
             is_bold,
@@ -101,7 +99,7 @@ impl TableCell {
         }
     }
 
-    pub fn new_text_block(text_block: TextBlock, is_bold: bool, horizontal: &HorizontalAlignment) -> Self {
+    pub(crate) fn new_text_block(text_block: TextBlock, is_bold: bool, horizontal: &HorizontalAlignment) -> Self {
         Self {
             text_block,
             is_bold,
@@ -109,26 +107,28 @@ impl TableCell {
         }
     }
 
-    pub fn is_bold(&self) -> bool {
+    pub(crate) fn is_bold(&self) -> bool {
         self.is_bold
     }
 
-    pub fn get_horizontal(&self) -> &HorizontalAlignment {
+    pub(crate) fn get_horizontal(&self) -> &HorizontalAlignment {
         &self.horizontal
     }
 
-    pub fn get_text_block(&self) -> &TextBlock {
+    pub(crate) fn get_text_block(&self) -> &TextBlock {
         &self.text_block
     }
 
-    pub fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
+    /*
+    pub(crate) fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
         self.text_block.update_internal_links(keys);
     }
+     */
 
 }
 
 impl HorizontalAlignment {
-    pub fn get_variant_name(&self) -> &str {
+    pub(crate) fn get_variant_name(&self) -> &str {
         match self {
             Self::Center => "Center",
             Self::Left => "Left",

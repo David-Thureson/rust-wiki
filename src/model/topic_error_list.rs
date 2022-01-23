@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use crate::model::TopicKey;
 use crate::Itertools;
 
-pub struct TopicErrorList {
+pub(crate) struct TopicErrorList {
     errors: BTreeMap<TopicKey, Vec<String>>,
 }
 
@@ -29,11 +29,12 @@ impl TopicErrorList {
         self.errors.clear();
     }
 
-    pub fn len(&self) -> usize {
+    #[allow(dead_code)]
+    pub(crate) fn len(&self) -> usize {
         self.errors.len()
     }
 
-    pub fn is_empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         self.errors.is_empty()
     }
 
@@ -53,7 +54,7 @@ impl TopicErrorList {
         }
     }
 
-    pub fn list_missing_topics(&self) {
+    pub(crate) fn list_missing_topics(&self) {
         let before = "Topic link [";
         let after = "] not found.";
         let mut map = BTreeMap::new();

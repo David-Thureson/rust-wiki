@@ -3,13 +3,13 @@
 use super::*;
 
 #[derive(Clone, Debug)]
-pub struct Link {
+pub(crate) struct Link {
     label: Option<String>,
     type_: LinkType,
 }
 
 #[derive(Clone, Debug)]
-pub enum LinkType {
+pub(crate) enum LinkType {
     Topic {
         topic_key: TopicKey,
     },
@@ -31,7 +31,7 @@ pub enum LinkType {
 }
 
 #[derive(Clone, Debug)]
-pub enum ImageSource {
+pub(crate) enum ImageSource {
     Internal {
         namespace: String,
         file_name: String,
@@ -42,14 +42,16 @@ pub enum ImageSource {
 }
 
 #[derive(Clone, Debug)]
-pub enum ImageAlignment {
+#[allow(dead_code)]
+pub(crate) enum ImageAlignment {
     Center,
     Left,
     Right,
 }
 
 #[derive(Clone, Debug)]
-pub enum ImageSize {
+#[allow(dead_code)]
+pub(crate) enum ImageSize {
     DokuSmall,
     DokuMedium,
     DokuLarge,
@@ -67,7 +69,8 @@ pub enum ImageSize {
 }
 
 #[derive(Clone, Debug)]
-pub enum ImageLinkType {
+#[allow(dead_code)]
+pub(crate) enum ImageLinkType {
     // These are all based on Dokuwiki's terms and behavior: https://www.dokuwiki.org/images
     Detail, // Link to a detail page showing metadata for the image.
     Direct, // Link to the full-size image.
@@ -76,14 +79,14 @@ pub enum ImageLinkType {
 }
 
 impl Link {
-    pub fn new(label: Option<&str>, type_: LinkType) -> Self {
+    pub(crate) fn new(label: Option<&str>, type_: LinkType) -> Self {
         Self {
             label: label.map(|label| label.to_string()),
             type_,
         }
     }
 
-    pub fn new_image(label: Option<&str>, source: ImageSource, alignment: ImageAlignment, size: ImageSize, type_: ImageLinkType) -> Self {
+    pub(crate) fn new_image(label: Option<&str>, source: ImageSource, alignment: ImageAlignment, size: ImageSize, type_: ImageLinkType) -> Self {
         let type_ = LinkType::Image {
                 source,
                 alignment,
@@ -93,21 +96,22 @@ impl Link {
         Self::new(label, type_)
     }
 
-    pub fn new_external(label: Option<&str>, url: &str) -> Self {
+    pub(crate) fn new_external(label: Option<&str>, url: &str) -> Self {
         let type_ = LinkType::External {
             url: url.to_string(),
         };
         Self::new(label, type_)
     }
 
-    pub fn new_internal_unresolved(label: Option<&str>, dest: &str) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn new_internal_unresolved(label: Option<&str>, dest: &str) -> Self {
         let type_ = LinkType::InternalUnresolved {
             dest: dest.to_string()
         };
         Self::new(label, type_)
     }
 
-    pub fn new_section(label: Option<&str>, namespace_name: &str, topic_name: &str, section_name: &str) -> Self {
+    pub(crate) fn new_section(label: Option<&str>, namespace_name: &str, topic_name: &str, section_name: &str) -> Self {
         TopicKey::assert_legal_namespace(namespace_name);
         TopicKey::assert_legal_topic_name(topic_name);
         let section_key = SectionKey::new(namespace_name, topic_name, section_name);
@@ -117,7 +121,8 @@ impl Link {
         Self::new(label, type_)
     }
 
-    pub fn new_section_internal(label: Option<&str>, namespace_name: &str, topic_name: &str, section_name: &str) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn new_section_internal(label: Option<&str>, namespace_name: &str, topic_name: &str, section_name: &str) -> Self {
         TopicKey::assert_legal_namespace(namespace_name);
         TopicKey::assert_legal_topic_name(topic_name);
         let section_key = SectionKey::new(namespace_name, topic_name, section_name);
@@ -127,7 +132,7 @@ impl Link {
         Self::new(label, type_)
     }
 
-    pub fn new_topic(label: Option<&str>, namespace_name: &str, topic_name: &str) -> Self {
+    pub(crate) fn new_topic(label: Option<&str>, namespace_name: &str, topic_name: &str) -> Self {
         TopicKey::assert_legal_namespace(namespace_name);
         TopicKey::assert_legal_topic_name(topic_name);
         let topic_key = TopicKey::new(namespace_name, topic_name);
@@ -137,7 +142,8 @@ impl Link {
         Self::new(label, type_)
     }
 
-    pub fn new_topic_string_label(label: Option<String>, namespace_name: &str, topic_name: &str) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn new_topic_string_label(label: Option<String>, namespace_name: &str, topic_name: &str) -> Self {
         TopicKey::assert_legal_namespace(namespace_name);
         TopicKey::assert_legal_topic_name(topic_name);
         let topic_key = TopicKey::new(namespace_name, topic_name);
@@ -150,16 +156,16 @@ impl Link {
         }
     }
 
-    pub fn get_label(&self) -> Option<String> {
+    pub(crate) fn get_label(&self) -> Option<String> {
         self.label.as_ref().map(|label| label.clone())
     }
 
-    pub fn get_type(&self) -> &LinkType {
+    pub(crate) fn get_type(&self) -> &LinkType {
         &self.type_
     }
 
     /*
-    pub fn catalog_links(model: &mut Model) {
+    pub(crate) fn catalog_links(model: &mut Model) {
         for topic in model.get_topics_mut().values_mut() {
             topic.clear_outbound_links();
             topic.clear_inbound_topic_keys();
@@ -258,7 +264,7 @@ impl Link {
 }
 
 impl ImageSource {
-    pub fn new_internal(namespace: &str, file_name: &str) -> Self {
+    pub(crate) fn new_internal(namespace: &str, file_name: &str) -> Self {
         TopicKey::assert_legal_namespace(namespace);
         Self::Internal {
             namespace: namespace.to_string(),
@@ -266,7 +272,7 @@ impl ImageSource {
         }
     }
 
-    pub fn new_external(url: &str) -> Self {
+    pub(crate) fn new_external(url: &str) -> Self {
         Self::External {
             url: url.to_string(),
         }
@@ -274,7 +280,8 @@ impl ImageSource {
 }
 
 impl ImageSize {
-    pub fn get_name(&self) -> String {
+    #[allow(dead_code)]
+    pub(crate) fn get_name(&self) -> String {
         match self {
             ImageSize::DokuSmall => "Doku small (200)".to_string(),
             ImageSize::DokuMedium => "Doku medium (400)".to_string(),

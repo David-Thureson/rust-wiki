@@ -4,7 +4,7 @@ use crate::*;
 use super::*;
 use std::cmp::Reverse;
 
-pub fn main() {
+pub(crate) fn main() {
     // report_categories();
     // get_categories();
     // report_categories_by_topic_count();
@@ -27,7 +27,7 @@ fn report_categories() {
 }
 */
 
-pub fn get_categories() -> BTreeMap<String, Topic> {
+pub(crate) fn get_categories() -> BTreeMap<String, Topic> {
     let mut topics = BTreeMap::new();
     for (topic_name, lines) in get_topic_text(None) {
         let mut category_name = None;
@@ -72,7 +72,7 @@ pub fn get_categories() -> BTreeMap<String, Topic> {
     categories
 }
 
-pub fn report_category_tree() {
+pub(crate) fn report_category_tree() {
     let categories = get_categories();
     categories.values()
         .filter(|category| category.category_name.is_none())
@@ -87,7 +87,7 @@ fn report_category_tree_one(categories: &BTreeMap<String, Topic>, depth: usize, 
         .for_each(|category| report_category_tree_one(&categories, depth + 1, category));
 }
 
-pub fn report_categories_by_topic_count() {
+pub(crate) fn report_categories_by_topic_count() {
     let mut categories = get_categories().values().map(|topic| topic.clone()).collect::<Vec<_>>();
     categories.sort_by_cached_key(|topic| Reverse(topic.category_topic_names.len()));
     categories.iter()
@@ -100,7 +100,7 @@ pub fn report_categories_by_topic_count() {
         });
 }
 
-pub fn report_category_tree_2() {
+pub(crate) fn report_category_tree_2() {
     let mut parent_child_pairs = vec![];
     for (topic_name, lines) in get_topic_text(None) {
         for line in lines {

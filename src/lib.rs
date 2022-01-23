@@ -2,26 +2,26 @@
 #![feature(cell_leak)]
 #![feature(btree_drain_filter)]
 
-pub mod connectedtext;
+pub(crate) mod connectedtext;
 pub mod dokuwiki;
-pub mod model;
+pub(crate) mod model;
 
-pub use util::*;
-// pub use std::rc::Rc;
-// pub use std::cell::RefCell;
-pub use itertools::Itertools;
-// pub use util::{format, group, parse};
-// pub use util::format::{fc, ff};
-// pub use util::{b, b2, m, rse, r};
+pub(crate) use util::*;
+// pub(crate) use std::rc::Rc;
+// pub(crate) use std::cell::RefCell;
+pub(crate) use itertools::Itertools;
+// pub(crate) use util::{format, group, parse};
+// pub(crate) use util::format::{fc, ff};
+// pub(crate) use util::{b, b2, m, rse, r};
 
 // These paths won't work for something like DokuWiki. They're simply folders in which to generate
 // wiki pages and copy image files for comparisons to test the generating and file copying code.
 // They're also used to make backups of the live wiki.
-pub const PATH_WORKING: &str = "C:/Wiki Working";
-pub const FOLDER_GEN: &str = "Gen";
-pub const FOLDER_BACKUP: &str = "Backup";
-pub const FOLDER_PAGES: &str = "Pages";
-pub const FOLDER_MEDIA: &str = "Media";
+// pub(crate) const PATH_WORKING: &str = "C:/Wiki Working";
+// pub(crate) const FOLDER_GEN: &str = "Gen";
+// pub(crate) const FOLDER_BACKUP: &str = "Backup";
+// pub(crate) const FOLDER_PAGES: &str = "Pages";
+// pub(crate) const FOLDER_MEDIA: &str = "Media";
 
 const _FILE_NUMBER_DIGITS: usize = 4;
 
@@ -35,11 +35,11 @@ fn path_backup_root() -> String {
 }
 */
 /*
-pub fn path_gen() -> String {
+pub(crate) fn path_gen() -> String {
     path_gen_or_backup(FOLDER_GEN)
 }
 
-pub fn path_backup() -> String {
+pub(crate) fn path_backup() -> String {
     path_gen_or_backup(FOLDER_BACKUP)
 }
 
@@ -51,13 +51,13 @@ fn path_gen_or_backup(type_: &str) -> String {
 */
 
 /*
-pub fn r<T>(value: T) -> Rc<RefCell<T>> {
+pub(crate) fn r<T>(value: T) -> Rc<RefCell<T>> {
     Rc::new(RefCell::new(value))
 }
 */
 
 /*
-pub fn b<T>(rc: &'static Rc<RefCell<T>>) -> Ref<'static, T> {
+pub(crate) fn b<T>(rc: &'static Rc<RefCell<T>>) -> Ref<'static, T> {
     RefCell::borrow(rc)
 }
 */

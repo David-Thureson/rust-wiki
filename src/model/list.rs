@@ -1,7 +1,7 @@
 use super::*;
 
 #[derive(Clone, Debug)]
-pub enum ListType {
+pub(crate) enum ListType {
     Articles,
     Books,
     Clients,
@@ -29,13 +29,13 @@ pub enum ListType {
 }
 
 #[derive(Clone, Debug)]
-pub struct ListItem {
+pub(crate) struct ListItem {
     depth: usize,
     text_block: TextBlock,
 }
 
 impl ListType {
-    pub fn from_header(header: &str) -> Self {
+    pub(crate) fn from_header(header: &str) -> Self {
         match header {
             "Articles:" => Self::Articles,
             "Books:" => Self::Books,
@@ -64,7 +64,7 @@ impl ListType {
         }
     }
 
-    pub fn get_variant_name(&self) -> &str {
+    pub(crate) fn get_variant_name(&self) -> &str {
         match self {
             Self::Articles => "Articles",
             Self::Books => "Books",
@@ -93,7 +93,7 @@ impl ListType {
         }
     }
 
-    pub fn catalog_possible_list_types(model: &Model) -> util::group::Grouper<String> {
+    pub(crate) fn catalog_possible_list_types(model: &Model) -> util::group::Grouper<String> {
         let mut group = util::group::Grouper::new("Possible List Types");
         for topic in model.get_topics().values() {
             for paragraph in topic.get_paragraphs().iter() {
@@ -123,23 +123,25 @@ impl ListType {
 }
 
 impl ListItem {
-    pub fn new(depth: usize, block: TextBlock) -> Self {
+    pub(crate) fn new(depth: usize, block: TextBlock) -> Self {
         Self {
             depth,
             text_block: block,
         }
     }
 
-    pub fn get_depth(&self) -> usize {
+    pub(crate) fn get_depth(&self) -> usize {
         self.depth
     }
 
-    pub fn get_text_block(&self) -> &TextBlock {
+    pub(crate) fn get_text_block(&self) -> &TextBlock {
         &self.text_block
     }
 
-    pub fn get_text_block_mut(&mut self) -> &mut TextBlock {
+    /*
+    pub(crate) fn get_text_block_mut(&mut self) -> &mut TextBlock {
         &mut self.text_block
     }
+     */
 
 }

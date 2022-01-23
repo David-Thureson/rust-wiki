@@ -3,45 +3,41 @@ use crate::model::{TopicErrorList, ATTRIBUTE_NAME_DOMAIN, Model};
 use crate::Itertools;
 
 #[derive(Debug)]
-pub struct DomainList {
+pub(crate) struct DomainList {
     domains: BTreeMap<String, Domain>,
 }
 
 #[derive(Debug)]
-pub struct Domain {
+pub(crate) struct Domain {
     name: String,
     related: BTreeMap<String, usize>,
     related_by_count: Vec<String>,
 }
 
 impl DomainList {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             domains: Default::default(),
         }
     }
 
-    pub fn add_domain_optional(&mut self, domain_name: &str) {
+    pub(crate) fn add_domain_optional(&mut self, domain_name: &str) {
         if !self.domains.contains_key(domain_name) {
             self.domains.insert(domain_name.to_string(), Domain::new(domain_name));
         }
     }
 
-    pub fn get_domains(&self) -> &BTreeMap<String, Domain> {
-        &self.domains
-    }
-
-    pub fn get_domain(&self, name: &str) -> Option<&Domain> {
+    pub(crate) fn get_domain(&self, name: &str) -> Option<&Domain> {
         self.domains.get(name)
     }
 
-    pub fn add_related_domain(&mut self, domain_name: &str, related_name: &str) {
+    pub(crate) fn add_related_domain(&mut self, domain_name: &str, related_name: &str) {
         let domain= self.domains.get_mut(domain_name).unwrap();
         let entry = domain.related.entry(related_name.to_string()).or_insert(0);
         *entry += 1;
     }
 
-    pub fn catalog_domains(model: &mut Model) -> TopicErrorList {
+    pub(crate) fn catalog_domains(model: &mut Model) -> TopicErrorList {
         // This must be run after catalog_attributes().
         debug_assert!(!model.get_attribute_list().get_attribute_types().is_empty());
         let errors = TopicErrorList::new();
@@ -72,7 +68,8 @@ impl DomainList {
         errors
     }
 
-    pub fn print(&self) {
+    #[allow(dead_code)]
+    pub(crate) fn print(&self) {
         println!("Domains: ({})", util::format::format_count(self.domains.len()));
         for domain in self.domains.values() {
             let related_list = domain.related_by_count.iter().join(", ");
@@ -80,7 +77,8 @@ impl DomainList {
         }
     }
 
-    pub fn print_strong_relationships(&self) {
+    #[allow(dead_code)]
+    pub(crate) fn print_strong_relationships(&self) {
         println!("Domains: ({})", util::format::format_count(self.domains.len()));
         for domain in self.domains.values()
                 .sorted_by(|a, b| a.max_related_count().cmp(&b.max_related_count()).reverse().then(a.name.cmp(&b.name))) {
@@ -94,7 +92,7 @@ impl DomainList {
 }
 
 impl Domain {
-    pub fn new(name: &str) -> Self {
+    pub(crate) fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
             related: Default::default(),
@@ -102,7 +100,7 @@ impl Domain {
         }
     }
 
-    pub fn fill_related_by_count(&mut self) {
+    pub(crate) fn fill_related_by_count(&mut self) {
         // Sort the related domains so that the most closely related ones (higher count) come
         // first. If there's a tie, use alphabetical order.
         let mut sorted = self.related.iter()
@@ -112,11 +110,12 @@ impl Domain {
         self.related_by_count = sorted.drain(..).map(|(name, _count)| name).collect::<Vec<_>>();
     }
 
-    pub fn get_related_by_count(&self) -> &Vec<String> {
+    pub(crate) fn get_related_by_count(&self) -> &Vec<String> {
         &self.related_by_count
     }
 
-    pub fn max_related_count(&self) -> usize {
+    #[allow(dead_code)]
+    pub(crate) fn max_related_count(&self) -> usize {
         *self.related.values().max().unwrap_or(&0)
     }
 }

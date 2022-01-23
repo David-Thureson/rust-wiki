@@ -6,27 +6,27 @@ use chrono::NaiveDate;
 use std::fmt::{Display, Formatter};
 use std::cmp::Ordering;
 
-// pub type AttributeRc = Rc<RefCell<Attribute>>;
-// pub type AttributeValueRc = Rc<RefCell<AttributeValue>>;
+// pub(crate) type AttributeRc = Rc<RefCell<Attribute>>;
+// pub(crate) type AttributeValueRc = Rc<RefCell<AttributeValue>>;
 
 // This is the overall kind of topic like Author, Domain, or Language.
 #[derive(Debug)]
-pub struct AttributeType {
-    pub name: String,
-    pub type_name: String,
-    pub values: BTreeMap<AttributeValue, Vec<TopicKey>>,
+pub(crate) struct AttributeType {
+    pub(crate) name: String,
+    pub(crate) type_name: String,
+    pub(crate) values: BTreeMap<AttributeValue, Vec<TopicKey>>,
 }
 
 // This is an instance of an attribute of some type in a single topic, possibly with multiple
 // values.
 #[derive(Debug)]
-pub struct AttributeInstance {
-    pub attribute_type_name: String,
-    pub values: Vec<AttributeValue>,
+pub(crate) struct AttributeInstance {
+    pub(crate) attribute_type_name: String,
+    pub(crate) values: Vec<AttributeValue>,
 }
 
 #[derive(Debug)]
-pub enum AttributeValue {
+pub(crate) enum AttributeValue {
     Boolean {
         value: bool,
     },
@@ -48,7 +48,7 @@ pub enum AttributeValue {
 }
 
 impl AttributeType {
-    pub fn new(name: &str, type_name: &str) -> Self {
+    pub(crate) fn new(name: &str, type_name: &str) -> Self {
         Self {
             name: name.to_string(),
             type_name: type_name.to_string(),
@@ -57,21 +57,21 @@ impl AttributeType {
     }
 
     /*
-    pub fn add_value_string(&mut self, value: &str) {
+    pub(crate) fn add_value_string(&mut self, value: &str) {
         let entry = self.values.entry(value.to_string()).or_insert(r!(AttributeValue::new(AttributeTypedValue::new_string(value))));
     }
     */
 
-    pub fn value_count(&self) -> usize {
+    pub(crate) fn value_count(&self) -> usize {
         self.values.len()
     }
 
     /*
-    pub fn topic_count(&self) -> usize {
+    pub(crate) fn topic_count(&self) -> usize {
         self.values.values().map(|value| b!(value).topic_count()).sum()
     }
 
-    pub fn get_topics(&self) -> Vec<TopicRc> {
+    pub(crate) fn get_topics(&self) -> Vec<TopicRc> {
         let mut topics: Vec<TopicRc> = self.values.values()
             .map(|value| b!(value).get_topics())
             .flatten()
@@ -85,7 +85,7 @@ impl AttributeType {
 
 /*
 impl AttributeValueList {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             list: Default::default(),
         }
@@ -95,11 +95,11 @@ impl AttributeValueList {
 
 /*
 impl AttributeValue {
-    pub fn topic_count(&self) -> usize {
+    pub(crate) fn topic_count(&self) -> usize {
         self.topics.len()
     }
 
-    pub fn get_topics(&self) -> Vec<TopicRc> {
+    pub(crate) fn get_topics(&self) -> Vec<TopicRc> {
         self.topics.values().map(|topic_rc| topic_rc.clone()).collect()
     }
 }
@@ -107,11 +107,11 @@ impl AttributeValue {
 
 impl AttributeValue {
 
-    pub fn get_key(&self) -> String {
+    pub(crate) fn get_key(&self) -> String {
         self.to_string().to_lowercase()
     }
 
-    pub fn get_display_string(&self) -> String {
+    pub(crate) fn get_display_string(&self) -> String {
         // In most cases the display string, which will be used on wiki pages, is the same as the
         // to_string(). For dates, though, the regular to_string() is something like "2022-01-03"
         // so that it sorts correctly, while the display string is something like "2022-Jan-03".

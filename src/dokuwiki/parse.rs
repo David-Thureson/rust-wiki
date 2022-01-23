@@ -2,7 +2,7 @@ use crate::*;
 use super::*;
 use crate::model::{TopicKey, HorizontalAlignment};
 
-pub fn parse_link_optional(text: &str) -> Result<Option<model::Link>, String> {
+pub(crate) fn parse_link_optional(text: &str) -> Result<Option<model::Link>, String> {
     // Example topic link:
     //   [[tools:combinations|Combinations]]
     // Example section link:
@@ -58,7 +58,7 @@ pub fn parse_link_optional(text: &str) -> Result<Option<model::Link>, String> {
     Ok(None)
 }
 
-pub fn parse_header_optional(text: &str) -> Result<Option<(String, usize)>, String> {
+pub(crate) fn parse_header_optional(text: &str) -> Result<Option<(String, usize)>, String> {
     // A section header will look like:
     //   ===Section Name===
     // The level is between 0 and 5 where 0 is the main page title. The number of "=" is six
@@ -87,7 +87,7 @@ pub fn parse_header_optional(text: &str) -> Result<Option<(String, usize)>, Stri
     Ok(None)
 }
 
-pub fn parse_breadcrumb_optional(text: &str) -> Result<Option<Vec<TopicKey>>, String> {
+pub(crate) fn parse_breadcrumb_optional(text: &str) -> Result<Option<Vec<TopicKey>>, String> {
     // A breadcrumb paragraph showing the parent and grandparent topic will look like this with
     // the links worked out:
     //   **[[tools:android|Android]] => [[tools:android_development|Android Development]] => Android Sensors**
@@ -123,7 +123,7 @@ pub fn parse_breadcrumb_optional(text: &str) -> Result<Option<Vec<TopicKey>>, St
     Ok(None)
 }
 
-pub fn parse_marker_optional(text: &str) -> Result<Option<(String, String)>, String> {
+pub(crate) fn parse_marker_optional(text: &str) -> Result<Option<(String, String)>, String> {
     // A marker will be a one-line paragraph with something like "<WRAP round box>", "</WRAP>",
     // "<code>", "</code>", "<code Rust>", "<file>", "<html>", or "<php>".
     let text = text.trim();
@@ -150,7 +150,7 @@ pub fn parse_marker_optional(text: &str) -> Result<Option<(String, String)>, Str
     Ok(None)
 }
 
-pub fn parse_table_optional(text: &str) -> Result<Option<model::Table>, String> {
+pub(crate) fn parse_table_optional(text: &str) -> Result<Option<model::Table>, String> {
     // A table with the first column bolded might look like this:
     //   ^ Platform | Android, Windows |
     //   ^ Added | Jul 24, 2018 |
@@ -236,7 +236,7 @@ fn eval_breadcrumb_topic_ref(topic_ref: &str) -> Result<TopicKey, String> {
 }
 */
 
-pub fn topic_ref_to_topic_key(topic_ref: &str) -> Result<model::TopicKey, String> {
+pub(crate) fn topic_ref_to_topic_key(topic_ref: &str) -> Result<model::TopicKey, String> {
     // Something like "tools:books:Zero to One".
     if !topic_ref.contains(DELIM_NAMESPACE) {
         return Err(format!("Namespace delimiter \"{}\" not found in topic reference \"{}\".", DELIM_NAMESPACE, topic_ref));
@@ -245,7 +245,7 @@ pub fn topic_ref_to_topic_key(topic_ref: &str) -> Result<model::TopicKey, String
     Ok(model::TopicKey::new(namespace, topic_name))
 }
 
-pub fn text_or_topic_link_label(text: &str) -> Result<String, String> {
+pub(crate) fn text_or_topic_link_label(text: &str) -> Result<String, String> {
     // If this is a link, take the label if there is one, otherwise if it's a section link take the
     // section name, or if it's a topic link take the topic name.
     // If it's not a link, simply return the text.

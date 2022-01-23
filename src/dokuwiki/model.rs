@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 use crate::*;
 use std::fs;
 
-pub enum WikiImageSize {
+pub(crate) enum WikiImageSize {
     Small,
     Medium,
     Large,
@@ -11,7 +11,7 @@ pub enum WikiImageSize {
 }
 
 impl WikiImageSize {
-    pub fn suffix(&self) -> Option<&str> {
+    pub(crate) fn suffix(&self) -> Option<&str> {
         match self {
             WikiImageSize::Small => Some("200"),
             WikiImageSize::Medium => Some("400"),
@@ -22,7 +22,7 @@ impl WikiImageSize {
 }
 
 #[derive(Clone, Debug)]
-pub enum WikiImageLinkType {
+pub(crate) enum WikiImageLinkType {
     Detail,
     Direct,
     NoLink,
@@ -30,7 +30,7 @@ pub enum WikiImageLinkType {
 }
 
 impl WikiImageSize {
-    pub fn to_name(&self) -> String {
+    pub(crate) fn to_name(&self) -> String {
         match self {
             WikiImageSize::Large => "Large",
             WikiImageSize::Medium => "Medium",
@@ -55,7 +55,7 @@ impl Hash for WikiImageSize {
 }
 
 impl WikiImageLinkType {
-    pub fn suffix(&self) -> Option<&str> {
+    pub(crate) fn suffix(&self) -> Option<&str> {
         match self {
             WikiImageLinkType::Detail => None,
             WikiImageLinkType::Direct => Some("direct"),
@@ -66,7 +66,7 @@ impl WikiImageLinkType {
 }
 
 /*
-pub fn add_headline(page_text: &mut String, text: &str, level: usize) {
+pub(crate) fn add_headline(page_text: &mut String, text: &str, level: usize) {
     // Like "----- Categories -----" where a level 1 (top) headline has five hyphens.
     debug_assert!(level >= 1);
     debug_assert!(level <= 5);
@@ -74,17 +74,17 @@ pub fn add_headline(page_text: &mut String, text: &str, level: usize) {
     page_text.push_str(&format!("{}{}{}\n\n", equal_signs, text, equal_signs));
 }
 
-pub fn add_image_internal_link(page_text: &mut String, page_namespace: &str, page_name: &str, image_namespace: &str, image_file_name: &str, image_size: &WikiImageSize) {
+pub(crate) fn add_image_internal_link(page_text: &mut String, page_namespace: &str, page_name: &str, image_namespace: &str, image_file_name: &str, image_size: &WikiImageSize) {
     let image_part = image_part(image_namespace, image_file_name, &WikiImageLinkType::NoLink, image_size);
     page_text.push_str(&format!("[[{}:{}|{}]]\n\n", page_namespace, legal_file_name(page_name), &image_part));
 }
 
-pub fn add_image_link_to_full_image(page_text: &mut String, image_namespace: &str, image_file_name: &str, image_size: &WikiImageSize) {
+pub(crate) fn add_image_link_to_full_image(page_text: &mut String, image_namespace: &str, image_file_name: &str, image_size: &WikiImageSize) {
     let image_part = image_part(image_namespace, image_file_name, &WikiImageLinkType::Direct, image_size);
     page_text.push_str(&format!("{}\n\n", &image_part));
 }
 
-pub fn add_image_table_row(page_text: &mut String, image_namespace: &str, image_size: &WikiImageSize, end_table: bool, image_file_names: &[&str]) {
+pub(crate) fn add_image_table_row(page_text: &mut String, image_namespace: &str, image_size: &WikiImageSize, end_table: bool, image_file_names: &[&str]) {
     let markup = format!("|{}", image_file_names.iter()
         .map(|file_name| format!(" {} |", image_part(image_namespace, file_name, &WikiImageLinkType::Direct, image_size)))
         .join(""));
@@ -92,7 +92,7 @@ pub fn add_image_table_row(page_text: &mut String, image_namespace: &str, image_
     page_text.push_str(&format!("{}\n{}", markup, suffix));
 }
 
-pub fn add_image_row(page_text: &mut String, image_namespace: &str, image_size: &WikiImageSize, image_file_names: &[&str]) {
+pub(crate) fn add_image_row(page_text: &mut String, image_namespace: &str, image_size: &WikiImageSize, image_file_names: &[&str]) {
     let markup = image_file_names.iter()
         .map(|file_name| format!("{}\n", image_part(image_namespace, file_name, &WikiImageLinkType::Direct, image_size)))
         .join("");
@@ -111,34 +111,34 @@ pub(crate) fn image_part(image_namespace: &str, image_file_name: &str, image_lin
     format!("{{{{:{}:{}?{}|}}}}", image_namespace, legal_file_name(image_file_name), suffix)
 }
 
-pub fn add_page_link(page_text: &mut String, namespace: &str, page_name: &str, label: Option<&str>) {
+pub(crate) fn add_page_link(page_text: &mut String, namespace: &str, page_name: &str, label: Option<&str>) {
     // Like "[[nav:categories|Categories]]".
     page_text.push_str(&format!("{}\n\n", page_link(namespace, page_name, label)));
 }
 
-pub fn add_section_link(page_text: &mut String, namespace: &str, page_name: &str, section_name: &str, label: Option<&str>) {
+pub(crate) fn add_section_link(page_text: &mut String, namespace: &str, page_name: &str, section_name: &str, label: Option<&str>) {
     // Like "[[nav:categories|Categories#Five]]".
     page_text.push_str(&format!("{}\n\n", section_link(namespace, page_name, section_name, label)));
 }
 
-pub fn add_section_link_same_page(page_text: &mut String, section_name: &str, label: Option<&str>) {
+pub(crate) fn add_section_link_same_page(page_text: &mut String, section_name: &str, label: Option<&str>) {
     // Like "[[#All|All Categories]]".
     page_text.push_str(&format!("{}\n\n", section_link_same_page(section_name, label)));
 }
 
-pub fn add_line(page_text: &mut String) {
+pub(crate) fn add_line(page_text: &mut String) {
     page_text.push_str("\n");
 }
 
-pub fn add_list_item_unordered(page_text: &mut String, text: &str) {
+pub(crate) fn add_list_item_unordered(page_text: &mut String, text: &str) {
     page_text.push_str(&format!("  * {}\n", text));
 }
 
-pub fn add_paragraph(page_text: &mut String, text: &str) {
+pub(crate) fn add_paragraph(page_text: &mut String, text: &str) {
     page_text.push_str(&format!("{}\n\n", text));
 }
 
-pub fn namespace_prefix(namespace: &str) -> String {
+pub(crate) fn namespace_prefix(namespace: &str) -> String {
     if namespace.is_empty() {
         "".to_string()
     } else {
@@ -146,26 +146,26 @@ pub fn namespace_prefix(namespace: &str) -> String {
     }
 }
 
-pub fn page_link(namespace: &str, page_name: &str, label: Option<&str>) -> String {
+pub(crate) fn page_link(namespace: &str, page_name: &str, label: Option<&str>) -> String {
     format!("[[{}{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), label.map_or("".to_string(), |x| format!("|{}", x)))
 }
 
-pub fn section_link(namespace: &str, page_name: &str, section_name: &str, label: Option<&str>) -> String {
+pub(crate) fn section_link(namespace: &str, page_name: &str, section_name: &str, label: Option<&str>) -> String {
     // Like "[[nav:categories#All|All Categories]]".
     format!("[[{}{}#{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, label.map_or("".to_string(), |x| format!("|{}", x)))
 }
 
-pub fn section_link_same_page(section_name: &str, label: Option<&str>) -> String {
+pub(crate) fn section_link_same_page(section_name: &str, label: Option<&str>) -> String {
     // Like "[[#All|All Categories]]".
     format!("[[#{}{}]]", section_name, label.map_or("".to_string(), |x| format!("|{}", x)))
 }
 
-pub fn external_link(url: &str, label: Option<&str>) -> String {
+pub(crate) fn external_link(url: &str, label: Option<&str>) -> String {
     // Like "[[https://github.com/|external link|GitHub]]".
     format!("[[{}{}]]", url, label.map_or("".to_string(), |x| format!("|{}", x)))
 }
 
-pub fn legal_file_name(name: &str) -> String {
+pub(crate) fn legal_file_name(name: &str) -> String {
     // https://www.dokuwiki.org/pagename. From that page_text:
     //   page_text names in DokuWiki are converted to lowercase automatically. Allowed characters are
     //   letters, digits and, within names, the "special characters" ., - and _. All other special
@@ -189,26 +189,26 @@ pub fn legal_file_name(name: &str) -> String {
     page_name
 }
 
-pub fn namespace_to_path(namespace: &str) -> String {
+pub(crate) fn namespace_to_path(namespace: &str) -> String {
     namespace.replace(":", "/")
 }
 
-pub fn write_page(folder: &str, namespace: &str, name: &str, text: &str) {
+pub(crate) fn write_page(folder: &str, namespace: &str, name: &str, text: &str) {
     fs::write(format!("{}/{}/{}.txt", folder, namespace_to_path(namespace), legal_file_name(name)), text).unwrap();
 }
 
-pub fn copy_image_file(from_path: &str, from_file_name: &str, to_path: &str, to_namespace: &str, to_file_name: &str) {
+pub(crate) fn copy_image_file(from_path: &str, from_file_name: &str, to_path: &str, to_namespace: &str, to_file_name: &str) {
     let from_full_file_name = format!("{}/{}", from_path, from_file_name);
     let to_full_file_name = format!("{}/{}/{}", to_path, namespace_to_path(to_namespace), legal_file_name(to_file_name));
     println!("{} => {}", from_full_file_name, to_full_file_name);
     fs::copy(from_full_file_name, to_full_file_name).unwrap();
 }
 
-pub fn bold(value: &str) -> String {
+pub(crate) fn bold(value: &str) -> String {
     format!("**{}**", value)
 }
 
-pub fn italic(value: &str) -> String {
+pub(crate) fn italic(value: &str) -> String {
     format!("//{}//", value)
 }
 */

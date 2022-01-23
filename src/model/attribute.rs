@@ -2,10 +2,10 @@ use super::*;
 use std::collections::BTreeMap;
 use chrono::NaiveDate;
 
-// pub type AttributeRc = Rc<RefCell<Attribute>>;
-// pub type AttributeValueRc = Rc<RefCell<AttributeValue>>;
+// pub(crate) type AttributeRc = Rc<RefCell<Attribute>>;
+// pub(crate) type AttributeValueRc = Rc<RefCell<AttributeValue>>;
 
-pub struct AttributeList {
+pub(crate) struct AttributeList {
     attribute_types: BTreeMap<String, AttributeType>,
     attribute_orders: BTreeMap<String, usize>,
     attributes_to_index: Vec<String>,
@@ -14,7 +14,7 @@ pub struct AttributeList {
 
 // This is the overall kind of topic like Author, Domain, or Language.
 #[derive(Debug)]
-pub struct AttributeType {
+pub(crate) struct AttributeType {
     name: String,
     value_type: AttributeValueType,
     sequence: usize,
@@ -24,14 +24,14 @@ pub struct AttributeType {
 // This is an instance of an attribute of some type in a single topic, possibly with multiple
 // values.
 #[derive(Debug)]
-pub struct AttributeInstance {
+pub(crate) struct AttributeInstance {
     attribute_type_name: String,
     sequence: usize,
     values: Vec<String>,
 }
 
 #[derive(Clone, Debug)]
-pub enum AttributeValueType {
+pub(crate) enum AttributeValueType {
     Boolean,
     Date,
     Number,
@@ -41,7 +41,7 @@ pub enum AttributeValueType {
 }
 
 impl AttributeList {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             attribute_types: Default::default(),
             attribute_orders: Default::default(),
@@ -50,15 +50,11 @@ impl AttributeList {
         }
     }
 
-    pub fn get_attribute_types(&self) -> &BTreeMap<String, AttributeType> {
+    pub(crate) fn get_attribute_types(&self) -> &BTreeMap<String, AttributeType> {
         &self.attribute_types
     }
 
-    pub fn get_attribute_types_mut(&mut self) -> &mut BTreeMap<String, AttributeType> {
-        &mut self.attribute_types
-    }
-
-    pub fn sort_attribute_topic_lists(&mut self) {
+    pub(crate) fn sort_attribute_topic_lists(&mut self) {
         // In the values map, each entry is a list of pairs of topic keys and attribute type names.
         // Sort each of these lists by topic name first, then attribute type name.
         for list in self.attribute_values.values_mut() {
@@ -66,50 +62,54 @@ impl AttributeList {
         }
     }
 
-    pub fn get_attribute_type(&self, name: &str) -> Option<&AttributeType> {
+    pub(crate) fn get_attribute_type(&self, name: &str) -> Option<&AttributeType> {
         self.attribute_types.get(name)
     }
 
-    pub fn clear_attribute_types_and_values(&mut self) {
+    /*
+    pub(crate) fn clear_attribute_types_and_values(&mut self) {
         self.attribute_types.clear();
         self.attribute_values.clear();
     }
+    */
 
-    pub fn clear_attribute_orders(&mut self) {
+    pub(crate) fn clear_attribute_orders(&mut self) {
         self.attribute_orders.clear();
     }
 
-    pub fn add_attribute_order(&mut self, type_name: String, sequence: usize) {
+    pub(crate) fn add_attribute_order(&mut self, type_name: String, sequence: usize) {
         self.attribute_orders.insert(type_name, sequence);
     }
 
-    pub fn get_attribute_orders(&self) -> &BTreeMap<String, usize> {
+    pub(crate) fn get_attribute_orders(&self) -> &BTreeMap<String, usize> {
         &self.attribute_orders
     }
 
-    pub fn set_attributes_to_index(&mut self, attr: Vec<String>) {
+    pub(crate) fn set_attributes_to_index(&mut self, attr: Vec<String>) {
         debug_assert!(self.attributes_to_index.is_empty());
         self.attributes_to_index = attr;
     }
 
-    pub fn is_attribute_indexed(&self, name: &str) -> bool {
+    pub(crate) fn is_attribute_indexed(&self, name: &str) -> bool {
         self.attributes_to_index.contains(&name.to_string())
     }
 
-    pub fn get_attribute_values(&self) -> &BTreeMap<String, Vec<(TopicKey, String)>> {
+    pub(crate) fn get_attribute_values(&self) -> &BTreeMap<String, Vec<(TopicKey, String)>> {
         &self.attribute_values
     }
 
-    pub fn has_attribute_links(&self, value: &str) -> bool {
+    pub(crate) fn has_attribute_links(&self, value: &str) -> bool {
         self.attribute_values.get(value).map_or(false, |list| !list.is_empty())
     }
 
-    pub fn add_attribute_value(&mut self, value: String, topic_key: TopicKey, attribute_type_name: String) {
+    /*
+    pub(crate) fn add_attribute_value(&mut self, value: String, topic_key: TopicKey, attribute_type_name: String) {
         let entry = self.attribute_values.entry(value).or_insert(vec![]);
         entry.push((topic_key, attribute_type_name));
     }
+    */
 
-    pub fn get_topics_with_attribute_value(&self, value: &str) -> Vec<(TopicKey, String)> {
+    pub(crate) fn get_topics_with_attribute_value(&self, value: &str) -> Vec<(TopicKey, String)> {
         let mut topic_keys = vec![];
         if let Some(found_topic_keys) = self.attribute_values.get(value) {
             topic_keys.append(&mut found_topic_keys.clone());
@@ -117,7 +117,7 @@ impl AttributeList {
         topic_keys
     }
 
-    pub fn set_attribute_types_and_values(&mut self, attribute_types: BTreeMap<String, AttributeType>, attribute_values: BTreeMap<String, Vec<(TopicKey, String)>>) {
+    pub(crate) fn set_attribute_types_and_values(&mut self, attribute_types: BTreeMap<String, AttributeType>, attribute_values: BTreeMap<String, Vec<(TopicKey, String)>>) {
         assert!(self.attribute_types.is_empty());
         assert!(self.attribute_values.is_empty());
         self.attribute_types = attribute_types;
@@ -126,7 +126,7 @@ impl AttributeList {
 }
 
 impl AttributeType {
-    pub fn new(name: &str, value_type: &AttributeValueType, sequence: usize) -> Self {
+    pub(crate) fn new(name: &str, value_type: &AttributeValueType, sequence: usize) -> Self {
         Self::assert_legal_attribute_type_name(name);
         Self {
             name: name.to_string(),
@@ -136,23 +136,23 @@ impl AttributeType {
         }
     }
 
-    pub fn get_name(&self) -> &str {
+    pub(crate) fn get_name(&self) -> &str {
         &self.name
     }
 
-    pub fn get_value_type(&self) -> &AttributeValueType {
+    pub(crate) fn get_value_type(&self) -> &AttributeValueType {
         &self.value_type
     }
 
-    pub fn get_values(&self) -> &BTreeMap<String, Vec<TopicKey>> {
+    pub(crate) fn get_values(&self) -> &BTreeMap<String, Vec<TopicKey>> {
         &self.values
     }
 
-    pub fn get_sequence(&self) -> usize {
+    pub(crate) fn get_sequence(&self) -> usize {
         self.sequence
     }
 
-    pub fn assert_legal_attribute_type_name(name: &str) {
+    pub(crate) fn assert_legal_attribute_type_name(name: &str) {
         if name != name.trim() {
             panic!("Attribute type name \"{}\" is not trimmed.", name);
         }
@@ -164,7 +164,7 @@ impl AttributeType {
         });
     }
 
-    pub fn is_legal_attribute_value(value: &str) -> bool {
+    pub(crate) fn is_legal_attribute_value(value: &str) -> bool {
         if value != value.trim() {
             return false;
         }
@@ -176,7 +176,7 @@ impl AttributeType {
         true
     }
 
-    pub fn assert_legal_attribute_value(value: &str) {
+    pub(crate) fn assert_legal_attribute_value(value: &str) {
         if value != value.trim() {
             panic!("Attribute value \"{}\" is not trimmed.", value);
         }
@@ -188,7 +188,7 @@ impl AttributeType {
         });
     }
 
-    pub fn add_value_for_topic(&mut self, value: &str, topic_key: &TopicKey) -> Result<String, String> {
+    pub(crate) fn add_value_for_topic(&mut self, value: &str, topic_key: &TopicKey) -> Result<String, String> {
         // If this attribute type does not have the value, add it. Then either way add a reference
         // to the topic, showing that this topic has this value for this attribute type.
         let canonical_value = Self::value_to_canonical_form(&self.value_type, value)?;
@@ -200,15 +200,17 @@ impl AttributeType {
         Ok(canonical_value)
     }
 
-    pub fn add_date_value(&mut self, value: &NaiveDate, topic_key: &TopicKey) -> Result<String, String> {
+    pub(crate) fn add_date_value(&mut self, value: &NaiveDate, topic_key: &TopicKey) -> Result<String, String> {
         self.add_value_for_topic(&Self::date_to_canonical_value(value), topic_key)
     }
 
-    pub fn get_canonical_value(&self, value: &str) -> Result<String, String> {
+    /*
+    pub(crate) fn get_canonical_value(&self, value: &str) -> Result<String, String> {
         Self::value_to_canonical_form(&self.value_type, value)
     }
+     */
 
-    pub fn value_to_canonical_form(value_type: &AttributeValueType, value: &str) -> Result<String, String> {
+    pub(crate) fn value_to_canonical_form(value_type: &AttributeValueType, value: &str) -> Result<String, String> {
         match value_type {
             AttributeValueType::Boolean => {
                 let value = util::bool::string_to_bool(value)?;
@@ -236,7 +238,7 @@ impl AttributeType {
         }
     }
 
-    pub fn value_to_presumed_type(attribute_type_name: &str, value: &str) -> AttributeValueType {
+    pub(crate) fn value_to_presumed_type(attribute_type_name: &str, value: &str) -> AttributeValueType {
         if attribute_type_name.to_lowercase().contains("year") && Self::value_to_canonical_form(&AttributeValueType::Year, value).is_ok() {
             return AttributeValueType::Year;
         }
@@ -248,15 +250,11 @@ impl AttributeType {
         AttributeValueType::String
     }
 
-    pub fn value_count(&self) -> usize {
-        self.values.len()
-    }
-
-    pub fn get_value_display_string(&self, value: &str) -> String {
+    pub(crate) fn get_value_display_string(&self, value: &str) -> String {
         Self::value_to_display_string(&self.value_type, value)
     }
 
-    pub fn value_to_display_string(value_type: &AttributeValueType, value: &str) -> String {
+    pub(crate) fn value_to_display_string(value_type: &AttributeValueType, value: &str) -> String {
         // In most cases the display string, which will be used on wiki pages, is the same as the
         // string stored as the value. For dates, though, the value is something like "2022-01-03"
         // so that it sorts correctly, while the display string is something like "2022-Jan-03".
@@ -267,24 +265,25 @@ impl AttributeType {
         }
     }
 
-    pub fn date_to_display_string(value: &NaiveDate) -> String {
+    pub(crate) fn date_to_display_string(value: &NaiveDate) -> String {
         // util::date_time::naive_date_to_mon_format(&value)
         util::date_time::naive_date_to_doc_format(&value)
     }
 
-    pub fn date_to_canonical_value(value: &NaiveDate) -> String {
+    pub(crate) fn date_to_canonical_value(value: &NaiveDate) -> String {
         util::date_time::naive_date_to_sortable_format(value)
     }
 
-    pub fn value_to_date(value: &str) -> NaiveDate {
+    pub(crate) fn value_to_date(value: &str) -> NaiveDate {
         util::date_time::naive_date_from_sortable_format(value).unwrap()
     }
 
-    pub fn get_topic_count(&self) -> usize {
+    pub(crate) fn get_topic_count(&self) -> usize {
         self.values.values().map(|topics| topics.len()).sum()
     }
 
-    pub fn list_attribute_types(model: &Model) {
+    #[allow(dead_code)]
+    pub(crate) fn list_attribute_types(model: &Model) {
         let mut list = vec![];
         println!("\nAttribute types:");
         for attribute_type in model.get_attribute_types().values() {
@@ -300,7 +299,7 @@ impl AttributeType {
         println!("\n{}", list.iter().map(|x| format!("\"{}\"", x)).join(", \n"));
     }
 
-    pub fn get_distinct_attr_values(model: &Model, value_type: &AttributeValueType) -> Vec<String> {
+    pub(crate) fn get_distinct_attr_values(model: &Model, value_type: &AttributeValueType) -> Vec<String> {
         let mut values = vec![];
         for attribute_type in model.get_attribute_types().values()
             .filter(|attribute_type| attribute_type.value_type.eq(value_type)) {
@@ -313,7 +312,7 @@ impl AttributeType {
         values
     }
 
-    pub fn get_topics_for_attr_value(model: &Model, value_type: &AttributeValueType, match_value: &str, included_attr_names: Option<Vec<&str>>) -> Vec<TopicKey> {
+    pub(crate) fn get_topics_for_attr_value(model: &Model, value_type: &AttributeValueType, match_value: &str, included_attr_names: Option<Vec<&str>>) -> Vec<TopicKey> {
         let mut topic_keys = vec![];
         for attribute_type in model.get_attribute_types().values()
             .filter(|attribute_type| attribute_type.value_type.eq(value_type))
@@ -332,7 +331,7 @@ impl AttributeType {
     }
 
     // Create a list of pairs of the attribute type name and the topic key.
-    pub fn get_typed_topics_for_attr_value(model: &Model, value_type: &AttributeValueType, match_value: &str, included_attr_names: Option<Vec<&str>>) -> Vec<(String, TopicKey)> {
+    pub(crate) fn get_typed_topics_for_attr_value(model: &Model, value_type: &AttributeValueType, match_value: &str, included_attr_names: Option<Vec<&str>>) -> Vec<(String, TopicKey)> {
         let mut list = vec![];
         for attribute_type in model.get_attribute_types().values()
             .filter(|attribute_type| attribute_type.value_type.eq(value_type))
@@ -348,7 +347,7 @@ impl AttributeType {
         list
     }
 
-    pub fn fill_attribute_orders(model: &mut Model) {
+    pub(crate) fn fill_attribute_orders(model: &mut Model) {
         model.clear_attribute_orders();
         for (i, type_name) in ATTRIBUTE_ORDER.iter().enumerate() {
             model.add_attribute_order(type_name.to_string(), i);
@@ -358,7 +357,7 @@ impl AttributeType {
 
 impl AttributeInstance {
 
-    pub fn new(attribute_type_name: &str, sequence: usize, values: Vec<String>) -> Self {
+    pub(crate) fn new(attribute_type_name: &str, sequence: usize, values: Vec<String>) -> Self {
         Self {
             attribute_type_name: attribute_type_name.to_string(),
             sequence,
@@ -366,15 +365,15 @@ impl AttributeInstance {
         }
     }
 
-    pub fn get_attribute_type_name(&self) -> &str {
+    pub(crate) fn get_attribute_type_name(&self) -> &str {
         &self.attribute_type_name
     }
 
-    pub fn get_sequence(&self) -> usize {
+    pub(crate) fn get_sequence(&self) -> usize {
         self.sequence
     }
 
-    pub fn get_values(&self) -> &Vec<String> {
+    pub(crate) fn get_values(&self) -> &Vec<String> {
         &self.values
     }
 
@@ -382,7 +381,7 @@ impl AttributeInstance {
 
 impl AttributeValueType {
 
-    pub fn get_variant_name(&self) -> &str {
+    pub(crate) fn get_variant_name(&self) -> &str {
         match self {
             Self::Boolean => "Boolean",
             Self::Date => "Date",
@@ -404,7 +403,7 @@ impl Eq for AttributeValueType {}
 
 /*
 impl AttributeValueList {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             list: Default::default(),
         }
@@ -414,11 +413,11 @@ impl AttributeValueList {
 
 /*
 impl AttributeValue {
-    pub fn topic_count(&self) -> usize {
+    pub(crate) fn topic_count(&self) -> usize {
         self.topics.len()
     }
 
-    pub fn get_topics(&self) -> Vec<TopicRc> {
+    pub(crate) fn get_topics(&self) -> Vec<TopicRc> {
         self.topics.values().map(|topic_rc| topic_rc.clone()).collect()
     }
 }

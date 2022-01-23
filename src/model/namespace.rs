@@ -4,19 +4,19 @@ use std::cell::RefCell;
 use super::*;
 use std::collections::BTreeMap;
 
-pub type NamespaceRc = Rc<RefCell<Namespace>>;
+pub(crate) type NamespaceRc = Rc<RefCell<Namespace>>;
 
 #[derive(Clone)]
-pub struct Namespace {
+pub(crate) struct Namespace {
     model: ModelRc,
     parent: Option<NamespaceRc>,
     name: String,
     namespaces: BTreeMap<String, NamespaceRc>,
-    // pub topics: BTreeMap<TopicKey, TopicRc>,
+    // pub(crate) topics: BTreeMap<TopicKey, TopicRc>,
 }
 
 impl Namespace {
-    pub fn new(wiki: &WikiRc, parent: Option<&NamespaceRc>, name: &str) -> Self {
+    pub(crate) fn new(wiki: &WikiRc, parent: Option<&NamespaceRc>, name: &str) -> Self {
         Self {
             model: wiki.clone(),
             parent: parent.map(|namespace_rc| namespace_rc.clone()),

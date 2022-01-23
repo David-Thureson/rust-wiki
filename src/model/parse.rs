@@ -2,10 +2,10 @@
 /*
 use std::cmp::Ordering;
 
-pub type TopicReferenceKey = (String, String);
+pub(crate) type TopicReferenceKey = (String, String);
 
 #[derive(Clone, Eq, Ord, PartialEq)]
-pub struct TopicReference {
+pub(crate) struct TopicReference {
     namespace: String,
     topic_name: String,
 }
@@ -18,11 +18,11 @@ impl TopicReference {
         }
     }
 
-    pub fn get_key(&self) -> TopicReferenceKey {
+    pub(crate) fn get_key(&self) -> TopicReferenceKey {
         (self.namespace.clone(), self.topic_name.clone())
     }
 
-    pub fn get_full_name(&self) -> String {
+    pub(crate) fn get_full_name(&self) -> String {
         format!("{{{}: {}}}", self.namespace, self.topic_name)
     }
 }

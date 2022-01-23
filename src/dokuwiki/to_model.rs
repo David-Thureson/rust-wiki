@@ -26,7 +26,7 @@ struct TopicParseState {
 }
 
 impl BuildProcess {
-    pub fn new(wiki_name: &str, namespace_main: &str, path_source: &str, topic_limit: Option<usize>) -> Self {
+    pub(crate) fn new(wiki_name: &str, namespace_main: &str, path_source: &str, topic_limit: Option<usize>) -> Self {
         Self {
             wiki_name: wiki_name.to_string(),
             namespace_main: namespace_main.to_string(),
@@ -37,7 +37,7 @@ impl BuildProcess {
         }
     }
 
-    pub fn build(&mut self) -> Model {
+    pub(crate) fn build(&mut self) -> Model {
         let mut model = Model::new(&self.wiki_name, &self.namespace_main);
         let namespace_main = self.namespace_main.clone();
         let namespace_book = model.namespace_book();
@@ -526,7 +526,7 @@ impl BuildProcess {
      */
 }
 
-pub fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>, attributes_to_index: Vec<&str>) -> Model {
+pub(crate) fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>, attributes_to_index: Vec<&str>) -> Model {
     let mut bp = BuildProcess::new(name, namespace_main,PATH_PAGES, topic_limit);
     let mut model = bp.build();
     model.set_attributes_to_index(attributes_to_index.iter().map(|x| x.to_string()).collect::<Vec<_>>());

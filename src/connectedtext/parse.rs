@@ -9,7 +9,7 @@ use std::time::Instant;
 use crate::model::{ATTRIBUTE_NAME_DOMAIN, ATTRIBUTE_VALUE_MISSING, TopicReference};
 use crate::connectedtext::{NAMESPACE_TOOLS, NAMESPACE_HOME};
 
-pub fn get_topic_text_both_namespaces(topic_limit_tools: Option<usize>, topic_limit_home: Option<usize>) -> BTreeMap<TopicReference, Vec<String>> {
+pub(crate) fn get_topic_text_both_namespaces(topic_limit_tools: Option<usize>, topic_limit_home: Option<usize>) -> BTreeMap<TopicReference, Vec<String>> {
     let start_time = Instant::now();
 
     let mut topics = BTreeMap::new();
@@ -49,7 +49,7 @@ fn get_topic_text_one_namespace(topics: &mut BTreeMap<TopicReference, Vec<String
     }
 }
 
-pub fn get_topic_text(topic_limit: Option<usize>) -> BTreeMap<String, Vec<String>> {
+pub(crate) fn get_topic_text(topic_limit: Option<usize>) -> BTreeMap<String, Vec<String>> {
     let start_time = Instant::now();
     let mut topics = BTreeMap::new();
     for path in fs::read_dir(PATH_CONNECTEDTEXT_EXPORT).unwrap() {
@@ -78,13 +78,13 @@ pub fn get_topic_text(topic_limit: Option<usize>) -> BTreeMap<String, Vec<String
     topics
 }
 
-pub fn parse_line_as_category(line: &str) -> Option<String> {
+pub(crate) fn parse_line_as_category(line: &str) -> Option<String> {
     // If it's a category line it will look like this:
     //   [[$CATEGORY:Books]]
     util::parse::between_optional_trim(line, "[[$CATEGORY:", "]]").map(|x| x.to_string())
 }
 
-pub fn parse_line_as_attribute(line: &str) -> Result<Option<(String, Vec<String>)>, String> {
+pub(crate) fn parse_line_as_attribute(line: &str) -> Result<Option<(String, Vec<String>)>, String> {
     // If it's a category line it will look like this if it has multiple values:
     //   ||Author||[[Author:=Kenneth W. Harl]], [[Author:=The Great Courses]]||
     if line.contains(":=") {
@@ -122,10 +122,10 @@ fn fix_attribute_name(name: &str) -> &str {
 }
 
 #[derive(Clone, Debug)]
-pub struct Topic {
-    pub name: String,
-    pub category_name: Option<String>,
-    pub category_topic_names: Vec<String>,
-    pub indirect_topic_count: usize,
+pub(crate) struct Topic {
+    pub(crate) name: String,
+    pub(crate) category_name: Option<String>,
+    pub(crate) category_topic_names: Vec<String>,
+    pub(crate) indirect_topic_count: usize,
 }
 

@@ -1,9 +1,8 @@
-use crate::model::{Model, ATTRIBUTE_NAME_ADDED, AttributeType, AttributeValueType, TopicKey, Topic};
-use std::collections::BTreeMap;
-use chrono::NaiveDate;
+// use crate::model::{ATTRIBUTE_NAME_ADDED, AttributeType, TopicKey, Topic};
 
-pub fn interpolate_added_date(model: &mut Model) {
-    let attr_added_sequence = model.get_attribute_order(ATTRIBUTE_NAME_ADDED).unwrap();
+/*
+pub(crate) fn interpolate_added_date(model: &mut Model) {
+    let attr_added_sequence = model.get_attribute_orders().get(ATTRIBUTE_NAME_ADDED).unwrap();
     let mut changes = BTreeMap::new();
 
     // See if any dates can be worked out within a topic.
@@ -59,11 +58,12 @@ pub fn interpolate_added_date(model: &mut Model) {
 
     for (topic_key, date) in changes.iter() {
         let topic = model.get_topics_mut().get_mut(topic_key).unwrap();
-        topic.set_attribute_date(ATTRIBUTE_NAME_ADDED, attr_added_sequence, date);
+        topic.set_attribute_date(ATTRIBUTE_NAME_ADDED, *attr_added_sequence, date);
     }
-
 }
+*/
 
+/*
 fn get_topic_added_date(topic: &Topic, changes: &BTreeMap<TopicKey, NaiveDate>) -> Option<NaiveDate> {
     match changes.get(&topic.get_key()) {
         Some(date) => Some(*date),
@@ -76,3 +76,4 @@ fn get_topic_added_date(topic: &Topic, changes: &BTreeMap<TopicKey, NaiveDate>) 
         },
     }
 }
+*/

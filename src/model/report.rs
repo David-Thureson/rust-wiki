@@ -1,6 +1,6 @@
 use super::*;
 
-pub struct WikiReport {
+pub(crate) struct WikiReport {
     categories: bool,
     paragraphs: bool,
     attributes: bool,
@@ -8,7 +8,8 @@ pub struct WikiReport {
 }
 
 impl WikiReport {
-    pub fn new() -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn new() -> Self {
         Self {
             categories: false,
             paragraphs: false,
@@ -17,28 +18,33 @@ impl WikiReport {
         }
     }
 
-    pub fn categories(mut self) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn categories(mut self) -> Self {
         self.categories = true;
         self
     }
 
-    pub fn paragraphs(mut self) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn paragraphs(mut self) -> Self {
         self.paragraphs = true;
         self
     }
 
-    pub fn attributes(mut self) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn attributes(mut self) -> Self {
         self.attributes = true;
         self
     }
 
-    pub fn lists(mut self) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn lists(mut self) -> Self {
         self.lists = true;
         self
     }
 
-    pub fn go(&self, wiki: &Model) {
-        let namespace_count = wiki.get_namespaces().len();
+    #[allow(dead_code)]
+    pub(crate) fn go(&self, wiki: &Model) {
+        let namespace_count = wiki.get_namespace_count();
         let topic_count = wiki.get_topics().len();
         let category_count = wiki.get_categories().len();
         let attribute_type_count = wiki.get_attribute_list().get_attribute_types().len();
@@ -59,6 +65,7 @@ impl WikiReport {
         }
     }
 
+    #[allow(dead_code)]
     fn category_breakdown(&self, wiki: &Model, depth: usize) {
         let mut groups = util::group::Grouper::new("Categories");
         for topic in wiki.get_topics().values() {
@@ -69,6 +76,7 @@ impl WikiReport {
         groups.print_by_count(depth, Some(5));
     }
 
+    #[allow(dead_code)]
     fn paragraph_breakdown(&self, wiki: &Model, depth: usize) {
         let mut groups = util::group::Grouper::new("Paragraph Types");
         for topic in wiki.get_topics().values() {
@@ -79,6 +87,7 @@ impl WikiReport {
         groups.print_by_count(depth, None);
     }
 
+    #[allow(dead_code)]
     fn attribute_breakdown(&self, wiki: &Model, depth: usize) {
         let mut groups = util::group::Grouper::new("Attributes");
         for topic in wiki.get_topics().values() {
@@ -90,6 +99,7 @@ impl WikiReport {
         groups.print_by_count(depth, Some(5));
     }
 
+    #[allow(dead_code)]
     fn list_breakdown(&self, wiki: &Model, depth: usize) {
         let mut groups = util::group::Grouper::new("List Types");
         for topic in wiki.get_topics().values() {
@@ -107,7 +117,8 @@ impl WikiReport {
 
 }
 
-pub fn report_attributes(wiki: &Model) {
+#[allow(dead_code)]
+pub(crate) fn report_attributes(wiki: &Model) {
     for attribute_type in wiki.get_attribute_types().values() {
         println!("\n{}: {} ({})", attribute_type.get_name(), attribute_type.get_value_type().get_variant_name(), attribute_type.get_topic_count());
         for (value, topics) in attribute_type.get_values().iter() {
@@ -125,7 +136,8 @@ pub fn report_attributes(wiki: &Model) {
     // println!("{}", wiki.attributes.iter().filter(|(_name, type_)| type_.value_type == AttributeValueType::Year).map(|(name, _type_)| format!("\"{}\"", name)).join(", "));
 }
 
-pub fn report_attributes_with_multiple_values(wiki: &Model) {
+#[allow(dead_code)]
+pub(crate) fn report_attributes_with_multiple_values(wiki: &Model) {
     // For round-trip parsing/generating of the wiki, we need conventions for handling multiple
     // attributes separated by commas, since commas can also appear inside a value. First simply do
     // a survey of attributes that appear to have multiple values within a given topic but might
@@ -148,7 +160,7 @@ pub fn report_attributes_with_multiple_values(wiki: &Model) {
     println!();
 }
 
-// pub fn report_attribute_values_with_commas(wiki: &Wiki) {
+// pub(crate) fn report_attribute_values_with_commas(wiki: &Wiki) {
     // Based on the results of report_attributes_with_multiple_values(), show the attribute
     // values that have one or more commas. This is not a prablem with the initial parse of the
     // ConnectedText wikis because each value is contained in markup like this:

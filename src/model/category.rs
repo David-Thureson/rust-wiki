@@ -2,7 +2,7 @@ use crate::model::{Model, TopicKey, Topic, TopicTree};
 
 // use super::*;
 
-pub fn add_missing_category_topics(model: &mut Model) {
+pub(crate) fn add_missing_category_topics(model: &mut Model) {
     // First make sure we have a category entry for each category referenced in a topic.
     let mut category_names = model.get_topics().values()
         .filter_map(|topic| topic.get_category())
@@ -45,7 +45,7 @@ pub fn add_missing_category_topics(model: &mut Model) {
 }
 
 /*
-pub fn move_topics_to_namespace_by_category(model: &mut Model, category_name: &str, namespace_name: &str) {
+pub(crate) fn move_topics_to_namespace_by_category(model: &mut Model, category_name: &str, namespace_name: &str) {
     TopicKey::assert_legal_namespace(namespace_name);
     let topic_names = model.get_topics().values()
         .filter(|topic| topic.get_category().map_or(false,|cat| cat.eq_ignore_ascii_case(category_name)))
@@ -66,7 +66,7 @@ pub fn move_topics_to_namespace_by_category(model: &mut Model, category_name: &s
 }
 */
 
-pub fn make_category_tree(model: &mut Model) -> TopicTree {
+pub(crate) fn make_category_tree(model: &mut Model) -> TopicTree {
     let mut parent_child_pairs = vec![];
     for topic in model.get_topics().values() {
         if let Some(category_name) = topic.get_category() {

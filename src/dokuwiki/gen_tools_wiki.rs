@@ -6,7 +6,7 @@ use crate::dokuwiki::gen_from_model::GenFromModel;
 use crate::connectedtext::PATH_CT_EXPORT_IMAGES;
 use crate::dokuwiki::{PATH_MEDIA, PATH_PAGES};
 
-pub const PROJECT_NAME: &str = "Tools";
+pub(crate) const PROJECT_NAME: &str = "Tools";
 
 pub fn main() {
     let copy_image_files = false;
@@ -193,6 +193,6 @@ fn add_links_to_all_topics(page: &mut wiki::WikiGenPage, model: &model::Wiki) {
 }
 */
 
-pub fn get_attr_to_index() -> Vec<&'static str> {
+pub(crate) fn get_attr_to_index() -> Vec<&'static str> {
     vec!["Author", "Book", "Company", "Context", "Course", ATTRIBUTE_NAME_DOMAIN, "Domains", "Format", "Founder", "IDE", "Language", "License Type", "LinkedIn", "Narrator", "Operating System", "Organization", "PC Name", "Paradigm", "Platform", "School", "Series", "Status", "Translator"]
 }

@@ -5,7 +5,7 @@ use super::*;
 use crate::dokuwiki::*;
 use std::cmp::Ordering;
 
-pub fn main() {
+pub(crate) fn main() {
     CtGenProcess::new().gen();
 }
 
@@ -15,26 +15,26 @@ struct CtGenProcess {
     errors: BTreeMap<TopicReference, Vec<String>>,
 }
 
-pub enum AttributeType {
+pub(crate) enum AttributeType {
     String,
     Date,
     Boolean,
     Unknown,
 }
 
-pub struct Attribute {
+pub(crate) struct Attribute {
     name: String,
     type_: AttributeType,
     values: BTreeMap<String, AttributeValue>,
 }
 
-pub struct AttributeValue {
+pub(crate) struct AttributeValue {
     _name: String,
     topics: BTreeMap<TopicReference, ()>,
 }
 
 impl CtGenProcess {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             attributes: Default::default(),
             source_topics: Default::default(),
@@ -42,7 +42,7 @@ impl CtGenProcess {
         }
     }
 
-    pub fn gen(&mut self) {
+    pub(crate) fn gen(&mut self) {
         self.source_topics = get_topic_text_both_namespaces(TOPIC_LIMIT_TOOLS, TOPIC_LIMIT_HOME);
         self.fill_attributes();
         // self.copy_image_files();
@@ -223,7 +223,7 @@ impl CtGenProcess {
 }
 
 impl Attribute {
-    pub fn new(name: &str) -> Self {
+    pub(crate) fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
             type_: AttributeType::Unknown,
@@ -231,15 +231,15 @@ impl Attribute {
         }
     }
 
-    pub fn value_count(&self) -> usize {
+    pub(crate) fn value_count(&self) -> usize {
         self.values.len()
     }
 
-    pub fn topic_count(&self) -> usize {
+    pub(crate) fn topic_count(&self) -> usize {
         self.values.values().map(|value| value.topic_count()).sum()
     }
 
-    pub fn get_topics(&self) -> Vec<TopicReference> {
+    pub(crate) fn get_topics(&self) -> Vec<TopicReference> {
         let mut topics = self.values.values()
             .map(|value| value.topics.keys())
             .flatten()
@@ -252,14 +252,14 @@ impl Attribute {
 }
 
 impl AttributeValue {
-    pub fn new(name: &str) -> Self {
+    pub(crate) fn new(name: &str) -> Self {
         Self {
             _name: name.to_string(),
             topics: Default::default()
         }
     }
 
-    pub fn topic_count(&self) -> usize {
+    pub(crate) fn topic_count(&self) -> usize {
         self.topics.len()
     }
 }
