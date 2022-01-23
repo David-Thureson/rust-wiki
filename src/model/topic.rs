@@ -5,7 +5,6 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::cell::{RefCell, Ref};
 use chrono::NaiveDate;
-use std::collections::btree_map::Entry;
 
 pub struct Topic {
     parents: Vec<TopicKey>,
@@ -95,8 +94,12 @@ impl Topic {
         &self.name
     }
 
-    pub fn get_category(&self) -> Option<&str> {
-        self.category.map(|category| category.as_str())
+    pub fn get_category(&self) -> Option<String> {
+        if let Some(category) = &self.category {
+            Some(category.clone())
+        } else {
+            None
+        }
     }
 
     pub fn set_category(&mut self, category: &str) {
@@ -108,12 +111,72 @@ impl Topic {
         &self.temp_attributes
     }
 
+    pub fn catalog_attributes(&mut self, errors: &mut TopicErrorList, attribute_types: &mut BTreeMap<String, AttributeType>, attribute_values: &mut BTreeMap<String, Vec<(TopicKey, String)>>, attribute_orders: &BTreeMap<String, usize>) {
+        // At this point we should have only temp attributes, not references to attribute types
+        // held by the model.
+        assert!(self.attributes.is_empty());
+        // topic.clear_attributes();
+        // The earlier parsing stage may have left some temp attributes that have no values,
+        // either because they were empty in the source text or because they had only
+        // placeholder values like "***". We want to ignore those cases.
+        let temp_attributes = std::mem::replace(&mut self.temp_attributes, BTreeMap::new());
+        for (temp_attr_name, temp_attr_values) in temp_attributes.iter()
+                .filter(|(_name, values)| !values.is_empty()) {
+            AttributeType::assert_legal_attribute_type_name(temp_attr_name);
+            // The list of attribute types is shared among all topics, so we want only one
+            // entry each for "Added", "Title", and so on.
+            let attribute_type = attribute_types.entry(temp_attr_name.clone())
+                .or_insert({
+                    // We don't yet have this attribute type in the master list. Based on the
+                    // string values in the temp attribute for this topic, guess the type such
+                    // as a date, year, or boolean. If this ever turns out to be wrong we can
+                    // use a more elaborate method to figure out the type.
+                    let value_type = AttributeType::value_to_presumed_type(temp_attr_name,&*temp_attr_values[0]);
+                    // The sequence determines how the attributes will be ordered in the
+                    // generated wiki. For instance, Author, Title, Narrator, and Translator
+                    // will appear together.
+                    let sequence = attribute_orders.get(temp_attr_name).map_or_else(
+                        || {
+                            errors.add(&self.get_key(), &format!("No sequence found for attribute type \"{}\".", temp_attr_name));
+                            ATTRIBUTE_ORDER.len()
+                        },
+                        |sequence| { *sequence }
+                    );
+                    AttributeType::new(temp_attr_name, &value_type, sequence)
+                });
+            // This list holds the canonical forms of the attribute values for this topic. At
+            // the end it will be attached to the topic through an AttributeInstance owned by
+            // the topic.
+            let mut values_for_topic = vec![];
+            for temp_value in temp_attr_values.iter() {
+                AttributeType::assert_legal_attribute_value(temp_value);
+                // If this attribute type does not have the value, add it. Then either way add
+                // a reference to the topic, showing that this topic has this value for this
+                // attribute type.
+                match attribute_type.add_value_for_topic(temp_value,&self.get_key()) {
+                    Ok(canonical_value) => {
+                        AttributeType::assert_legal_attribute_value(&canonical_value);
+                        // Don't add a topic item if the topic has itself as an attribute.
+                        if self.name.ne(&canonical_value) {
+                            let entry = attribute_values.entry(canonical_value.clone()).or_insert(vec![]);
+                            entry.push((self.get_key(), attribute_type.get_name().to_string()));
+                            // model.add_attribute_value(canonical_value.clone(), topic.get_key(), attribute_type.get_name().clone());
+                        }
+                        values_for_topic.push(canonical_value)
+                    },
+                    Err(msg) => { errors.add(&self.get_key(), &msg) }
+                };
+            }
+            self.add_attribute(AttributeInstance::new(temp_attr_name, attribute_type.get_sequence(),values_for_topic));
+        }
+    }
+
     pub fn add_temp_attribute_values(&mut self, attr_type_name: String, mut values: Vec<String>) {
         let entry = self.temp_attributes.entry(attr_type_name).or_insert(vec![]);
         entry.append(&mut values);
     }
 
-    pub fn add_or_find_temp_attribute(&mut self, name: &str) -> &Vec<String> {
+    pub fn add_or_find_temp_attribute(&mut self, name: &str) -> &mut Vec<String> {
         self.temp_attributes.entry(name.to_string()).or_insert(vec![])
     }
 
@@ -121,13 +184,19 @@ impl Topic {
         self.attributes.len()
     }
 
+    pub fn get_attribute_value_count(&self, attr_type_name: &str) -> usize {
+        self.attributes.get(attr_type_name).map_or(0, |attr_instance| attr_instance.get_values().len())
+    }
+
     pub fn get_attributes(&self) -> &BTreeMap<String, AttributeInstance> {
         &self.attributes
     }
 
+    /*
     pub fn get_attribute(&self, attr_type_name: &str) -> &Option<&AttributeInstance> {
         &self.attributes.get(attr_type_name)
     }
+     */
 
     pub fn add_attribute(&mut self, attr_instance: AttributeInstance) {
         let key = attr_instance.get_attribute_type_name();
@@ -145,6 +214,10 @@ impl Topic {
 
     pub fn get_paragraphs(&self) -> &Vec<Paragraph> {
         &self.paragraphs
+    }
+
+    pub fn get_paragraphs_mut(&mut self) -> &mut Vec<Paragraph> {
+        &mut self.paragraphs
     }
 
     pub fn get_paragraph(&self, index: usize) -> &Paragraph {
@@ -167,6 +240,7 @@ impl Topic {
         &self.outbound_links
     }
 
+    /*
     pub fn add_outbound_link(&mut self, link: Link) {
         self.outbound_links.push(link)
     }
@@ -174,6 +248,8 @@ impl Topic {
     pub fn add_outbound_links(&mut self, mut links: Vec<Link>) {
         self.outbound_links.append(&mut links)
     }
+
+     */
 
     pub fn clear_outbound_links(&mut self) {
         self.outbound_links.clear();
@@ -347,7 +423,7 @@ impl Topic {
     }
 
     pub fn make_subtopic_tree(model: &mut Model) -> TopicTree {
-        for topic in model.get_topics().values_mut() {
+        for topic in model.get_topics_mut().values_mut() {
             topic.subtopics.clear();
             topic.combo_subtopics.clear();
         }
@@ -377,24 +453,90 @@ impl Topic {
             }
         }
         for (parent_topic_key, child_topic_key) in parent_child_pairs.iter() {
-            model.get_topics().get_mut(&parent_topic_key).unwrap().subtopics.push(child_topic_key.clone());
+            model.get_topics_mut().get_mut(&parent_topic_key).unwrap().subtopics.push(child_topic_key.clone());
         }
         for (parent_topic_key, combo_topic_key) in parent_combo_pairs.iter() {
-            model.get_topics().get_mut(&parent_topic_key).unwrap().combo_subtopics.push(combo_topic_key.clone());
+            model.get_topics_mut().get_mut(&parent_topic_key).unwrap().combo_subtopics.push(combo_topic_key.clone());
         }
-        for topic in model.get_topics().values_mut() {
+        for topic in model.get_topics_mut().values_mut() {
             topic.subtopics.sort_by_cached_key(|topic_key| topic_key.topic_name.clone());
             topic.combo_subtopics.sort_by_cached_key(|topic_key| topic_key.topic_name.clone());
         }
         let mut tree = util::tree::Tree::create(parent_child_pairs, true);
         Topic::sort_topic_tree(&mut tree);
         // Have each topic with a subtopic point to its node in the subtopic tree.
-        for topic in model.get_topics().values_mut() {
+        for topic in model.get_topics_mut().values_mut() {
             topic.subtopic_tree_node = tree.get_node(&topic.get_key());
         }
         // tree.print_counts_to_depth();
         // tree.print_with_items(None);
         tree
+    }
+
+    pub fn catalog_outbound_links(&mut self) {
+        self.outbound_links.clear();
+        self.listed_topics.clear();
+        self.subtopics.clear();
+        self.combo_subtopics.clear();
+        for paragraph in self.paragraphs.iter() {
+            match paragraph {
+                Paragraph::List { type_, header, items } => {
+                    let (is_combos, is_subtopics) = match type_ {
+                        ListType::Combinations => (true, false),
+                        ListType::Subtopics => (false, true),
+                        _ => (false, false),
+                    };
+                    let mut text_block_links = Link::catalog_links_text_block(header);
+                    self.outbound_links.append(&mut text_block_links);
+                    for list_item in items.iter() {
+                        if list_item.get_depth() == 1 {
+                            let mut links = Link::catalog_links_text_block(&list_item.get_text_block());
+                            for link in links.iter() {
+                                match &link.get_type() {
+                                    LinkType::Topic { topic_key } => {
+                                        if !self.listed_topics.contains(topic_key) {
+                                            self.listed_topics.push(topic_key.clone());
+                                        }
+                                        // self.add_listed_topic_optional(topic_key);
+                                        if is_combos {
+                                            // self.add_combo_subtopic(topic_key.clone());
+                                            self.combo_subtopics.push(topic_key.clone());
+                                        } else if is_subtopics {
+                                            // self.add_subtopic(topic_key.clone());
+                                            self.subtopics.push(topic_key.clone());
+                                        }
+                                        break;
+                                    },
+                                    _ => {},
+                                }
+                            }
+                            self.outbound_links.append(&mut links);
+                        }
+                    }
+                },
+                Paragraph::Text { text_block } => {
+                    let mut links = Link::catalog_links_text_block(text_block);
+                    self.outbound_links.append(&mut links);
+                },
+                _ => {},
+            }
+        }
+
+        TopicKey::sort_topic_keys_by_name(&mut self.subtopics);
+        TopicKey::sort_topic_keys_by_name(&mut self.combo_subtopics);
+        TopicKey::sort_topic_keys_by_name(&mut self.listed_topics);
+    }
+
+    pub fn get_topic_links_as_topic_keys(&self) -> Vec<TopicKey> {
+        self.outbound_links.iter()
+            .filter_map(|link| {
+                match link.get_type() {
+                    LinkType::Topic { topic_key } => Some(topic_key.clone()),
+                    LinkType::Section { section_key } => Some(section_key.get_topic_key().clone()),
+                    _ => None,
+                }
+            })
+            .collect()
     }
 
     pub fn set_attribute_date(&mut self, attr_type_name: &str, sequence: usize, value: &NaiveDate) {
@@ -407,9 +549,6 @@ impl Topic {
     pub fn sort_topic_key_lists(&mut self) {
         // Sort all of the vectors of TopicKeys.
         TopicKey::sort_topic_keys_by_name(&mut self.inbound_topic_keys);
-        TopicKey::sort_topic_keys_by_name(&mut self.subtopics);
-        TopicKey::sort_topic_keys_by_name(&mut self.combo_subtopics);
-        TopicKey::sort_topic_keys_by_name(&mut self.listed_topics);
     }
 
     pub fn check_links(model: &Model) -> TopicErrorList {
@@ -440,7 +579,7 @@ impl Topic {
         errors
     }
 
-    pub fn update_internal_links(&mut self, model: &mut Model, keys: &Vec<(TopicKey, TopicKey)>) {
+    pub fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
         //bg!(&keys);
         // For each entry in keys, the first TopicKey is the old value and the second is the new
         // value.
@@ -453,9 +592,9 @@ impl Topic {
                     }
                 },
                 Paragraph::Table { table} => {
-                    for row in table.get_rows().iter_mut() {
+                    for row in table.get_rows_mut().iter_mut() {
                         for cell in row.iter_mut() {
-                            cell.get_text_block().update_internal_links(keys);
+                            cell.update_internal_links(keys);
                         }
                     }
                 },

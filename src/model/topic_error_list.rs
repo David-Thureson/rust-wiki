@@ -63,7 +63,7 @@ impl TopicErrorList {
                 if msg.starts_with(before) && msg.ends_with(after) {
                     let topic_name = util::parse::between_trim(msg, before, after);
                     let entry = map.entry(topic_name).or_insert(vec![]);
-                    entry.push(error_topic_key.topic_name.clone());
+                    entry.push(error_topic_key.get_topic_name().clone());
                 }
             }
         }

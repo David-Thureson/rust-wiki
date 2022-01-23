@@ -10,7 +10,7 @@ pub fn interpolate_added_date(model: &mut Model) {
     for topic in model.get_topics().values().filter(|topic| !topic.get_attributes().contains_key(ATTRIBUTE_NAME_ADDED)) {
         let min_other_date = topic.get_attributes().values()
             .filter_map(|attr_instance| {
-                let attr_type = model.get_attribute(attr_instance.get_attribute_type_name()).unwrap();
+                let attr_type = model.get_attribute_type(attr_instance.get_attribute_type_name()).unwrap();
                 if attr_type.get_value_type().eq(&AttributeValueType::Date) {
                     Some(attr_instance.get_values().iter().map(|value| AttributeType::value_to_date(value)).min().unwrap())
                 } else {

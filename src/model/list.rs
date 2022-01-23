@@ -138,7 +138,7 @@ impl ListItem {
         &self.text_block
     }
 
-    pub fn get_text_block_mut(&self) -> &mut TextBlock {
+    pub fn get_text_block_mut(&mut self) -> &mut TextBlock {
         &mut self.text_block
     }
 

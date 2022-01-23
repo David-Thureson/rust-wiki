@@ -89,8 +89,8 @@ impl BuildProcess {
         // report_category_tree(&wiki);
         // wiki.catalog_possible_list_types().print_by_count(0, None);
         wiki.add_missing_category_topics();
-        wiki.move_topics_to_namespace_by_category("Navigation",&wiki.namespace_navigation());
-        wiki.move_topics_to_namespace_by_category("Nonfiction Books",&wiki.namespace_book());
+        // wiki.move_topics_to_namespace_by_category("Navigation", &wiki.namespace_navigation());
+        // wiki.move_topics_to_namespace_by_category("Nonfiction Books", &wiki.namespace_book());
         wiki.catalog_links();
         self.errors.clear();
         self.check_links(&wiki);

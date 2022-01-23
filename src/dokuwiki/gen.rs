@@ -253,6 +253,12 @@ pub fn page_link(namespace: &str, page_name: &str, label: Option<&str>) -> Strin
     format!("[[{}{}{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), DELIM_LINK_LABEL, label.unwrap_or(page_name))
 }
 
+pub fn page_link_from_string_label(namespace: &str, page_name: &str, label: &Option<String>) -> String {
+    TopicKey::assert_legal_namespace(namespace);
+    // format!("[[{}{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), label.map_or("".to_string(), |x| format!("|{}", x)))
+    format!("[[{}{}{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), DELIM_LINK_LABEL, &label.as_ref().unwrap_or(&page_name.to_string()))
+}
+
 pub fn section_link(namespace: &str, page_name: &str, section_name: &str, label: Option<&str>) -> String {
     // Like "[[nav:categories#All|All Categories]]".
     // format!("[[{}{}#{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, label.map_or("".to_string(), |x| format!("|{}", x)))
@@ -268,6 +274,25 @@ pub fn section_link(namespace: &str, page_name: &str, section_name: &str, label:
     format!("[[{}{}#{}{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, DELIM_LINK_LABEL, label)
 }
 
+pub fn section_link_from_string_label(namespace: &str, page_name: &str, section_name: &str, label: &Option<String>) -> String {
+    // Like "[[nav:categories#All|All Categories]]".
+    // format!("[[{}{}#{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, label.map_or("".to_string(), |x| format!("|{}", x)))
+    // if label.map_or(false, |label| label.contains("#")) {
+    //     label = None;
+    //}
+    TopicKey::assert_legal_namespace(namespace);
+    // let label = label.unwrap_or(format!({}: {}))
+    //format!("[[{}{}#{}|{}#{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, label.unwrap_or(page_name), section_name)
+    //format!("[[{}{}#{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name)
+    let label = if let Some(label) = label {
+        label.clone()
+    } else {
+        format!("{}: {}", page_name, section_name)
+    };
+    // format!("[[{}{}#{}|{}: {}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, page_name, section_name)
+    format!("[[{}{}#{}{}{}]]", namespace_prefix(namespace), legal_file_name(page_name), section_name, DELIM_LINK_LABEL, label)
+}
+
 pub fn section_link_same_page(section_name: &str, label: Option<&str>) -> String {
     // Like "[[#All|All Categories]]".
     // format!("[[#{}{}]]", section_name, label.map_or("".to_string(), |x| format!("|{}", x)))
@@ -279,6 +304,16 @@ pub fn section_link_same_page(section_name: &str, label: Option<&str>) -> String
 pub fn external_link(url: &str, label: Option<&str>) -> String {
     // Like "[[https://github.com/|external link|GitHub]]".
     format!("[[{}{}]]", url, label.map_or("".to_string(), |x| format!("{}{}", DELIM_LINK_LABEL, x)))
+}
+
+pub fn external_link_from_string_label(url: &str, label: &Option<String>) -> String {
+    // Like "[[https://github.com/|external link|GitHub]]".
+    let label = if let Some(label) = label {
+        format!("{}{}", DELIM_LINK_LABEL, label)
+    } else {
+        "".to_string()
+    };
+    format!("[[{}{}]]", url, label)
 }
 
 pub fn legal_file_name(name: &str) -> String {

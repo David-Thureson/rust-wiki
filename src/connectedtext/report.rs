@@ -4,7 +4,7 @@ pub fn report_category_tree(wiki: &Model) {
     let mut parent_child_pairs = vec![];
     for topic in wiki.get_topics().values() {
         if let Some(category_name) = &topic.get_category() {
-            parent_child_pairs.push((category_name.clone(), topic.get_name()));
+            parent_child_pairs.push((category_name.clone(), topic.get_name().to_string()));
         }
     }
     /*

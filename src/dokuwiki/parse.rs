@@ -253,17 +253,17 @@ pub fn text_or_topic_link_label(text: &str) -> Result<String, String> {
     // attribute value to its string form without any links.
     let label = match parse_link_optional(text)? {
         Some(link) => {
-            let label = link.get_label();
+            let label = link.get_label().map(|label| label.to_string());
             label.unwrap_or(match link.get_type() {
-                model::LinkType::Topic { topic_key} => topic_key.get_topic_name(),
-                model::LinkType::Section { section_key} => section_key.get_section_name(),
+                model::LinkType::Topic { topic_key} => topic_key.get_topic_name().to_string(),
+                model::LinkType::Section { section_key} => section_key.get_section_name().to_string(),
                 _ => {
                     dbg!(&text, &link);
                     unimplemented!()
                 },
             })
         },
-        None => text,
+        None => text.to_string(),
     };
     let label = util::parse::unquote(&label);
     Ok(label.to_string())

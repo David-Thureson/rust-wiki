@@ -89,7 +89,7 @@ impl <'a> GenFromModel<'a> {
 
     pub fn gen_attr_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR,None);
-        for attribute_type in self.model.get_attributes().values()
+        for attribute_type in self.model.get_attribute_types().values()
             .filter(|attribute_type| {
                 let value_type = attribute_type.get_value_type();
                 AttributeValueType::Date.ne(value_type) && AttributeValueType::Year.ne(value_type)
@@ -116,7 +116,7 @@ impl <'a> GenFromModel<'a> {
     pub fn gen_attr_value_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR_VALUE,None);
         let mut map = BTreeMap::new();
-        for attribute_type in self.model.get_attributes().values()
+        for attribute_type in self.model.get_attribute_types().values()
                 .filter(|attribute_type| self.model.is_attribute_indexed(attribute_type.get_name())) {
             for (value, topic_keys) in attribute_type.get_values().iter() {
                 let entry = map.entry(value).or_insert(vec![]);
@@ -293,7 +293,7 @@ impl <'a> GenFromModel<'a> {
 
     fn add_category_optional(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
         if let Some(category) = topic.get_category() {
-            page.add_category(&self.model.get_main_namespace(),category);
+            page.add_category(&self.model.get_main_namespace(),&category);
         }
     }
 
@@ -303,7 +303,7 @@ impl <'a> GenFromModel<'a> {
             let mut table = WikiAttributeTable::new();
             for attr_instance in topic.get_attributes().values()
                     .sorted_by_key(|attr_instance| attr_instance.get_sequence()) {
-                let attr_type = self.model.get_attribute(attr_instance.get_attribute_type_name()).unwrap();
+                let attr_type = self.model.get_attribute_type(attr_instance.get_attribute_type_name()).unwrap();
                 let attr_type_name = attr_type.get_name();
                 let attr_type_link = match attr_type.get_value_type() {
                     AttributeValueType::Date => wiki::page_link(&namespace_navigation, PAGE_NAME_ATTR_DATE,Some(attr_type_name)),
@@ -450,7 +450,7 @@ impl <'a> GenFromModel<'a> {
      */
 
     fn add_subcategory_tree(&self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
-        let node_rc = topic.get_category_tree_node().unwrap();
+        let node_rc = topic.get_category_tree_node().as_ref().unwrap();
         let node = b!(&node_rc);
         if node.height() > 2 {
             // let filter_func = |node: Ref<TopicTreeNode>| node.height() > 1;
@@ -574,20 +574,20 @@ impl <'a> GenFromModel<'a> {
 
     fn link_to_markup(&mut self, link: &model::Link) -> String {
         let msg_func_unexpected = |type_, variant: &str| format!("In gen_from_model::add_link(), unexpected {} variant = \"{}\"", type_, variant);
-        let label = link.get_label();
+        let label = link.get_label().map(|label| label.to_string());
         match link.get_type() {
             model::LinkType::Topic { topic_key } => {
                 let page_name = self.model.get_topic_name(&topic_key);
-                let text = wiki::gen::page_link(&self.model.qualify_namespace(topic_key.get_namespace()), &page_name, *label);
+                let text = wiki::gen::page_link_from_string_label(&self.model.qualify_namespace(topic_key.get_namespace()), &page_name, &label);
                 text
             },
             model::LinkType::Section { section_key } => {
-                let text = wiki::gen::section_link(&self.model.qualify_namespace(section_key.get_namespace()),section_key.get_topic_name(), &section_key.get_section_name(), *label);
+                let text = wiki::gen::section_link_from_string_label(&self.model.qualify_namespace(section_key.get_namespace()),section_key.get_topic_name(), &section_key.get_section_name(), &label);
                 //bg!(&text);
                 text
             },
             model::LinkType::External { url } => {
-                let text = wiki::gen::external_link(&url, *label);
+                let text = wiki::gen::external_link_from_string_label(&url, &label);
                 text
             },
             model::LinkType::Image { source, alignment: _, size: _, type_: _ } => {
@@ -624,16 +624,15 @@ impl <'a> GenFromModel<'a> {
     }
 
     pub fn add_attribute_value_topics_list_optional(&self, page: &mut wiki::WikiGenPage) {
-        if let Some(list) = self.model.get_topics_with_attribute_value(&page.topic_name) {
-            if !list.is_empty() {
-                page.add_line("Topics with this attribute:");
-                for (topic_key, attribute_type_name) in list.iter() {
-                    let link = self.page_link_simple(&topic_key);
-                    let line = format!("({}) {}", attribute_type_name.to_lowercase(), link);
-                    page.add_list_item_unordered(1, &line);
-                }
-                page.add_linefeed();
+        let list = self.model.get_topics_with_attribute_value(&page.topic_name);
+        if !list.is_empty() {
+            page.add_line("Topics with this attribute:");
+            for (topic_key, attribute_type_name) in list.iter() {
+                let link = self.page_link_simple(&topic_key);
+                let line = format!("({}) {}", attribute_type_name.to_lowercase(), link);
+                page.add_list_item_unordered(1, &line);
             }
+            page.add_linefeed();
         }
     }
 

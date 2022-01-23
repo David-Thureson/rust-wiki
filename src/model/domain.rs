@@ -43,11 +43,11 @@ impl DomainList {
 
     pub fn catalog_domains(model: &mut Model) -> TopicErrorList {
         // This must be run after catalog_attributes().
-        debug_assert!(!model.get_attribute_list().get_attributes().is_empty());
+        debug_assert!(!model.get_attribute_list().get_attribute_types().is_empty());
         let errors = TopicErrorList::new();
         let mut domain_list = DomainList::new();
-        for topic in model.get_topics().values_mut() {
-            if let Some(attribute_instance) = topic.get_attribute(ATTRIBUTE_NAME_DOMAIN) {
+        for topic in model.get_topics_mut().values_mut() {
+            if let Some(attribute_instance) = topic.get_attributes().get(ATTRIBUTE_NAME_DOMAIN) {
                 if attribute_instance.get_values().len() == 1 {
                     domain_list.add_domain_optional(&attribute_instance.get_values()[0]);
                 } else {

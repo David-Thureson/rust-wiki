@@ -8,11 +8,11 @@ use std::collections::BTreeMap;
 pub type ModelRc = Rc<RefCell<Model>>;
 
 pub struct Model {
-    name: String,
+    _name: String,
     main_namespace: String,
     namespaces: BTreeMap<String, String>,
     topics: BTreeMap<TopicKey, Topic>,
-    categories: BTreeMap<String, Category>,
+    categories: Vec<String>,
     category_tree: Option<TopicTree>,
     subtopic_tree: Option<TopicTree>,
     attribute_list: AttributeList,
@@ -23,7 +23,7 @@ impl Model {
     pub fn new(name: &str, main_namespace: &str) -> Self {
         TopicKey::assert_legal_namespace(main_namespace);
         let mut wiki = Self {
-            name: name.to_string(),
+            _name: name.to_string(),
             main_namespace: main_namespace.to_string(),
             namespaces: Default::default(),
             topics: Default::default(),
@@ -80,9 +80,11 @@ impl Model {
         &mut self.topics
     }
 
+    /*
     pub fn get_topic_mut(&mut self, topic_key: &TopicKey) -> &Option<&mut Topic> {
-        &self.topics.get_mut(topic_key)
+        self.topics.get_mut(topic_key)
     }
+    */
 
     pub fn add_topic(&mut self, topic: Topic) {
         assert!(self.namespaces.contains_key(topic.get_namespace()));
@@ -105,15 +107,19 @@ impl Model {
     }
 
     pub fn set_attributes_to_index(&mut self, attr: Vec<String>) {
-        self.attributes.set_attributes_to_index(attr);
+        self.attribute_list.set_attributes_to_index(attr);
     }
 
     pub fn is_attribute_indexed(&self, name: &str) -> bool {
-        self.attributes.is_attribute_indexed(name)
+        self.attribute_list.is_attribute_indexed(name)
     }
 
-    pub fn get_attributes(&self) -> &BTreeMap<String, AttributeType> {
-        self.attribute_list.get_attributes()
+    pub fn get_attribute_types(&self) -> &BTreeMap<String, AttributeType> {
+        self.attribute_list.get_attribute_types()
+    }
+
+    pub fn get_attribute_types_mut(&mut self) -> &mut BTreeMap<String, AttributeType> {
+        self.attribute_list.get_attribute_types_mut()
     }
 
     // In the values map, each entry is a list of pairs of topic keys and attribute type names.
@@ -122,8 +128,8 @@ impl Model {
         self.attribute_list.sort_attribute_topic_lists();
     }
 
-    pub fn get_attribute(&self, name: &str) -> Option<&AttributeType> {
-        self.attribute_list.get_attribute(name)
+    pub fn get_attribute_type(&self, name: &str) -> Option<&AttributeType> {
+        self.attribute_list.get_attribute_type(name)
     }
 
     pub fn clear_attribute_orders(&mut self) {
@@ -146,15 +152,15 @@ impl Model {
         self.attribute_list.has_attribute_links(value)
     }
 
-    pub fn clear_attributes(&mut self) {
-        self.attribute_list.clear_attributes();
+    pub fn clear_attribute_types_and_values(&mut self) {
+        self.attribute_list.clear_attribute_types_and_values();
     }
 
     pub fn get_attribute_list(&self) -> &AttributeList {
         &self.attribute_list
     }
 
-    pub fn get_topics_with_attribute_value(&self, value: &str) -> &Option<&Vec<(TopicKey, String)>> {
+    pub fn get_topics_with_attribute_value(&self, value: &str) -> Vec<(TopicKey, String)> {
         self.attribute_list.get_topics_with_attribute_value(value)
     }
 
@@ -167,7 +173,29 @@ impl Model {
     }
 
     pub fn catalog_links(&mut self) {
-        Link::catalog_links(self);
+        for topic in self.topics.values_mut() {
+            topic.catalog_outbound_links();
+        }
+        self.catalog_inbound_links();
+    }
+
+    fn catalog_inbound_links(&mut self) {
+        let mut map = BTreeMap::new();
+        for topic in self.topics.values() {
+            let topic_key = topic.get_key();
+            for outbound_topic_key in topic.get_topic_links_as_topic_keys().drain(..) {
+                let entry = map.entry(outbound_topic_key.clone()).or_insert(vec![]);
+                if !entry.contains(&topic_key) {
+                    entry.push(topic_key.clone());
+                }
+            }
+        }
+        for (topic_key, mut inbound_topic_keys) in map.drain_filter(|_k, _v| true) {
+            TopicKey::sort_topic_keys_by_name(&mut inbound_topic_keys);
+            if let Some(topic) = self.get_topics_mut().get_mut(&topic_key) {
+                topic.add_inbound_topic_keys(inbound_topic_keys);
+            }
+        }
     }
 
     pub fn check_links(&self) -> TopicErrorList {
@@ -182,7 +210,7 @@ impl Model {
 
     pub fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
         for topic in self.topics.values_mut() {
-            topic.update_internal_links(&mut self, keys);
+            topic.update_internal_links(keys);
         }
     }
 
@@ -195,7 +223,34 @@ impl Model {
     }
 
     pub fn catalog_attributes(&mut self) -> TopicErrorList {
-        AttributeType::catalog_attributes(self)
+        // At this point each topic has a list of temp attributes which are simply named sets of
+        // string values, with no sense of their type. Go through the temp attributes in all of the
+        // topics and use them to create a master list of attribute types such as "Added" or
+        // "Domain" which are held by the model to be shared among topics. Within each topic,
+        // replace the temp attributes with references to these shared attribute types.
+        let mut errors = TopicErrorList::new();
+        AttributeType::fill_attribute_orders(self);
+        let attribute_orders = self.get_attribute_orders().clone();
+        // Presumably we haven't yet created the real attribute types held by the model.
+        assert!(self.attribute_list.get_attribute_types().is_empty());
+        assert!(self.attribute_list.get_attribute_values().is_empty());
+        // model.clear_attributes();
+        // This map holds the real attribute types. We build it while looping through the topics,
+        // then attach it to the model at the end to avoid attempting more than one mutable
+        // reference to the model.
+        let mut attribute_types = BTreeMap::new();
+        // Similarly, this map holds the master list of attribute values encountered within the
+        // topics. It will be attached to the model at the end.
+        let mut attribute_values = BTreeMap::new();
+        for topic in self.get_topics_mut().values_mut() {
+            topic.catalog_attributes(&mut errors, &mut attribute_types, &mut attribute_values, &attribute_orders);
+        }
+        self.attribute_list.set_attribute_types_and_values(attribute_types, attribute_values);
+        // In the values map, each entry is a list of pairs of topic keys and attribute type names.
+        // Sort each of these lists by topic name first, then attribute type name.
+        self.sort_attribute_topic_lists();
+        // Self::list_attribute_types(model);
+        errors
     }
 
     pub fn catalog_domains(&mut self) -> TopicErrorList {
@@ -214,18 +269,18 @@ impl Model {
         self.topics.keys().sorted_by_key(|topic_key| topic_key.get_topic_name().to_lowercase()).map(|x| x.clone()).collect()
     }
 
-    pub fn add_category_optional(&mut self, name: &str) {
-        if !self.categories.contains_key(name) {
-            self.categories.insert(name.to_string(), Category::new(None, name) );
+    pub fn add_category_optional(&mut self, name: String) {
+        if !self.categories.contains(&name) {
+            self.categories.push(name);
         }
     }
 
-    pub fn get_categories(&self) -> &BTreeMap<String, Category> {
+    pub fn get_categories(&self) -> &Vec<String> {
         &self.categories
     }
 
     pub fn get_attribute_order(&self, attr_type_name: &str) -> Result<usize, String> {
-        match self.attributes.attribute_orders.get(attr_type_name) {
+        match self.attribute_list.get_attribute_orders().get(attr_type_name) {
             Some(sequence) => Ok(*sequence),
             None => Err(format!("No sequence found for attribute type \"{}\".", attr_type_name)),
         }
@@ -249,23 +304,25 @@ impl Model {
     */
 
     pub fn has_section(&self, section_key: &SectionKey) -> bool {
-        if !self.has_topic(&section_key.topic_key) {
+        if !self.has_topic(&section_key.get_topic_key()) {
             return false;
         }
-        self.topics[&section_key.topic_key].has_section(&section_key.section_name)
+        self.topics[&section_key.get_topic_key()].has_section(&section_key.get_section_name())
     }
 
     pub fn add_missing_category_topics(&mut self) {
-        Category::add_missing_category_topics(self)
+        category::add_missing_category_topics(self)
     }
 
+    /*
     pub fn move_topics_to_namespace_by_category(&mut self, category_name: &str, namespace_name: &str) {
         TopicKey::assert_legal_namespace(namespace_name);
         Category::move_topics_to_namespace_by_category(self, category_name, namespace_name)
     }
+    */
 
     pub fn make_category_tree(&mut self) {
-        self.category_tree = Some(Category::make_category_tree(self));
+        self.category_tree = Some(make_category_tree(self));
     }
 
     pub fn make_subtopic_tree(&mut self) {

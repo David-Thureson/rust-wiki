@@ -1,4 +1,4 @@
-use crate::model::TextBlock;
+use crate::model::{TextBlock, TopicKey};
 
 // This is a simple table abstraction used during parsing. It's not part of the model. In the
 // model, use Paragraph::Table.
@@ -36,6 +36,10 @@ impl Table {
 
     pub fn get_rows(&self) -> &Vec<Vec<TableCell>> {
         &self.rows
+    }
+
+    pub fn get_rows_mut(&mut self) -> &mut Vec<Vec<TableCell>> {
+        &mut self.rows
     }
 
     pub fn has_header(&self) -> bool {
@@ -116,6 +120,11 @@ impl TableCell {
     pub fn get_text_block(&self) -> &TextBlock {
         &self.text_block
     }
+
+    pub fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
+        self.text_block.update_internal_links(keys);
+    }
+
 }
 
 impl HorizontalAlignment {

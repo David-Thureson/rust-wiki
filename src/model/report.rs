@@ -41,9 +41,9 @@ impl WikiReport {
         let namespace_count = wiki.get_namespaces().len();
         let topic_count = wiki.get_topics().len();
         let category_count = wiki.get_categories().len();
-        let attribute_count = wiki.get_attribute_list().get_attributes().len();
-        println!("namespaces = {}, topics = {}, categories = {}, attributes = {}",
-            namespace_count, topic_count, category_count, attribute_count);
+        let attribute_type_count = wiki.get_attribute_list().get_attribute_types().len();
+        println!("namespaces = {}, topics = {}, categories = {}, attribute types = {}",
+            namespace_count, topic_count, category_count, attribute_type_count);
         let child_depth = 1;
         if self.categories {
             self.category_breakdown(wiki, child_depth);
@@ -63,7 +63,7 @@ impl WikiReport {
         let mut groups = util::group::Grouper::new("Categories");
         for topic in wiki.get_topics().values() {
             if let Some(category) = &topic.get_category() {
-                groups.record_entry(&category);
+                groups.record_entry(&category.to_string());
             }
         }
         groups.print_by_count(depth, Some(5));
@@ -108,7 +108,7 @@ impl WikiReport {
 }
 
 pub fn report_attributes(wiki: &Model) {
-    for attribute_type in wiki.get_attributes().values() {
+    for attribute_type in wiki.get_attribute_types().values() {
         println!("\n{}: {} ({})", attribute_type.get_name(), attribute_type.get_value_type().get_variant_name(), attribute_type.get_topic_count());
         for (value, topics) in attribute_type.get_values().iter() {
             let display_value = attribute_type.get_value_display_string(value);
@@ -120,7 +120,7 @@ pub fn report_attributes(wiki: &Model) {
     // Print the names of the string attribute types as a list of quoted strings.
     // println!("{}", wiki.attributes.iter().filter(|(_name, type_)| type_.value_type == AttributeValueType::String).map(|(name, _type_)| format!("\"{}\"", name)).join(", "));
     // Print the names of the date attribute types as a list of quoted strings.
-    println!("{}", wiki.get_attributes().iter().filter(|(_name, type_)| AttributeValueType::Date.eq(type_.get_value_type())).map(|(name, _type_)| format!("\"{}\"", name)).join(", "));
+    println!("{}", wiki.get_attribute_types().iter().filter(|(_name, type_)| AttributeValueType::Date.eq(type_.get_value_type())).map(|(name, _type_)| format!("\"{}\"", name)).join(", "));
     // Print the names of the year attribute types as a list of quoted strings.
     // println!("{}", wiki.attributes.iter().filter(|(_name, type_)| type_.value_type == AttributeValueType::Year).map(|(name, _type_)| format!("\"{}\"", name)).join(", "));
 }
@@ -131,11 +131,11 @@ pub fn report_attributes_with_multiple_values(wiki: &Model) {
     // a survey of attributes that appear to have multiple values within a given topic but might
     // really be a case where a value such as a book title has commas that we misinterpreted.
     println!("\nReport: Attributes with Multiple Values:\n");
-    for attr_type in wiki.get_attributes().values()
+    for attr_type in wiki.get_attribute_types().values()
             .filter(|attr_type| attr_type.get_value_type().eq(&AttributeValueType::String)) {
         let mult_value_count = wiki.get_topics().values()
             .map(|topic| {
-                let topic_value_count = topic.get_attributes().get(&attr_type.get_name()).map_or(0, |attr_instance| attr_instance.get_values().len());
+                let topic_value_count = topic.get_attribute_value_count(attr_type.get_name());
                 if topic_value_count > 0 { 1 } else { 0 }
             })
             .sum::<usize>();

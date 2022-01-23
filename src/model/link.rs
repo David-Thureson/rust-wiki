@@ -1,7 +1,6 @@
 // https://www.dokuwiki.org/images
 
 use super::*;
-use std::collections::BTreeMap;
 
 #[derive(Clone, Debug)]
 pub struct Link {
@@ -138,14 +137,28 @@ impl Link {
         Self::new(label, type_)
     }
 
-    pub fn get_label(&self) -> &Option<&str> {
-        &self.label.map(|label| label.as_str())
+    pub fn new_topic_string_label(label: Option<String>, namespace_name: &str, topic_name: &str) -> Self {
+        TopicKey::assert_legal_namespace(namespace_name);
+        TopicKey::assert_legal_topic_name(topic_name);
+        let topic_key = TopicKey::new(namespace_name, topic_name);
+        let type_ = LinkType::Topic {
+            topic_key,
+        };
+        Self {
+            label,
+            type_,
+        }
+    }
+
+    pub fn get_label(&self) -> Option<String> {
+        self.label.as_ref().map(|label| label.clone())
     }
 
     pub fn get_type(&self) -> &LinkType {
         &self.type_
     }
 
+    /*
     pub fn catalog_links(model: &mut Model) {
         for topic in model.get_topics_mut().values_mut() {
             topic.clear_outbound_links();
@@ -222,8 +235,9 @@ impl Link {
             topic.sort_topic_key_lists();
         }
     }
+    */
 
-    fn catalog_links_text_block(text_block: &TextBlock) -> Vec<Link> {
+    pub(crate) fn catalog_links_text_block(text_block: &TextBlock) -> Vec<Link> {
         match text_block {
             TextBlock::Resolved { items } => {
                 let mut links = vec![];

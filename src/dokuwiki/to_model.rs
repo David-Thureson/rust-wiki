@@ -115,7 +115,7 @@ impl BuildProcess {
     }
 
     fn refine_paragraphs(&mut self, model: &mut Model) {
-        for topic in model.get_topics().values_mut() {
+        for topic in model.get_topics_mut().values_mut() {
             let context = format!("Refining paragraphs for \"{}\".", topic.get_name());
             self.topic_parse_state = TopicParseState::new();
             //rintln!("\n==================================================================\n\n{}\n", context);
@@ -180,7 +180,7 @@ impl BuildProcess {
                             Some(label) => {
                                 let category_name = label;
                                 //rintln!("\"{}\" in \"{}\"", topic.get_name(), category_name);
-                                topic.set_category(category_name);
+                                topic.set_category(&category_name);
                                 return Ok(true);
                             },
                             None => {

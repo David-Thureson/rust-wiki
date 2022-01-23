@@ -6,10 +6,10 @@ use chrono::NaiveDate;
 // pub type AttributeValueRc = Rc<RefCell<AttributeValue>>;
 
 pub struct AttributeList {
-    attributes: BTreeMap<String, AttributeType>,
+    attribute_types: BTreeMap<String, AttributeType>,
     attribute_orders: BTreeMap<String, usize>,
     attributes_to_index: Vec<String>,
-    values: BTreeMap<String, Vec<(TopicKey, String)>>,
+    attribute_values: BTreeMap<String, Vec<(TopicKey, String)>>,
 }
 
 // This is the overall kind of topic like Author, Domain, or Language.
@@ -43,32 +43,36 @@ pub enum AttributeValueType {
 impl AttributeList {
     pub fn new() -> Self {
         Self {
-            attributes: Default::default(),
+            attribute_types: Default::default(),
             attribute_orders: Default::default(),
             attributes_to_index: vec![],
-            values: Default::default(),
+            attribute_values: Default::default(),
         }
     }
 
-    pub fn get_attributes(&self) -> &BTreeMap<String, AttributeType> {
-        &self.attributes
+    pub fn get_attribute_types(&self) -> &BTreeMap<String, AttributeType> {
+        &self.attribute_types
+    }
+
+    pub fn get_attribute_types_mut(&mut self) -> &mut BTreeMap<String, AttributeType> {
+        &mut self.attribute_types
     }
 
     pub fn sort_attribute_topic_lists(&mut self) {
         // In the values map, each entry is a list of pairs of topic keys and attribute type names.
         // Sort each of these lists by topic name first, then attribute type name.
-        for list in self.values.values_mut() {
+        for list in self.attribute_values.values_mut() {
             list.sort_by(|a, b| a.0.get_topic_name().to_lowercase().cmp(&b.0.get_topic_name().to_lowercase()).then(a.1.cmp(&b.1)));
         }
     }
 
-    pub fn get_attribute(&self, name: &str) -> Option<&AttributeType> {
-        self.attributes.get(name)
+    pub fn get_attribute_type(&self, name: &str) -> Option<&AttributeType> {
+        self.attribute_types.get(name)
     }
 
-    pub fn clear_attributes(&mut self) {
-        self.attributes.clear();
-        self.values.clear();
+    pub fn clear_attribute_types_and_values(&mut self) {
+        self.attribute_types.clear();
+        self.attribute_values.clear();
     }
 
     pub fn clear_attribute_orders(&mut self) {
@@ -92,17 +96,32 @@ impl AttributeList {
         self.attributes_to_index.contains(&name.to_string())
     }
 
+    pub fn get_attribute_values(&self) -> &BTreeMap<String, Vec<(TopicKey, String)>> {
+        &self.attribute_values
+    }
+
     pub fn has_attribute_links(&self, value: &str) -> bool {
-        self.values.get(value).map_or(false, |list| !list.is_empty())
+        self.attribute_values.get(value).map_or(false, |list| !list.is_empty())
     }
 
-    pub fn add_attribute_value(&mut self, value: String, topic_key: TopicKey, value_type_name: String) {
-        let entry = self.values.entry(value).or_insert(vec![]);
-        entry.push((topic_key, value_type_name));
+    pub fn add_attribute_value(&mut self, value: String, topic_key: TopicKey, attribute_type_name: String) {
+        let entry = self.attribute_values.entry(value).or_insert(vec![]);
+        entry.push((topic_key, attribute_type_name));
     }
 
-    pub fn get_topics_with_attribute_value(&self, value: &str) -> &Option<&Vec<(TopicKey, String)>> {
-        &self.values.get(value)
+    pub fn get_topics_with_attribute_value(&self, value: &str) -> Vec<(TopicKey, String)> {
+        let mut topic_keys = vec![];
+        if let Some(found_topic_keys) = self.attribute_values.get(value) {
+            topic_keys.append(&mut found_topic_keys.clone());
+        }
+        topic_keys
+    }
+
+    pub fn set_attribute_types_and_values(&mut self, attribute_types: BTreeMap<String, AttributeType>, attribute_values: BTreeMap<String, Vec<(TopicKey, String)>>) {
+        assert!(self.attribute_types.is_empty());
+        assert!(self.attribute_values.is_empty());
+        self.attribute_types = attribute_types;
+        self.attribute_values = attribute_values;
     }
 }
 
@@ -127,6 +146,10 @@ impl AttributeType {
 
     pub fn get_values(&self) -> &BTreeMap<String, Vec<TopicKey>> {
         &self.values
+    }
+
+    pub fn get_sequence(&self) -> usize {
+        self.sequence
     }
 
     pub fn assert_legal_attribute_type_name(name: &str) {
@@ -165,7 +188,9 @@ impl AttributeType {
         });
     }
 
-    pub fn add_value(&mut self, value: &str, topic_key: &TopicKey) -> Result<String, String> {
+    pub fn add_value_for_topic(&mut self, value: &str, topic_key: &TopicKey) -> Result<String, String> {
+        // If this attribute type does not have the value, add it. Then either way add a reference
+        // to the topic, showing that this topic has this value for this attribute type.
         let canonical_value = Self::value_to_canonical_form(&self.value_type, value)?;
         let entry = self.values.entry(canonical_value.clone())
                 .or_insert(vec![]);
@@ -176,7 +201,7 @@ impl AttributeType {
     }
 
     pub fn add_date_value(&mut self, value: &NaiveDate, topic_key: &TopicKey) -> Result<String, String> {
-        self.add_value(&Self::date_to_canonical_value(value), topic_key)
+        self.add_value_for_topic(&Self::date_to_canonical_value(value), topic_key)
     }
 
     pub fn get_canonical_value(&self, value: &str) -> Result<String, String> {
@@ -259,56 +284,10 @@ impl AttributeType {
         self.values.values().map(|topics| topics.len()).sum()
     }
 
-    pub fn catalog_attributes(model: &mut Model) -> TopicErrorList {
-        let mut errors = TopicErrorList::new();
-        Self::fill_attribute_orders(model);
-        model.clear_attributes();
-        for topic in model.get_topics().values_mut() {
-            topic.clear_attributes();
-            for (temp_attr_name, temp_attr_values) in topic.get_temp_attributes().iter()
-                    .filter(|(_name, values)| !values.is_empty()) {
-                AttributeType::assert_legal_attribute_type_name(temp_attr_name);
-                let attribute_type = model.get_attributes().entry(temp_attr_name.clone())
-                    .or_insert({
-                        let value_type = AttributeType::value_to_presumed_type(temp_attr_name,&*temp_attr_values[0]);
-                        let sequence = model.get_attribute_orders().get(temp_attr_name).map_or_else(
-                            || {
-                                errors.add(&topic.get_key(), &format!("No sequence found for attribute type \"{}\".", temp_attr_name));
-                                ATTRIBUTE_ORDER.len()
-                            },
-                                |sequence| { *sequence }
-                            );
-                        AttributeType::new(temp_attr_name, &value_type, sequence)
-                    });
-                let mut values_for_topic = vec![];
-                for temp_value in temp_attr_values.iter() {
-                    AttributeType::assert_legal_attribute_value(temp_value);
-                    match attribute_type.add_value(temp_value,&topic.get_key()) {
-                        Ok(canonical_value) => {
-                            AttributeType::assert_legal_attribute_value(&canonical_value);
-                            // Don't add a topic item if the topic has itself as an attribute.
-                            if topic.get_name().ne(&canonical_value) {
-                                model.add_attribute_value(canonical_value.clone(), topic.get_key(), attribute_type.name.clone());
-                            }
-                            values_for_topic.push(canonical_value)
-                        },
-                        Err(msg) => { errors.add(&topic.get_key(), &msg)}
-                    };
-                }
-                topic.add_attribute(AttributeInstance::new(temp_attr_name, attribute_type.sequence,values_for_topic));
-            }
-        }
-        // In the values map, each entry is a list of pairs of topic keys and attribute type names.
-        // Sort each of these lists by topic name first, then attribute type name.
-        model.sort_attribute_topic_lists();
-        // Self::list_attribute_types(model);
-        errors
-    }
-
     pub fn list_attribute_types(model: &Model) {
         let mut list = vec![];
         println!("\nAttribute types:");
-        for attribute_type in model.get_attributes().values() {
+        for attribute_type in model.get_attribute_types().values() {
             let value_type = attribute_type.value_type.get_variant_name();
             list.push(attribute_type.name.clone());
             let value_count = attribute_type.values.len();
@@ -323,7 +302,7 @@ impl AttributeType {
 
     pub fn get_distinct_attr_values(model: &Model, value_type: &AttributeValueType) -> Vec<String> {
         let mut values = vec![];
-        for attribute_type in model.get_attributes().values()
+        for attribute_type in model.get_attribute_types().values()
             .filter(|attribute_type| attribute_type.value_type.eq(value_type)) {
             for value in attribute_type.values.keys() {
                 values.push(value.clone());
@@ -336,7 +315,7 @@ impl AttributeType {
 
     pub fn get_topics_for_attr_value(model: &Model, value_type: &AttributeValueType, match_value: &str, included_attr_names: Option<Vec<&str>>) -> Vec<TopicKey> {
         let mut topic_keys = vec![];
-        for attribute_type in model.get_attributes().values()
+        for attribute_type in model.get_attribute_types().values()
             .filter(|attribute_type| attribute_type.value_type.eq(value_type))
             .filter(|attribute_type| included_attr_names.as_ref().map_or(true, |included| included.contains(&&*attribute_type.name))) {
             for (_found_value, found_topic_keys) in attribute_type.values.iter()
@@ -355,7 +334,7 @@ impl AttributeType {
     // Create a list of pairs of the attribute type name and the topic key.
     pub fn get_typed_topics_for_attr_value(model: &Model, value_type: &AttributeValueType, match_value: &str, included_attr_names: Option<Vec<&str>>) -> Vec<(String, TopicKey)> {
         let mut list = vec![];
-        for attribute_type in model.get_attributes().values()
+        for attribute_type in model.get_attribute_types().values()
             .filter(|attribute_type| attribute_type.value_type.eq(value_type))
             .filter(|attribute_type| included_attr_names.as_ref().map_or(true, |included| included.contains(&&*attribute_type.name))) {
             for (_found_value, found_topic_keys) in attribute_type.values.iter()
