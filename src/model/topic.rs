@@ -762,3 +762,11 @@ impl Display for SectionKey {
         write!(f, "[{}:{}#{}]", self.topic_key.namespace, self.topic_key.topic_name, self.section_name)
     }
 }
+
+pub(crate) fn make_topic_ref(namespace: &str, topic_name: &str) -> String {
+    // For now use the DokuWiki conventions. If we later need to generate a different wiki format,
+    // create a function like this for each wiki engine and pass it to the gen process.
+    let canonical_topic_name = super::dokuwiki::gen::legal_file_name(topic_name);
+    let topic_ref = format!("{}{}{}", namespace, super::dokuwiki::DELIM_NAMESPACE, canonical_topic_name);
+    topic_ref
+}

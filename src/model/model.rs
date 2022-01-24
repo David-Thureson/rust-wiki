@@ -2,11 +2,14 @@ use super::*;
 use std::collections::BTreeMap;
 // use crate::connectedtext::NAMESPACE_TOOLS;
 
+pub(crate) type TopicRefs = BTreeMap<String, TopicKey>;
+
 pub(crate) struct Model {
     _name: String,
     main_namespace: String,
     namespaces: BTreeMap<String, String>,
     topics: BTreeMap<TopicKey, Topic>,
+    topic_refs: TopicRefs,
     categories: Vec<String>,
     category_tree: Option<TopicTree>,
     subtopic_tree: Option<TopicTree>,
@@ -22,6 +25,7 @@ impl Model {
             main_namespace: main_namespace.to_string(),
             namespaces: Default::default(),
             topics: Default::default(),
+            topic_refs: Default::default(),
             categories: Default::default(),
             category_tree: None,
             subtopic_tree: None,
@@ -84,12 +88,18 @@ impl Model {
 
     pub(crate) fn add_topic(&mut self, topic: Topic) {
         assert!(self.namespaces.contains_key(topic.get_namespace()));
-        let key = topic.get_key();
-        if self.topics.contains_key(&key) {
-            panic!("We already have this topic key: {:?}", key)
+        let topic_key = topic.get_key();
+
+        let topic_ref = make_topic_ref(topic_key.get_namespace(), topic_key.get_topic_name());
+        if self.topic_refs.contains_key(&topic_ref) {
+            panic!("We already have this topic ref: \"{}\".", topic_ref)
         }
-        assert!(!self.topics.contains_key(&key));
-        self.topics.insert(key, topic);
+        self.topic_refs.insert(topic_ref, topic_key.clone());
+
+        if self.topics.contains_key(&topic_key) {
+            panic!("We already have this topic key: {:?}.", topic_key)
+        }
+        self.topics.insert(topic_key, topic);
     }
 
     /*
@@ -102,6 +112,22 @@ impl Model {
         assert!(self.topics.contains_key(topic_key), "Topic key {} not found.", topic_key);
         let topic = self.topics.get(topic_key).unwrap();
         topic.get_name()
+    }
+
+    pub(crate) fn get_topic_refs(&self) -> &TopicRefs {
+        &self.topic_refs
+    }
+
+    pub(crate) fn get_corrected_topic_key(topic_refs: &TopicRefs, namespace: &str, topic_name: &str) -> Result<TopicKey, String> {
+        // The topic name will be in either the title form like "Functional Programming" or the
+        // canonical file name form found in links. Either way we want to end up with a topic key
+        // that uses the title form.
+        if topic_name.eq("//www.alteryx.com/") { panic!(); }
+        let topic_ref = make_topic_ref(namespace, topic_name);
+        match topic_refs.get(&topic_ref) {
+            Some(topic_key) => Ok(topic_key.clone()),
+            None => Err(format!("Corrected topic key not found for namespace = \"{}\", topic_name = \"{}\", topic_ref = \"{}\".", namespace, topic_name, topic_ref)),
+        }
     }
 
     pub(crate) fn set_attributes_to_index(&mut self, attr: Vec<String>) {
@@ -198,7 +224,7 @@ impl Model {
 
     pub(crate) fn check_topic_link(&self, errors: &mut TopicErrorList, list_name: &str, this_topic_key: &TopicKey, ref_topic_key: &TopicKey) {
         if !self.has_topic(ref_topic_key) {
-            errors.add(this_topic_key,&format!("wiki::check_topic_link(): Topic link {} from {} list not found.", ref_topic_key, list_name));
+            errors.add(this_topic_key, &format!("wiki::check_topic_link(): Topic link {} from {} list not found.", ref_topic_key, list_name));
         }
     }
 
@@ -373,5 +399,4 @@ impl Model {
         }
         map
     }
-
 }

@@ -1,8 +1,8 @@
 use crate::*;
 use super::*;
-use crate::model::{TopicKey, HorizontalAlignment};
+use crate::model::{TopicKey, HorizontalAlignment, Model, TopicRefs};
 
-pub(crate) fn parse_link_optional(text: &str) -> Result<Option<model::Link>, String> {
+pub(crate) fn parse_link_optional(topic_refs: &TopicRefs, text: &str) -> Result<Option<model::Link>, String> {
     // Example topic link:
     //   [[tools:combinations|Combinations]]
     // Example section link:
@@ -20,12 +20,13 @@ pub(crate) fn parse_link_optional(text: &str) -> Result<Option<model::Link>, Str
         let text = util::parse::between_trim(text, DELIM_LINK_START, DELIM_LINK_END);
         //bg!(text);
         let (dest, label) = util::parse::split_1_or_2(text, DELIM_LINK_LABEL);
-        let link = if dest.trim().to_lowercase().starts_with(PREFIX_HTTPS) {
+        let dest_trim_lower = dest.trim().to_lowercase();
+        let link = if dest_trim_lower.starts_with(PREFIX_HTTP) || dest_trim_lower.starts_with(PREFIX_HTTPS) {
             model::Link::new_external(label, dest)
         } else {
             // Internal link.
             let (topic_ref, section_name) = util::parse::split_1_or_2(dest, DELIM_LINK_SECTION);
-            let topic_key = topic_ref_to_topic_key(topic_ref)?;
+            let topic_key = topic_ref_to_topic_key(topic_refs, topic_ref)?;
             if let Some(section_name) = section_name {
                 model::Link::new_section(label, topic_key.get_namespace(), topic_key.get_topic_name(), section_name)
             } else {
@@ -42,7 +43,8 @@ pub(crate) fn parse_link_optional(text: &str) -> Result<Option<model::Link>, Str
         //   {{tools:antlr_plugin_on_pycharm_added.png?direct}}
         let text = util::parse::between_trim(text, DELIM_IMAGE_START, DELIM_IMAGE_END);
         let (file_ref, _options) = util::parse::split_1_or_2(text, DELIM_IMAGE_OPTIONS);
-        let image_source = if file_ref.to_lowercase().starts_with(PREFIX_HTTPS) {
+        let file_ref_lower = file_ref.to_lowercase().trim().to_string();
+        let image_source = if file_ref_lower.starts_with(PREFIX_HTTP) || file_ref_lower.starts_with(PREFIX_HTTPS) {
             model::ImageSource::new_external(file_ref)
         } else {
             let (file_name, namespace) = util::parse::rsplit_2(file_ref, DELIM_NAMESPACE);
@@ -236,13 +238,14 @@ fn eval_breadcrumb_topic_ref(topic_ref: &str) -> Result<TopicKey, String> {
 }
 */
 
-pub(crate) fn topic_ref_to_topic_key(topic_ref: &str) -> Result<model::TopicKey, String> {
+pub(crate) fn topic_ref_to_topic_key(topic_refs: &TopicRefs, topic_ref: &str) -> Result<model::TopicKey, String> {
     // Something like "tools:books:Zero to One".
     if !topic_ref.contains(DELIM_NAMESPACE) {
         return Err(format!("Namespace delimiter \"{}\" not found in topic reference \"{}\".", DELIM_NAMESPACE, topic_ref));
     }
     let (topic_name, namespace) = util::parse::rsplit_2(topic_ref, DELIM_NAMESPACE);
-    Ok(model::TopicKey::new(namespace, topic_name))
+    // Ok(model::TopicKey::new(namespace, topic_name))
+    Model::get_corrected_topic_key(topic_refs, namespace, topic_name)
 }
 
 pub(crate) fn text_or_topic_link_label(text: &str) -> Result<String, String> {
@@ -251,19 +254,31 @@ pub(crate) fn text_or_topic_link_label(text: &str) -> Result<String, String> {
     // If it's not a link, simply return the text.
     // This is used for the round trip with DokuWiki, in the attribute blocks. It reduces a given
     // attribute value to its string form without any links.
-    let label = match parse_link_optional(text)? {
-        Some(link) => {
-            let label = link.get_label().map(|label| label.to_string());
-            label.unwrap_or(match link.get_type() {
-                model::LinkType::Topic { topic_key} => topic_key.get_topic_name().to_string(),
-                model::LinkType::Section { section_key} => section_key.get_section_name().to_string(),
-                _ => {
-                    dbg!(&text, &link);
-                    unimplemented!()
-                },
-            })
-        },
-        None => text.to_string(),
+    // Example topic link:
+    //   [[tools:combinations|Combinations]]
+    // Example section link:
+    //   [[tools:combinations#Notes|Combinations: Notes]]
+    // Example external link:
+    //   [[https://github.com/|external link|GitHub]]
+    let text = text.trim();
+    //bg!(text);
+    let label = if !text.starts_with(DELIM_LINK_START) {
+        // Not a link.
+        text.to_string()
+    } else {
+        if !text.ends_with(DELIM_LINK_END) {
+            return Err(format!("Text seems to be a link because it starts with \"{}\" but it does not end with \"{}\": \"{}\".", DELIM_LINK_START, DELIM_LINK_END, text));
+        }
+        let text = util::parse::between_trim(text, DELIM_LINK_START, DELIM_LINK_END);
+        //bg!(text);
+        let (dest, label) = util::parse::split_1_or_2(text, DELIM_LINK_LABEL);
+        if let Some(label) = label {
+            label.to_string()
+        } else {
+            let (topic_ref, _section_name) = util::parse::split_1_or_2(dest, DELIM_LINK_SECTION);
+            let (_namespace, topic_name) = util::parse::rsplit_2(topic_ref, DELIM_NAMESPACE);
+            topic_name.to_string()
+        }
     };
     let label = util::parse::unquote(&label);
     Ok(label.to_string())

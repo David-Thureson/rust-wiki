@@ -12,6 +12,7 @@ struct BuildProcess {
     wiki_name: String,
     namespace_main: String,
     path_source: String,
+    topic_refs: TopicRefs,
     errors: TopicErrorList,
     topic_limit: Option<usize>,
     topic_parse_state: TopicParseState,
@@ -31,6 +32,7 @@ impl BuildProcess {
             wiki_name: wiki_name.to_string(),
             namespace_main: namespace_main.to_string(),
             path_source: path_source.to_string(),
+            topic_refs: Default::default(),
             errors: TopicErrorList::new(),
             topic_limit,
             topic_parse_state: TopicParseState::new(),
@@ -46,6 +48,8 @@ impl BuildProcess {
         let topic_limit_per_namespace = self.topic_limit.map(|topic_limit| topic_limit / 2);
         self.parse_from_folder(&mut model, &namespace_main, topic_limit_per_namespace);
         self.parse_from_folder(&mut model, &namespace_book, topic_limit_per_namespace);
+
+        self.topic_refs = model.get_topic_refs().clone();
 
         // Figure out the real nature of each paragraph.
         self.refine_paragraphs(&mut model);
@@ -174,7 +178,7 @@ impl BuildProcess {
                 return err_func("The text seems to be a category format but it has linefeeds.");
             } else {
                 let category_part = util::parse::after(text, PREFIX_CATEGORY).trim().to_string();
-                match parse_link_optional(&category_part) {
+                match parse_link_optional(&self.topic_refs,&category_part) {
                     Ok(Some(link)) => {
                         match link.get_label() {
                             Some(label) => {
@@ -378,7 +382,7 @@ impl BuildProcess {
                         let mut cells = vec![];
                         for temp_cell in temp_row.iter() {
                             let text = temp_cell.get_text_block().get_unresolved_text();
-                            dbg!(topic.get_name(), &text);
+                            //bg!(topic.get_name(), &text);
                             let text_block = self.make_text_block_rc(&text, context)?;
                             cells.push(TableCell::new_text_block(text_block, temp_cell.is_bold(), &temp_cell.get_horizontal()));
                         }
@@ -504,7 +508,8 @@ impl BuildProcess {
     fn make_link_rc(&self, text: &str, context: &str) -> Result<Link, String> {
         let text = text.trim();
         let err_func = |msg: &str| Err(format!("{} make_link_rc: {}: text = \"{}\".", context, msg, text));
-        match parse_link_optional(&text)? {
+        //bg!(context, text);
+        match parse_link_optional(&self.topic_refs, &text)? {
             Some(link) => Ok(link),
             None => err_func("parse_link_optional didn't think it was a link."),
         }
