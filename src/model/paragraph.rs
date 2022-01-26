@@ -35,6 +35,12 @@ pub(crate) enum Paragraph {
 
 impl Paragraph {
 
+    pub(crate) fn new_list(list: List) -> Self {
+        Self::List {
+            list,
+        }
+    }
+
     pub(crate) fn new_marker(text: &str) -> Self {
         Self::Marker {
             text: text.to_string(),

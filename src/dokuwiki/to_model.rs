@@ -146,8 +146,8 @@ impl BuildProcess {
                     || self.paragraph_as_breadcrumb_rc(topic, &text, context)?
                     || self.paragraph_as_marker_start_or_end_rc(topic, &text, paragraph_index, context)?
                     || self.paragraph_as_table_rc(topic, &text, paragraph_index, context)?
-                    || self.paragraph_as_list_rc(topic, &text, context)?
-                    || self.paragraph_as_text_rc(topic, &text, context)?
+                    || self.paragraph_as_list_rc(topic, &text, paragraph_index, context)?
+                    || self.paragraph_as_text_rc(topic, &text, paragraph_index, context)?
                 ) {
                     panic!("Unable to resolve paragraph.")
                     // let new_paragraph = Paragraph::new_text_unresolved(&text);
@@ -415,50 +415,20 @@ impl BuildProcess {
         //    * [[By the Numbers]]
         //    * [[Genealogy (coding project)]]
         let context = &format!("{} Seems to be a list paragraph.", context);
-        let lines = text.lines().collect::<Vec<_>>();
-        let is_list = if lines.len() == 1 {
-            // Only one line, so see if that line starts with a list item delimiter.
-            lines[0].starts_with(DELIM_LIST_ITEM_ORDERED) || lines[0].starts_with(DELIM)
-        }
-
-        if !text.contains(DELIM_LINEFEED) {
-            // The text is a single line, so
-            return Ok(None);
-        }
-        let lines = text.lines().collect::<Vec<_>>();
-        if lines.len() < 2 || !lines[1].trim().starts_with("*") {
-            return Ok(None);
-        }
-        let err_func = |msg: &str| Err(format!("{} paragraph_as_list_rc: {}: partial = \n\t\t\t{}\n\t\t\t{}.", context, msg, lines[0], lines[1]));
-        // At this point we're going to assume that it's a list and consider it an error if
-        // that doesn't work out.
-        if lines[0].trim().starts_with("*") {
-            return err_func("List with no header.");
-        }
-        let type_ = ListType::from_header(lines[0].trim());
-        // The header may be a simple label like "Subtopics:" but it could also be a longer piece
-        // of text containing links and other markup.
-        let header = self.make_text_block_rc(topic.get_name(), lines[0], context)?;
-        let mut items = vec![];
-        for line in lines.iter().skip(1) {
-            // The depth of the list item is the number of spaces before the asterisk.
-            match line.find("*") {
-                Some(depth) => {
-                    let item_text = line[depth + 1..].trim();
-                    let item_text_block = self.make_text_block_rc(topic.get_name(), item_text, context)?;
-                    items.push(ListItem::new(depth, item_text_block));
-                },
-                None => {
-                    return err_func("List item with no \"*\".");
-                }
+        let err_func = |msg: &str| Err(format!("{} paragraph_as_list_rc: {}: text = \"{}\".", context, msg, text));
+        match parse_list_optional(text) {
+            Ok(Some(list)) => {
+                let paragraph = Paragraph::new_list(list);
+                topic.replace_paragraph(paragraph_index, paragraph);
+                Ok(true)
+            },
+            Ok(None) => {
+                Ok(false)
+            },
+            Err(msg) => {
+                return err_func(&msg);
             }
         }
-        let paragraph = Paragraph::List {
-            type_,
-            header,
-            items,
-        };
-        Ok(Some(paragraph))
     }
 
     fn paragraph_as_text_rc(&self, topic: &mut Topic, text: &str, paragraph_index: usize, context: &str) -> Result<bool, String> {

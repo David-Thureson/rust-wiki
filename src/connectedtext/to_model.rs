@@ -670,25 +670,23 @@ impl BuildProcess {
         // The header may be a simple label like "Subtopics:" but it could also be a longer piece
         // of text containing links and other markup.
         let header = self.make_text_block_rc(topic.get_name(), lines[0], context)?;
-        let mut items = vec![];
+        let mut list = List::new(type_, Some(header));
         for line in lines.iter().skip(1) {
             // The depth of the list item is the number of spaces before the asterisk.
             match line.find("*") {
                 Some(depth) => {
                     let item_text = line[depth + 1..].trim();
                     let item_text_block = self.make_text_block_rc(topic.get_name(), item_text, context)?;
-                    items.push(ListItem::new(depth, item_text_block));
+                    let is_ordered = false;
+                    let list_item = ListItem::new(depth, is_ordered, item_text_block);
+                    list.add_item(list_item);
                 },
                 None => {
                     return err_func("List item with no \"*\".");
                 }
             }
         }
-        let paragraph = Paragraph::List {
-            type_,
-            header,
-            items,
-        };
+        let paragraph = Paragraph::new_list(list);
         Ok(Some(paragraph))
     }
 

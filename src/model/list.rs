@@ -156,16 +156,18 @@ impl ListType {
         for topic in model.get_topics().values() {
             for paragraph in topic.get_paragraphs().iter() {
                 match paragraph {
-                    Paragraph::List { type_, header, .. } => {
-                        match type_ {
+                    Paragraph::List { list } => {
+                        match list.get_type() {
                             ListType::General => {
-                                let items = header.get_resolved_items();
-                                if items.len() == 1 {
-                                    match &items[0] {
-                                        TextItem::Text { text } => {
-                                            group.record_entry(text);
-                                        },
-                                        _ => {},
+                                if let Some(header) = list.get_header() {
+                                    let items = header.get_resolved_items();
+                                    if items.len() == 1 {
+                                        match &items[0] {
+                                            TextItem::Text { text } => {
+                                                group.record_entry(text);
+                                            },
+                                            _ => {},
+                                        }
                                     }
                                 }
                             },

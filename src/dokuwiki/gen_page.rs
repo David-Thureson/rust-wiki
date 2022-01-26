@@ -127,6 +127,13 @@ impl WikiGenPage {
         // self.content.push_str(&format!("  * {}\n", text));
     }
 
+    pub(crate) fn add_list_item(&mut self, depth: usize, is_ordered: bool, text: &str) {
+        //bg!(depth, is_ordered, &text);
+        let delimiter = if is_ordered { DELIM_LIST_ITEM_ORDERED } else { DELIM_LIST_ITEM_UNORDERED };
+        let prefix = format!("{}{}", DELIM_LIST_ITEM_DEPTH.repeat(depth), delimiter);
+        self.content.push_str(&format!("{}{}\n", prefix, text));
+    }
+
     pub(crate) fn add_paragraph(&mut self, text: &str) {
         self.content.push_str(&format!("{}\n\n", text));
     }

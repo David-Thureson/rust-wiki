@@ -285,52 +285,74 @@ pub(crate) fn text_or_topic_link_label(text: &str) -> Result<String, String> {
 }
 
 pub(crate) fn parse_list_optional(text: &str) -> Result<Option<model::List>, String> {
-    if !line.contains(DELIM_LINEFEED) {
+    let mut lines = text.split(DELIM_LINEFEED).collect::<Vec<_>>();
+    let first_line = lines.remove(0);
+    let first_line_as_list_item = parse_list_item_optional(first_line)?;
+    if lines.len() == 1 {
         // The text is a single line, so if that line is a list item, we call the text a list with
         // no label and only one line.
+        if let Some(list_item) = first_line_as_list_item {
+            let mut list = model::List::new(model::ListType::General, None);
+            list.add_item(list_item);
+            return Ok(Some(list));
+        } else {
+            // There's only one line and it's not a list item, so this text does not represent a
+            // list.
+            return Ok(None);
+        }
     }
-    let test_line = format!("  {}", line.trim());
-    let (is_list, is_ordered) = if test_line.starts_with(DELIM_LIST_ITEM_ORDERED) {
-        (true, true)
-    } else if test_line.starts_with(DELIM_LIST_ITEM_UNORDERED) {
-        (true, false)
+    // We have at least two lines. The first line may or may not be a list item. We need to see if
+    // the rest of the lines are all list items.
+    let mut rest_of_lines_as_list_items = lines.iter()
+        .filter_map(|line| {
+            let list_item = parse_list_item_optional(line).ok()?;
+            list_item
+        })
+        .collect::<Vec<_>>();
+    if rest_of_lines_as_list_items.is_empty() {
+        // This is the most likely case, since most paragraphs in the wiki are not lists.
+        if first_line_as_list_item.is_some() {
+            return Err("The first line is a list item, but the other lines are not.".to_string());
+        } else {
+            // None of the lines are list items, so this text is not a list.
+            return Ok(None);
+        }
+    } else if rest_of_lines_as_list_items.len() == lines.len() {
+        // All of the lines starting from the second one are list items. So whether the first line
+        // is a list item or a header, the text is a list.
+        let mut list = if let Some(list_item) = first_line_as_list_item {
+            // The first line is a list item. Make a list with no header and add this first list
+            // item. Since we don't have a header to tell us the list type, go with General.
+            let mut list = model::List::new(model::ListType::General, None);
+            list.add_item(list_item);
+            list
+        } else {
+            // The first line is not a list item so it must be the header.
+            let type_ = model::ListType::from_header(first_line);
+            model::List::new(type_, Some(model::TextBlock::new_unresolved(first_line)))
+        };
+        // We've dealt with the first line, whether it was a header or the first list item. Now add
+        // the remaining lines/list items.
+        for list_item in rest_of_lines_as_list_items.drain(..) {
+            list.add_item(list_item);
+        };
+        return Ok(Some(list));
     } else {
-        (false, false)
-    };
-    if !is_list {
-        return OK(None);
+        return Err("Some of the lines are list items and some are not.".to_string());
     }
-
-    let text = if is_list {
-        util::parse::after(line, DELIM_LIST_ITEM_ORDERED).trim()
-    } else {
-        util::parse::after(line, DELIM_LIST_ITEM_UNORDERED).trim()
-    };
-    let text_block = model::TextBlock::new_unresolved(text);
-
-    let leading_space_count = util::parse::count_leading_spaces(line);
-    if leading_space_count & 2 != 0 {
-        return Err(format!("Expected an even number of spaces for a list item: \"{}\".", line));
-    }
-    let depth = leading_space_count / 2;
-
-    let list_item = model::ListItem::new(depth, is_ordered, text_block);
-
-    Ok(Some(list_item))
 }
 
 pub(crate) fn parse_list_item_optional(line: &str) -> Result<Option<model::ListItem>, String> {
     assert!(line.contains(DELIM_LINEFEED));
-    let test_line = format!("  {}", line.trim());
-    let (is_list, is_ordered) = if test_line.starts_with(DELIM_LIST_ITEM_ORDERED) {
+    let (is_list, is_ordered) = if line.trim().starts_with(DELIM_LIST_ITEM_ORDERED) {
         (true, true)
-    } else if test_line.starts_with(DELIM_LIST_ITEM_UNORDERED) {
+    } else if line.trim().starts_with(DELIM_LIST_ITEM_UNORDERED) {
         (true, false)
     } else {
         (false, false)
     };
     if !is_list {
-        return OK(None);
+        return Ok(None);
     }
 
     let text = if is_list {

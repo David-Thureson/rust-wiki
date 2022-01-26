@@ -50,8 +50,9 @@ pub(crate) const DELIM_IMAGE_OPTIONS: &str = "?";
 pub(crate) const DELIM_HEADER: &str = "=";
 pub(crate) const DELIM_TABLE_CELL: &str = "|";
 pub(crate) const DELIM_TABLE_CELL_BOLD: &str = "^";
-pub(crate) const DELIM_LIST_ITEM_UNORDERED: &str = "  *";
-pub(crate) const DELIM_LIST_ITEM_ORDERED: &str = "  -";
+pub(crate) const DELIM_LIST_ITEM_ORDERED: &str = "-";
+pub(crate) const DELIM_LIST_ITEM_UNORDERED: &str = "*";
+pub(crate) const DELIM_LIST_ITEM_DEPTH: &str = "  ";
 
 pub(crate) const MARKER_LINE_START: &str = "<";
 pub(crate) const MARKER_LINE_START_CLOSE: &str = "</";

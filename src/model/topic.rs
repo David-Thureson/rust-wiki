@@ -489,15 +489,17 @@ impl Topic {
         self.combo_subtopics.clear();
         for paragraph in self.paragraphs.iter() {
             match paragraph {
-                Paragraph::List { type_, header, items } => {
-                    let (is_combos, is_subtopics) = match type_ {
+                Paragraph::List { list } => {
+                    let (is_combos, is_subtopics) = match list.get_type() {
                         ListType::Combinations => (true, false),
                         ListType::Subtopics => (false, true),
                         _ => (false, false),
                     };
-                    let mut text_block_links = Link::catalog_links_text_block(header);
-                    self.outbound_links.append(&mut text_block_links);
-                    for list_item in items.iter() {
+                    if let Some(header) = list.get_header() {
+                        let mut text_block_links = Link::catalog_links_text_block(header);
+                        self.outbound_links.append(&mut text_block_links);
+                    }
+                    for list_item in list.get_items().iter() {
                         if list_item.get_depth() == 1 {
                             let mut links = Link::catalog_links_text_block(&list_item.get_text_block());
                             for link in links.iter() {

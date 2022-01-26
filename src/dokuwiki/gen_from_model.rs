@@ -368,8 +368,8 @@ impl <'a> GenFromModel<'a> {
                 model::Paragraph::Category => {}, // This was already added to the page.
                 model::Paragraph::GenStart => {},
                 model::Paragraph::GenEnd => {},
-                model::Paragraph::List { type_, header, items} => {
-                    self.add_list(page, type_, header, items);
+                model::Paragraph::List { list} => {
+                    self.add_list(page, list);
                 },
                 model::Paragraph::Marker { text } => {
                     page.add_paragraph(text);
@@ -500,7 +500,7 @@ impl <'a> GenFromModel<'a> {
     fn text_block_to_markup(&mut self, text_block: &model::TextBlock) -> String {
         let mut markup = "".to_string();
         match text_block {
-            model::TextBlock::Resolved {items} => {
+            model::TextBlock::Resolved { items} => {
                 for text_item in items.iter() {
                     match text_item {
                         model::TextItem::Text { text } => {
@@ -519,15 +519,23 @@ impl <'a> GenFromModel<'a> {
         markup
     }
 
-    fn add_list(&mut self, page: &mut wiki::WikiGenPage, type_: &model::ListType, header: &model::TextBlock, items: &Vec<model::ListItem>) {
-        match type_ {
+    fn add_list(&mut self, page: &mut wiki::WikiGenPage, list: &model::List) {
+        match list.get_type() {
             model::ListType::Subtopics | model::ListType::Combinations => {}, // These are generated elsewhere.
             _ => {
-                page.add(&self.text_block_to_markup(header));
-                page.add_linefeed();
-                for item in items.iter() {
-                    let markup = &self.text_block_to_markup(item.get_text_block());
-                    page.add_list_item_unordered(item.get_depth(), markup);
+                if let Some(header) = list.get_header() {
+                    match header {
+                        model::TextBlock::Unresolved { text } => {
+                            panic!("Text block should be resolved by this point. Page = \"{}\"; text = \"{}\".", page.topic_name, text)
+                        }
+                        _ => {},
+                    }
+                    page.add(&self.text_block_to_markup(header));
+                    page.add_linefeed();
+                }
+                for list_item in list.get_items().iter() {
+                    let markup = &self.text_block_to_markup(list_item.get_text_block());
+                    page.add_list_item(list_item.get_depth(),list_item.is_ordered(), markup);
                 }
                 page.add_linefeed();
             }
