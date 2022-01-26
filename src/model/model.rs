@@ -356,7 +356,7 @@ impl Model {
         self.subtopic_tree = Some(Topic::make_subtopic_tree(self));
     }
 
-    pub(crate) fn category_tree(&self) -> &TopicTree {
+    pub(crate) fn get_category_tree(&self) -> &TopicTree {
         match &self.category_tree {
             Some(tree) => tree,
             None => panic!("The wiki model has no category tree. Call make_category_tree() after loading all of the topics."),

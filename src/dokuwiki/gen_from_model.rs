@@ -68,7 +68,7 @@ impl <'a> GenFromModel<'a> {
 
     pub(crate) fn gen_categories_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_CATEGORIES,None);
-        let nodes = self.model.category_tree().unroll_to_depth(None);
+        let nodes = self.model.get_category_tree().unroll_to_depth(None);
 
         // Debugging:
         // for node in nodes.iter() {
@@ -76,14 +76,14 @@ impl <'a> GenFromModel<'a> {
         //     debug_assert!(self.model.has_topic(topic_key), "Topic key not found: {}", topic_key.to_string());
         // }
 
-        self.gen_partial_topic_tree(&mut page, &nodes, 0, true, None);
+        self.gen_partial_topic_tree(&mut page, &nodes, true, None);
         page.write();
     }
 
     pub(crate) fn gen_subtopics_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_SUBTOPICS,None);
         let nodes = self.model.subtopic_tree().unroll_to_depth(None);
-        self.gen_partial_topic_tree(&mut page, &nodes, 0, false, None);
+        self.gen_partial_topic_tree(&mut page, &nodes, false, None);
         page.write();
     }
 
@@ -457,7 +457,7 @@ impl <'a> GenFromModel<'a> {
             // let max_depth = node.max_depth_for_max_count_filtered(SUBCATEGORY_TREE_MAX_SIZE, &filter_func);
             let nodes = node.unroll_to_depth(None, None);
             //bg!(topic.get_name(), node.description_line(), max_depth, nodes.len());
-            self.gen_partial_topic_tree(page, &nodes, node.depth(), true, Some(model::LIST_LABEL_SUBCATEGORIES));
+            self.gen_partial_topic_tree(page, &nodes, true, Some(model::LIST_LABEL_SUBCATEGORIES));
         }
     }
 
@@ -467,21 +467,25 @@ impl <'a> GenFromModel<'a> {
             if node.height() > 1 {
                 let nodes = node.unroll_to_depth(None, None);
                 //bg!(topic.get_name(), node.description_line(), max_depth, nodes.len());
-                self.gen_partial_topic_tree(page, &nodes, node.depth(), false, Some(model::LIST_LABEL_SUBTOPICS));
+                self.gen_partial_topic_tree(page, &nodes, false, Some(model::LIST_LABEL_SUBTOPICS));
             }
         }
     }
 
-    pub(crate) fn gen_partial_topic_tree(&self, page: &mut wiki::WikiGenPage, nodes: &Vec<Rc<RefCell<model::TopicTreeNode>>>, start_depth: usize, is_category: bool, label: Option<&str>) {
+    pub(crate) fn gen_partial_topic_tree(&self, page: &mut wiki::WikiGenPage, nodes: &Vec<Rc<RefCell<model::TopicTreeNode>>>, is_category: bool, label: Option<&str>) {
         if !nodes.is_empty() {
             if let Some(label) = label {
                 page.add_line(label);
             }
-            for node_rc in nodes.iter().sorted_by_key(|node| b!(node).item.get_topic_name().to_lowercase()) {
+            // Presumably the first item is at the highest level of the tree. That is, we're not
+            // going to find any subsequent items that should be outdented compared to this one.
+            let base_depth = b!(&nodes[0]).depth();
+            for node_rc in nodes.iter() {
+                // for node_rc in nodes.iter().sorted_by_key(|node| b!(node).item.get_topic_name().to_lowercase()) {
                 let node = b!(node_rc);
                 let use_this_node = if is_category { !node.is_leaf() } else { true };
                 if use_this_node {
-                    let depth = node.depth() - start_depth;
+                    let depth = (node.depth() - base_depth) + 1;
                     let link = self.page_link_simple(&node.item);
                     let topic_count_label = if is_category {
                         let topic_count = node.subtree_leaf_count();
@@ -490,7 +494,7 @@ impl <'a> GenFromModel<'a> {
                         "".to_string()
                     };
                     let line = format!("{}{}", link, topic_count_label);
-                    page.add_list_item_unordered(depth + 1, &line);
+                    page.add_list_item_unordered(depth, &line);
                 }
             }
             page.add_linefeed();
