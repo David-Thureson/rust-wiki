@@ -344,7 +344,7 @@ impl <'a> GenFromModel<'a> {
     }
 
     fn add_paragraphs(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
-        let msg_func_unexpected = |variant_name: &str| format!("In gen_from_model::add_paragraph(), unexpected Paragraph variant = \"{}\"", variant_name);
+        let msg_func_unexpected = |variant_name: &str| format!("In dokuwiki::gen_from_model::add_paragraphs(), unexpected Paragraph variant = \"{}\"", variant_name);
         // let add_error_unexpected = |paragraph_variant: &str| self.add_error(&msg_func_unexpected(paragraph_variant));
         let mut generated_navigation_paragraphs_added = false;
         for paragraph in topic.get_paragraphs().iter() {

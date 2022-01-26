@@ -146,11 +146,12 @@ impl BuildProcess {
                     || self.paragraph_as_breadcrumb_rc(topic, &text, context)?
                     || self.paragraph_as_marker_start_or_end_rc(topic, &text, paragraph_index, context)?
                     || self.paragraph_as_table_rc(topic, &text, paragraph_index, context)?
-                    // || self.paragraph_as_list_rc(topic, &text, context)? {
-                    // || self.paragraph_as_text_rc(topic, &text, context)? {
+                    || self.paragraph_as_list_rc(topic, &text, context)?
+                    || self.paragraph_as_text_rc(topic, &text, context)?
                 ) {
-                    let new_paragraph = Paragraph::new_text_unresolved(&text);
-                    topic.replace_paragraph(paragraph_index, new_paragraph);
+                    panic!("Unable to resolve paragraph.")
+                    // let new_paragraph = Paragraph::new_text_unresolved(&text);
+                    // topic.replace_paragraph(paragraph_index, new_paragraph);
                 }
                 return Ok(());
             },
@@ -404,11 +405,7 @@ impl BuildProcess {
         }
     }
 
-    /*
-    fn paragraph_as_list_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
-        // if text.contains("Determine if number of messages") {
-        //     dbg!(&text);
-        // }
+    fn paragraph_as_list_rc(&mut self, topic: &mut Topic, text: &str, paragraph_index: usize, context: &str) -> Result<bool, String> {
         // Example with two levels (the first level has one space before the asterisk):
         // Projects:
         //   * [[Android]]
@@ -418,7 +415,14 @@ impl BuildProcess {
         //    * [[By the Numbers]]
         //    * [[Genealogy (coding project)]]
         let context = &format!("{} Seems to be a list paragraph.", context);
-        if !text.contains(" *") {
+        let lines = text.lines().collect::<Vec<_>>();
+        let is_list = if lines.len() == 1 {
+            // Only one line, so see if that line starts with a list item delimiter.
+            lines[0].starts_with(DELIM_LIST_ITEM_ORDERED) || lines[0].starts_with(DELIM)
+        }
+
+        if !text.contains(DELIM_LINEFEED) {
+            // The text is a single line, so
             return Ok(None);
         }
         let lines = text.lines().collect::<Vec<_>>();
@@ -457,12 +461,13 @@ impl BuildProcess {
         Ok(Some(paragraph))
     }
 
-    fn paragraph_as_text_rc(&self, topic: &mut Topic, text: &str, context: &str) -> Result<Option<Paragraph>, String> {
+    fn paragraph_as_text_rc(&self, topic: &mut Topic, text: &str, paragraph_index: usize, context: &str) -> Result<bool, String> {
         let context = &format!("{} Seems to be a text paragraph.", context);
-        let text_block = self.make_text_block_rc(topic.get_name(), text, context)?;
-        Ok(Some(Paragraph::new_text(text_block)))
+        let text_block = self.make_text_block_rc(text, context)?;
+        let paragraph = Paragraph::new_text(text_block);
+        topic.replace_paragraph(paragraph_index, paragraph);
+        Ok(true)
     }
-    */
 
     fn check_links(&mut self, wiki: &Model) {
         let mut link_errors = wiki.check_links();

@@ -1,6 +1,20 @@
 use super::*;
 
 #[derive(Clone, Debug)]
+pub(crate) struct List {
+    type_: ListType,
+    header: Option<TextBlock>,
+    items: Vec<ListItem>,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct ListItem {
+    depth: usize,
+    is_ordered: bool,
+    text_block: TextBlock,
+}
+
+#[derive(Clone, Debug)]
 pub(crate) enum ListType {
     Articles,
     Books,
@@ -28,10 +42,54 @@ pub(crate) enum ListType {
     Tutorials,
 }
 
-#[derive(Clone, Debug)]
-pub(crate) struct ListItem {
-    depth: usize,
-    text_block: TextBlock,
+impl List {
+    pub(crate) fn new(type_: ListType, header: Option<TextBlock>) -> Self {
+        Self {
+            type_,
+            header,
+            items: vec![]
+        }
+    }
+
+    pub fn get_type(&self) -> &ListType {
+        &self.type_
+    }
+
+    pub fn get_header(&self) -> &Option<TextBlock> {
+        &self.header
+    }
+
+    pub fn add_item(&mut self, item: ListItem) {
+        self.items.push(item);
+    }
+
+    pub fn get_items(&self) -> &Vec<ListItem> {
+        &self.items
+    }
+
+}
+
+impl ListItem {
+    pub(crate) fn new(depth: usize, is_ordered: bool, block: TextBlock) -> Self {
+        assert!(depth > 0);
+        Self {
+            depth,
+            is_ordered,
+            text_block: block,
+        }
+    }
+
+    pub(crate) fn get_depth(&self) -> usize {
+        self.depth
+    }
+
+    pub(crate) fn is_ordered(&self) -> bool {
+        self.is_ordered
+    }
+
+    pub(crate) fn get_text_block(&self) -> &TextBlock {
+        &self.text_block
+    }
 }
 
 impl ListType {
@@ -122,26 +180,3 @@ impl ListType {
     }
 }
 
-impl ListItem {
-    pub(crate) fn new(depth: usize, block: TextBlock) -> Self {
-        Self {
-            depth,
-            text_block: block,
-        }
-    }
-
-    pub(crate) fn get_depth(&self) -> usize {
-        self.depth
-    }
-
-    pub(crate) fn get_text_block(&self) -> &TextBlock {
-        &self.text_block
-    }
-
-    /*
-    pub(crate) fn get_text_block_mut(&mut self) -> &mut TextBlock {
-        &mut self.text_block
-    }
-     */
-
-}

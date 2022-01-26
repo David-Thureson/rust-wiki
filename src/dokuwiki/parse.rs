@@ -283,3 +283,70 @@ pub(crate) fn text_or_topic_link_label(text: &str) -> Result<String, String> {
     let label = util::parse::unquote(&label);
     Ok(label.to_string())
 }
+
+pub(crate) fn parse_list_optional(text: &str) -> Result<Option<model::List>, String> {
+    if !line.contains(DELIM_LINEFEED) {
+        // The text is a single line, so if that line is a list item, we call the text a list with
+        // no label and only one line.
+    }
+    let test_line = format!("  {}", line.trim());
+    let (is_list, is_ordered) = if test_line.starts_with(DELIM_LIST_ITEM_ORDERED) {
+        (true, true)
+    } else if test_line.starts_with(DELIM_LIST_ITEM_UNORDERED) {
+        (true, false)
+    } else {
+        (false, false)
+    };
+    if !is_list {
+        return OK(None);
+    }
+
+    let text = if is_list {
+        util::parse::after(line, DELIM_LIST_ITEM_ORDERED).trim()
+    } else {
+        util::parse::after(line, DELIM_LIST_ITEM_UNORDERED).trim()
+    };
+    let text_block = model::TextBlock::new_unresolved(text);
+
+    let leading_space_count = util::parse::count_leading_spaces(line);
+    if leading_space_count & 2 != 0 {
+        return Err(format!("Expected an even number of spaces for a list item: \"{}\".", line));
+    }
+    let depth = leading_space_count / 2;
+
+    let list_item = model::ListItem::new(depth, is_ordered, text_block);
+
+    Ok(Some(list_item))
+}
+
+pub(crate) fn parse_list_item_optional(line: &str) -> Result<Option<model::ListItem>, String> {
+    assert!(line.contains(DELIM_LINEFEED));
+    let test_line = format!("  {}", line.trim());
+    let (is_list, is_ordered) = if test_line.starts_with(DELIM_LIST_ITEM_ORDERED) {
+        (true, true)
+    } else if test_line.starts_with(DELIM_LIST_ITEM_UNORDERED) {
+        (true, false)
+    } else {
+        (false, false)
+    };
+    if !is_list {
+        return OK(None);
+    }
+
+    let text = if is_list {
+        util::parse::after(line, DELIM_LIST_ITEM_ORDERED).trim()
+    } else {
+        util::parse::after(line, DELIM_LIST_ITEM_UNORDERED).trim()
+    };
+    let text_block = model::TextBlock::new_unresolved(text);
+
+    let leading_space_count = util::parse::count_leading_spaces(line);
+    if leading_space_count & 2 != 0 {
+        return Err(format!("Expected an even number of spaces for a list item: \"{}\".", line));
+    }
+    let depth = leading_space_count / 2;
+
+    let list_item = model::ListItem::new(depth, is_ordered, text_block);
+
+    Ok(Some(list_item))
+}

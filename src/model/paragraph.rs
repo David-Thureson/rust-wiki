@@ -9,9 +9,7 @@ pub(crate) enum Paragraph {
     GenStart,
     GenEnd,
     List {
-        type_: ListType,
-        header: TextBlock,
-        items: Vec<ListItem>,
+        list: List,
     },
     Marker {
         text: String,
