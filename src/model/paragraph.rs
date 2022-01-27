@@ -95,4 +95,24 @@ impl Paragraph {
             Paragraph::Unknown { .. } => "Unknown",
         }
     }
+
+    pub(crate) fn get_all_text_blocks_cloned(&self) -> Vec<TextBlock> {
+        let mut text_blocks = vec![];
+        match self {
+            Paragraph::List { list } => {
+                text_blocks.append(&mut list.get_all_text_blocks_cloned());
+            },
+            Paragraph::Table { table } => {
+                text_blocks.append(&mut table.get_all_text_blocks_cloned());
+            },
+            Paragraph::Text { text_block } => {
+                text_blocks.push(text_block.clone());
+            },
+            Paragraph::Attributes | Paragraph::Breadcrumbs | Paragraph::Category | Paragraph::GenStart
+                | Paragraph::GenEnd | Paragraph::Marker { .. } | Paragraph::Placeholder | Paragraph::SectionHeader { .. }
+                | Paragraph::TextUnresolved { .. } | Paragraph::Unknown { .. } => {},
+        }
+        text_blocks
+    }
+
 }

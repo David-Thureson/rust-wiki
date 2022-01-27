@@ -500,29 +500,28 @@ impl Topic {
                         self.outbound_links.append(&mut text_block_links);
                     }
                     for list_item in list.get_items().iter() {
-                        if list_item.get_depth() == 1 {
-                            let mut links = Link::catalog_links_text_block(&list_item.get_text_block());
-                            for link in links.iter() {
-                                match &link.get_type() {
-                                    LinkType::Topic { topic_key } => {
-                                        if !self.listed_topics.contains(topic_key) {
-                                            self.listed_topics.push(topic_key.clone());
-                                        }
-                                        // self.add_listed_topic_optional(topic_key);
-                                        if is_combos {
-                                            // self.add_combo_subtopic(topic_key.clone());
-                                            self.combo_subtopics.push(topic_key.clone());
-                                        } else if is_subtopics {
-                                            // self.add_subtopic(topic_key.clone());
-                                            self.subtopics.push(topic_key.clone());
-                                        }
-                                        break;
-                                    },
-                                    _ => {},
-                                }
+                        // if list_item.get_depth() == 1 {
+                        let mut links = Link::catalog_links_text_block(&list_item.get_text_block());
+                        for link in links.iter() {
+                            match &link.get_type() {
+                                LinkType::Topic { topic_key } => {
+                                    if !self.listed_topics.contains(topic_key) {
+                                        self.listed_topics.push(topic_key.clone());
+                                    }
+                                    // self.add_listed_topic_optional(topic_key);
+                                    if is_combos {
+                                        // self.add_combo_subtopic(topic_key.clone());
+                                        self.combo_subtopics.push(topic_key.clone());
+                                    } else if is_subtopics {
+                                        // self.add_subtopic(topic_key.clone());
+                                        self.subtopics.push(topic_key.clone());
+                                    }
+                                    break;
+                                },
+                                _ => {},
                             }
-                            self.outbound_links.append(&mut links);
                         }
+                        self.outbound_links.append(&mut links);
                     }
                 },
                 Paragraph::Text { text_block } => {
@@ -628,6 +627,25 @@ impl Topic {
         }
     }
      */
+
+    pub(crate) fn assert_all_text_blocks_resolved(&self) {
+        for text_block in self.get_all_text_blocks_cloned().iter() {
+            match text_block {
+                TextBlock::Resolved { .. } => {},
+                TextBlock::Unresolved { text} => {
+                    panic!("In topic \"{}\", expected all text blocks to be resolved. Found text = \"{}\".", self.name, text)
+                }
+            }
+        }
+    }
+
+    pub(crate) fn get_all_text_blocks_cloned(&self) -> Vec<TextBlock> {
+        let mut text_blocks = vec![];
+        for paragraph in self.paragraphs.iter() {
+            text_blocks.append(&mut paragraph.get_all_text_blocks_cloned());
+        }
+        text_blocks
+    }
 
 }
 

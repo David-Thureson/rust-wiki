@@ -267,7 +267,9 @@ impl Link {
                 }
                 links
             },
-            _ => panic!("Expected a resolved text block."),
+            TextBlock::Unresolved { text} => {
+                panic!("Expected a resolved text block. text = \"{}\".", text)
+            },
         }
     }
 

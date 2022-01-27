@@ -88,6 +88,17 @@ impl Table {
             col_index += 1;
         }
     }
+
+    pub(crate) fn get_all_text_blocks_cloned(&self) -> Vec<TextBlock> {
+        let mut text_blocks = vec![];
+        for row in self.rows.iter() {
+            for cell in row.iter() {
+                text_blocks.push(cell.text_block.clone());
+            }
+        }
+        text_blocks
+    }
+
 }
 
 impl TableCell {

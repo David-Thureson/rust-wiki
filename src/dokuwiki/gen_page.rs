@@ -131,7 +131,7 @@ impl WikiGenPage {
         //bg!(depth, is_ordered, &text);
         let delimiter = if is_ordered { DELIM_LIST_ITEM_ORDERED } else { DELIM_LIST_ITEM_UNORDERED };
         let prefix = format!("{}{}", DELIM_LIST_ITEM_DEPTH.repeat(depth), delimiter);
-        self.content.push_str(&format!("{}{}\n", prefix, text));
+        self.content.push_str(&format!("{} {}\n", prefix, text));
     }
 
     pub(crate) fn add_paragraph(&mut self, text: &str) {
@@ -160,7 +160,12 @@ impl WikiGenPage {
         self.content.push_str(&markup);
     }
 
-    pub(crate) fn write(self) {
+    pub(crate) fn write(&self) {
+        let mut content = util::parse::trim_linefeeds(&self.content);
+        while content.contains("\n\n\n") {
+            content = content.replace("\n\n\n", "\n\n");
+        }
+
         let mut namespace_path= namespace_to_path(&self.namespace);
         //bg!(&namespace_path);
         if !namespace_path.is_empty() {
@@ -174,6 +179,6 @@ impl WikiGenPage {
         if full_file_name.contains("//") {
             panic!("File name has double slashes: \"{}\".", &full_file_name);
         }
-        fs::write(full_file_name, self.content).unwrap();
+        fs::write(full_file_name, content).unwrap();
     }
 }

@@ -34,6 +34,8 @@ const CT_PREFIX_URL: &str = "$URL:";
 const CT_PREFIX_FILE: &str = "$FILE:";
 const CT_PREFIX_APP: &str = "$APP:";
 const CT_PREFIX_CLOUD: &str = "$CLOUD";
+const CT_PREFIX_ASK: &str = "$ASK:";
+const CT_PREFIX_TREE: &str = "$TREE";
 const CT_PIPE: &str = "|";
 const CT_DELIM_SECTION_IN_LINK: &str = "#";
 const CT_MARK_SECTION_HEADER: &str = "=";
@@ -139,6 +141,7 @@ impl BuildProcess {
                 .take(self.topic_limit.unwrap_or(usize::max_value())) {
             //bg!(&topic_text);
             let (topic_name, topic_text) = util::parse::split_2(topic_text, CT_LINE_BREAK);
+            //bg!(topic_name);
             let mut topic_name = topic_name.to_string();
             if topic_name.starts_with("_") {
                 topic_name = topic_name[1..].to_string();
@@ -186,7 +189,7 @@ impl BuildProcess {
                             let entry_text = entry_text.replace(CT_TABLE_START_SINGLE_LINE_BREAK, CT_TABLE_START_DOUBLE_LINE_BREAK);
                             let entry_text= entry_text.replace(CT_TEMP_PARAGRAPH_BREAK, CT_PARAGRAPH_BREAK);
                             for paragraph_text in entry_text.split(CT_PARAGRAPH_BREAK) {
-                                if !paragraph_text.is_empty() {
+                                if !paragraph_text.is_empty() && !paragraph_text.contains(CT_PREFIX_ASK) && !paragraph_text.contains(CT_PREFIX_TREE) {
                                     topic.add_paragraph(Paragraph::new_unknown(paragraph_text));
                                 }
                             }
@@ -345,6 +348,7 @@ impl BuildProcess {
          */
         match source_paragraph {
             Paragraph::Unknown { text } => {
+                let text = util::parse::trim_linefeeds(&text);
                 if let Some(new_paragraph) = self.paragraph_as_category_rc(topic, &text, context)? {
                     topic.replace_paragraph(paragraph_index, new_paragraph);
                     return Ok(());
@@ -714,6 +718,8 @@ impl BuildProcess {
     }
 
     fn make_text_block_rc(&self, topic_name: &str, text: &str, context: &str) -> Result<TextBlock, String> {
+        //bg!(topic_name, text);
+        // let err_func = |msg: &str| Err(format!("{} make_text_block_rc: {}: text = \"{}\".", context, msg, text));
         TopicKey::assert_legal_topic_name(topic_name);
         let text = text.trim();
         let mut items = vec![];
@@ -726,6 +732,12 @@ impl BuildProcess {
                 }
             } else {
                 // Assume it's plain text.
+                // if item_text.starts_with('\n') {
+                //     return err_func("Item text starts with linefeed");
+                //}
+                //if item_text.ends_with('\n') {
+                //    return err_func("Item text ends with linefeed");
+                //}
                 items.push(TextItem::new_text(item_text));
             }
         }

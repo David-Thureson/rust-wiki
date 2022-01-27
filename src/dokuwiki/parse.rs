@@ -284,10 +284,11 @@ pub(crate) fn text_or_topic_link_label(text: &str) -> Result<String, String> {
 
 pub(crate) fn parse_list_optional(text: &str) -> Result<Option<model::List>, String> {
     let mut lines = text.split(DELIM_LINEFEED).collect::<Vec<_>>();
+    //bg!(&lines);
     let first_line = lines.remove(0);
     //util::parse::print_chars(first_line);
     let first_line_as_list_item = parse_list_item_optional(first_line)?;
-    if lines.len() == 1 {
+    if lines.is_empty() {
         // The text is a single line, so if that line is a list item, we call the text a list with
         // no label and only one line.
         if let Some(list_item) = first_line_as_list_item {
@@ -308,6 +309,7 @@ pub(crate) fn parse_list_optional(text: &str) -> Result<Option<model::List>, Str
             list_item
         })
         .collect::<Vec<_>>();
+    //bg!(&lines, &rest_of_lines_as_list_items);
     if rest_of_lines_as_list_items.is_empty() {
         // This is the most likely case, since most paragraphs in the wiki are not lists.
         if first_line_as_list_item.is_some() {
@@ -337,7 +339,9 @@ pub(crate) fn parse_list_optional(text: &str) -> Result<Option<model::List>, Str
         };
         return Ok(Some(list));
     } else {
-        return Err("Some of the lines are list items and some are not.".to_string());
+        // panic!("Some of the lines are list items and some are not.");
+        // return Err("Some of the lines are list items and some are not.".to_string());
+        return Ok(None)
     }
 }
 
@@ -350,6 +354,7 @@ pub(crate) fn parse_list_item_optional(line: &str) -> Result<Option<model::ListI
     } else {
         (false, false)
     };
+    //bg!(line, is_list, is_ordered);
     if !is_list {
         return Ok(None);
     }
@@ -362,16 +367,20 @@ pub(crate) fn parse_list_item_optional(line: &str) -> Result<Option<model::ListI
     let text_block = model::TextBlock::new_unresolved(text);
 
     let leading_space_count = util::parse::count_leading_spaces(line);
-    if leading_space_count & 2 != 0 {
-        return Err(format!("Expected an even number of spaces for a list item: \"{}\".", line));
+    //bg!(leading_space_count);
+    if leading_space_count % 2 != 0 {
+        // return Err(format!("Expected an even number of spaces for a list item: \"{}\".", line));
+        return Ok(None)
     }
     if leading_space_count < 2 {
-        return Err(format!("Expected at least two spaces for a list item: \"{}\".", line));
+        // return Err(format!("Expected at least two spaces for a list item: \"{}\".", line));
+        return Ok(None)
     }
     let depth = leading_space_count / 2;
     assert!(depth > 0);
 
     let list_item = model::ListItem::new(depth, is_ordered, text_block);
+    //bg!(&list_item);
 
     Ok(Some(list_item))
 }

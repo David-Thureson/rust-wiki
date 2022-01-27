@@ -24,6 +24,8 @@ pub(crate) enum TextItem {
 
 impl TextBlock {
     pub(crate) fn new_unresolved(text: &str) -> Self {
+        assert!(!text.starts_with('\n'), "TextBlock text starts with linefeed: \"{}\".", text);
+        assert!(!text.ends_with('\n'), "TextBlock text ends with linefeed: \"{}\".", text);
         Self::Unresolved {
             text: text.to_string(),
         }
@@ -70,6 +72,8 @@ impl TextBlock {
 
 impl TextItem {
     pub(crate) fn new_text(text: &str) -> Self {
+        assert!(!text.starts_with('\n'), "TextItem text starts with linefeed: \"{}\".", text);
+        assert!(!text.ends_with('\n'), "TextItem text ends with linefeed: \"{}\".", text);
         TextItem::Text {
             text: text.to_string(),
         }

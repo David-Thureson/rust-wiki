@@ -97,6 +97,7 @@ impl BuildProcess {
             let file_name = util::file::dir_entry_to_file_name(dir_entry);
             if file_name.ends_with(".txt") {
                 let content = fs::read_to_string(&dir_entry.path()).unwrap();
+                assert_no_extra_lines(&file_name, &content);
                 let mut paragraphs = content.split(DELIM_PARAGRAPH).collect::<Vec<_>>();
                 // The first paragraph should have the topic name as a page header, like:
                 //   ======A Mind for Numbers======
@@ -133,6 +134,7 @@ impl BuildProcess {
                     _ => (),
                 }
             }
+            topic.assert_all_text_blocks_resolved();
             self.topic_parse_state.check_end_of_topic();
         }
     }
@@ -141,6 +143,7 @@ impl BuildProcess {
         let source_paragraph = topic.replace_paragraph_with_placeholder(paragraph_index);
         match source_paragraph {
             Paragraph::Unknown { text } => {
+                let text = util::parse::trim_linefeeds(&text);
                 if !(self.paragraph_as_category_rc(topic, &text, context)?
                     || self.paragraph_as_section_header_rc(topic, &text, paragraph_index, context)?
                     || self.paragraph_as_breadcrumb_rc(topic, &text, context)?
@@ -417,7 +420,7 @@ impl BuildProcess {
         let context = &format!("{} Seems to be a list paragraph.", context);
         let err_func = |msg: &str| Err(format!("{} paragraph_as_list_rc: {}: text = \"{}\".", context, msg, text));
         match parse_list_optional(text) {
-            Ok(Some(mut list)) => {
+            Ok(Some(list)) => {
                 // Resolve links and such within the the header, if any.
                 let resolved_header = if let Some(unresolved_header) = list.get_header() {
                     let resolved_header = self.make_text_block_rc(&unresolved_header.get_unresolved_text(), context)?;
@@ -425,8 +428,13 @@ impl BuildProcess {
                 } else {
                     None
                 };
-                list.replace_header(resolved_header);
-                let paragraph = Paragraph::new_list(list);
+                let mut resolved_list = List::new(list.get_type().clone(), resolved_header);
+                for list_item in list.get_items() {
+                    let resolved_text_block = self.make_text_block_rc(&list_item.get_text_block().get_unresolved_text(), context)?;
+                    let resolved_list_item = ListItem::new(list_item.get_depth(), list_item.is_ordered(), resolved_text_block);
+                    resolved_list.add_item(resolved_list_item);
+                }
+                let paragraph = Paragraph::new_list(resolved_list);
                 topic.replace_paragraph(paragraph_index, paragraph);
                 Ok(true)
             },
@@ -453,6 +461,7 @@ impl BuildProcess {
     }
 
     fn make_text_block_rc(&self, text: &str, context: &str) -> Result<TextBlock, String> {
+        //bg!(context);
         // if text.contains("tools:nav") { dbg!(context, text); panic!() };
         let text = text.trim();
         // An image link will look like this:
@@ -465,6 +474,7 @@ impl BuildProcess {
         let text = text.replace(DELIM_IMAGE_START, TEMP_DELIM_IMG_START)
             .replace(DELIM_IMAGE_END, TEMP_DELIM_IMG_END);
         let delimited_splits = util::parse::split_delimited_and_normal_rc(&text, DELIM_LINK_START, DELIM_LINK_END, context)?;
+        if text.contains("format|Num-Format") { dbg!(&delimited_splits); panic!(); }
         let mut items = vec![];
         for (item_is_delimited, item_text) in delimited_splits.iter() {
             if *item_is_delimited {
@@ -537,6 +547,11 @@ impl TopicParseState {
         assert!(!self.is_in_non_code_marker);
         assert!(self.marker_exit_string.is_none());
     }
+}
+
+fn assert_no_extra_lines(file_name: &str, content: &str) {
+    let three_linefeeds = DELIM_LINEFEED.repeat(3);
+    assert!(!content.contains(&three_linefeeds), "Page content has extra blank lines: {}", file_name);
 }
 
 /*

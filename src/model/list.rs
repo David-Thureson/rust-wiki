@@ -59,9 +59,11 @@ impl List {
         &self.header
     }
 
+    /*
     pub fn replace_header(&mut self, header: Option<TextBlock>) -> Option<TextBlock> {
         std::mem::replace(&mut self.header, header)
     }
+     */
 
     pub fn add_item(&mut self, item: ListItem) {
         self.items.push(item);
@@ -71,6 +73,16 @@ impl List {
         &self.items
     }
 
+    pub(crate) fn get_all_text_blocks_cloned(&self) -> Vec<TextBlock> {
+        let mut text_blocks = vec![];
+        if let Some(header) = &self.header {
+            text_blocks.push(header.clone());
+        }
+        for list_item in self.items.iter() {
+            text_blocks.push(list_item.get_text_block().clone());
+        }
+        text_blocks
+    }
 }
 
 impl ListItem {

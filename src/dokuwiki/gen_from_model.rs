@@ -295,6 +295,7 @@ impl <'a> GenFromModel<'a> {
         if let Some(category) = topic.get_category() {
             page.add_category(&self.model.get_main_namespace(),&category);
         }
+        // if page.topic_name.contains("10,000") { //bg!(&page.content); }
     }
 
     fn add_attributes_optional(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
@@ -544,6 +545,7 @@ impl <'a> GenFromModel<'a> {
                 page.add_linefeed();
             }
         }
+        // if page.topic_name.contains("10,000") { //bg!(&page.content); }
     }
 
     fn add_table(&mut self, page: &mut wiki::WikiGenPage, table: &model::Table) {
