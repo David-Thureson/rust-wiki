@@ -59,6 +59,10 @@ impl List {
         &self.header
     }
 
+    pub fn replace_header(&mut self, header: Option<TextBlock>) -> Option<TextBlock> {
+        std::mem::replace(&mut self.header, header)
+    }
+
     pub fn add_item(&mut self, item: ListItem) {
         self.items.push(item);
     }

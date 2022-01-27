@@ -588,18 +588,12 @@ impl <'a> GenFromModel<'a> {
         let msg_func_unexpected = |type_, variant: &str| format!("In gen_from_model::add_link(), unexpected {} variant = \"{}\"", type_, variant);
         let label = link.get_label().map(|label| label.to_string());
         match link.get_type() {
-            model::LinkType::Topic { topic_key } => {
-                let page_name = self.model.get_topic_name(&topic_key);
-                let text = wiki::gen::page_link_from_string_label(&self.model.qualify_namespace(topic_key.get_namespace()), &page_name, &label);
-                text
-            },
-            model::LinkType::Section { section_key } => {
-                let text = wiki::gen::section_link_from_string_label(&self.model.qualify_namespace(section_key.get_namespace()),section_key.get_topic_name(), &section_key.get_section_name(), &label);
-                //bg!(&text);
-                text
-            },
             model::LinkType::External { url } => {
                 let text = wiki::gen::external_link_from_string_label(&url, &label);
+                text
+            },
+            model::LinkType::File { file_ref } => {
+                let text = wiki::gen::file_ref(&file_ref, &label);
                 text
             },
             model::LinkType::Image { source, alignment: _, size: _, type_: _ } => {
@@ -622,6 +616,16 @@ impl <'a> GenFromModel<'a> {
                 self.add_error(&msg_func_unexpected("LinkType", "InternalUnresolved"));
                 "".to_string()
             }
+            model::LinkType::Section { section_key } => {
+                let text = wiki::gen::section_link_from_string_label(&self.model.qualify_namespace(section_key.get_namespace()),section_key.get_topic_name(), &section_key.get_section_name(), &label);
+                //bg!(&text);
+                text
+            },
+            model::LinkType::Topic { topic_key } => {
+                let page_name = self.model.get_topic_name(&topic_key);
+                let text = wiki::gen::page_link_from_string_label(&self.model.qualify_namespace(topic_key.get_namespace()), &page_name, &label);
+                text
+            },
         }
     }
 

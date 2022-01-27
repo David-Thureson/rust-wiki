@@ -31,6 +31,9 @@ const CT_TABLE_END: &str = "|}";
 const CT_TABLE_DELIM: &str = "||";
 const CT_PREFIX_IMAGE: &str = "$IMG:";
 const CT_PREFIX_URL: &str = "$URL:";
+const CT_PREFIX_FILE: &str = "$FILE:";
+const CT_PREFIX_APP: &str = "$APP:";
+const CT_PREFIX_CLOUD: &str = "$CLOUD";
 const CT_PIPE: &str = "|";
 const CT_DELIM_SECTION_IN_LINK: &str = "#";
 const CT_MARK_SECTION_HEADER: &str = "=";
@@ -750,9 +753,25 @@ impl BuildProcess {
             let url = util::parse::after(url, CT_PREFIX_URL);
             return Ok(Some(Link::new_external(label, url)));
         }
-        // For now skip anything else starting with a "$" like $FILE.
-        if text.starts_with("$") {
+        if text.starts_with(CT_PREFIX_FILE) {
+            // File link.
+            let (file_ref, label) = util::parse::split_1_or_2_trim(&text, CT_PIPE);
+            let file_ref = util::parse::after(file_ref, CT_PREFIX_FILE);
+            return Ok(Some(Link::new_file(label, file_ref)));
+        }
+        if text.starts_with(CT_PREFIX_APP) {
+            // Treat as a file link.
+            let (file_ref, label) = util::parse::split_1_or_2_trim(&text, CT_PIPE);
+            let file_ref = util::parse::after(file_ref, CT_PREFIX_APP);
+            return Ok(Some(Link::new_file(label, file_ref)));
+        }
+        if text.starts_with(CT_PREFIX_CLOUD) {
+            // Ignore this as it has no meaning outside of ConnectedText.
             return Ok(None);
+        }
+        if text.starts_with("$") {
+            panic!("Unexpected ConnectedText link type (starts with \"$\"): text = {}", text)
+            // println!("{}", text);
         }
         // Assume it's an internal link, either to a topic or a section of a topic.
         let (mut dest, label) = util::parse::split_1_or_2_trim(&text, CT_PIPE);

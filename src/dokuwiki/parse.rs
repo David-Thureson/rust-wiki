@@ -20,8 +20,7 @@ pub(crate) fn parse_link_optional(topic_refs: &TopicRefs, text: &str) -> Result<
         let text = util::parse::between_trim(text, DELIM_LINK_START, DELIM_LINK_END);
         //bg!(text);
         let (dest, label) = util::parse::split_1_or_2(text, DELIM_LINK_LABEL);
-        let dest_trim_lower = dest.trim().to_lowercase();
-        let link = if dest_trim_lower.starts_with(PREFIX_HTTP) || dest_trim_lower.starts_with(PREFIX_HTTPS) {
+        let link = if model::Link::is_external_ref(dest) {
             model::Link::new_external(label, dest)
         } else {
             // Internal link.
@@ -43,8 +42,7 @@ pub(crate) fn parse_link_optional(topic_refs: &TopicRefs, text: &str) -> Result<
         //   {{tools:antlr_plugin_on_pycharm_added.png?direct}}
         let text = util::parse::between_trim(text, DELIM_IMAGE_START, DELIM_IMAGE_END);
         let (file_ref, _options) = util::parse::split_1_or_2(text, DELIM_IMAGE_OPTIONS);
-        let file_ref_lower = file_ref.to_lowercase().trim().to_string();
-        let image_source = if file_ref_lower.starts_with(PREFIX_HTTP) || file_ref_lower.starts_with(PREFIX_HTTPS) {
+        let image_source = if model::Link::is_external_ref(file_ref) {
             model::ImageSource::new_external(file_ref)
         } else {
             let (file_name, namespace) = util::parse::rsplit_2(file_ref, DELIM_NAMESPACE);
@@ -287,6 +285,7 @@ pub(crate) fn text_or_topic_link_label(text: &str) -> Result<String, String> {
 pub(crate) fn parse_list_optional(text: &str) -> Result<Option<model::List>, String> {
     let mut lines = text.split(DELIM_LINEFEED).collect::<Vec<_>>();
     let first_line = lines.remove(0);
+    //util::parse::print_chars(first_line);
     let first_line_as_list_item = parse_list_item_optional(first_line)?;
     if lines.len() == 1 {
         // The text is a single line, so if that line is a list item, we call the text a list with
@@ -343,7 +342,7 @@ pub(crate) fn parse_list_optional(text: &str) -> Result<Option<model::List>, Str
 }
 
 pub(crate) fn parse_list_item_optional(line: &str) -> Result<Option<model::ListItem>, String> {
-    assert!(line.contains(DELIM_LINEFEED));
+    assert!(!line.contains(DELIM_LINEFEED));
     let (is_list, is_ordered) = if line.trim().starts_with(DELIM_LIST_ITEM_ORDERED) {
         (true, true)
     } else if line.trim().starts_with(DELIM_LIST_ITEM_UNORDERED) {
@@ -366,7 +365,11 @@ pub(crate) fn parse_list_item_optional(line: &str) -> Result<Option<model::ListI
     if leading_space_count & 2 != 0 {
         return Err(format!("Expected an even number of spaces for a list item: \"{}\".", line));
     }
+    if leading_space_count < 2 {
+        return Err(format!("Expected at least two spaces for a list item: \"{}\".", line));
+    }
     let depth = leading_space_count / 2;
+    assert!(depth > 0);
 
     let list_item = model::ListItem::new(depth, is_ordered, text_block);
 

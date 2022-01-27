@@ -19,6 +19,9 @@ pub(crate) enum LinkType {
     External {
         url: String,
     },
+    File {
+        file_ref: String,
+    },
     Image {
         source: ImageSource,
         alignment: ImageAlignment,
@@ -99,6 +102,13 @@ impl Link {
     pub(crate) fn new_external(label: Option<&str>, url: &str) -> Self {
         let type_ = LinkType::External {
             url: url.to_string(),
+        };
+        Self::new(label, type_)
+    }
+
+    pub(crate) fn new_file(label: Option<&str>, file_ref: &str) -> Self {
+        let type_ = LinkType::File {
+            file_ref: file_ref.to_string(),
         };
         Self::new(label, type_)
     }
@@ -261,6 +271,10 @@ impl Link {
         }
     }
 
+    pub fn is_external_ref(reference: &str) -> bool {
+        let reference = reference.to_lowercase().trim().to_string();
+        reference.starts_with(PREFIX_HTTP) || reference.starts_with(PREFIX_HTTPS) || reference.starts_with(PREFIX_SFTP)
+    }
 }
 
 impl ImageSource {

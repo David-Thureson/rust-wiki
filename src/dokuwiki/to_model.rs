@@ -417,7 +417,15 @@ impl BuildProcess {
         let context = &format!("{} Seems to be a list paragraph.", context);
         let err_func = |msg: &str| Err(format!("{} paragraph_as_list_rc: {}: text = \"{}\".", context, msg, text));
         match parse_list_optional(text) {
-            Ok(Some(list)) => {
+            Ok(Some(mut list)) => {
+                // Resolve links and such within the the header, if any.
+                let resolved_header = if let Some(unresolved_header) = list.get_header() {
+                    let resolved_header = self.make_text_block_rc(&unresolved_header.get_unresolved_text(), context)?;
+                    Some(resolved_header)
+                } else {
+                    None
+                };
+                list.replace_header(resolved_header);
                 let paragraph = Paragraph::new_list(list);
                 topic.replace_paragraph(paragraph_index, paragraph);
                 Ok(true)
@@ -445,7 +453,7 @@ impl BuildProcess {
     }
 
     fn make_text_block_rc(&self, text: &str, context: &str) -> Result<TextBlock, String> {
-        if text.contains("tools:nav") { dbg!(context, text); panic!() };
+        // if text.contains("tools:nav") { dbg!(context, text); panic!() };
         let text = text.trim();
         // An image link will look like this:
         //   {{tools:antlr_plugin.png?direct}}

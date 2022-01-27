@@ -68,8 +68,6 @@ pub(crate) const TEMP_DELIM_IMG_END: &str = "}}]]";
 pub(crate) const TEMP_COMMA: &str = "~temp comma~";
 
 pub(crate) const PREFIX_CATEGORY: &str = "Category: ";
-pub(crate) const PREFIX_HTTP: &str = "http://";
-pub(crate) const PREFIX_HTTPS: &str = "https://";
 
 /*
 pub(crate) fn back_up_from_live() {

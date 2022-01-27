@@ -75,3 +75,6 @@ pub(crate) const FOLDER_PREFIX_WIKI_GEN_BACKUP: &str = "Wiki Gen";
 pub(crate) const FOLDER_WIKI_COMPARE_OLD: &str = r"C:\Wiki Gen Backup\Old";
 pub(crate) const FOLDER_WIKI_COMPARE_NEW: &str = r"C:\Wiki Gen Backup\New";
 
+pub(crate) const PREFIX_HTTP: &str = "http://";
+pub(crate) const PREFIX_HTTPS: &str = "https://";
+pub(crate) const PREFIX_SFTP: &str = "sftp://";

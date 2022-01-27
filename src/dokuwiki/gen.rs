@@ -335,6 +335,15 @@ pub(crate) fn external_link_from_string_label(url: &str, label: &Option<String>)
     format!("[[{}{}]]", url, label)
 }
 
+pub(crate) fn file_ref(file_ref: &str, label: &Option<String>) -> String {
+    let label = if let Some(label) = label {
+        format!("{}: ", label)
+    } else {
+        "".to_string()
+    };
+    format!("{}[{}]", label, file_ref)
+}
+
 pub(crate) fn legal_file_name(name: &str) -> String {
     // https://www.dokuwiki.org/pagename. From that page_text:
     //   page_text names in DokuWiki are converted to lowercase automatically. Allowed characters are
