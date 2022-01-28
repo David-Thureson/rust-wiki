@@ -417,6 +417,9 @@ impl BuildProcess {
         //   * [[Windows]]
         //    * [[By the Numbers]]
         //    * [[Genealogy (coding project)]]
+        if self.topic_parse_state.is_in_code {
+            return Ok(false);
+        }
         let context = &format!("{} Seems to be a list paragraph.", context);
         let err_func = |msg: &str| Err(format!("{} paragraph_as_list_rc: {}: text = \"{}\".", context, msg, text));
         match parse_list_optional(text) {
@@ -449,7 +452,14 @@ impl BuildProcess {
 
     fn paragraph_as_text_rc(&self, topic: &mut Topic, text: &str, paragraph_index: usize, context: &str) -> Result<bool, String> {
         let context = &format!("{} Seems to be a text paragraph.", context);
-        let text_block = self.make_text_block_rc(text, context)?;
+        let text_block = if self.topic_parse_state.is_in_code {
+            // We're in code, so take the text exactly as it is rather than looking for things like
+            // links.
+            let text_item = TextItem::new_text(text);
+            TextBlock::new_resolved(vec![text_item])
+        } else {
+            self.make_text_block_rc(text, context)?
+        };
         let paragraph = Paragraph::new_text(text_block);
         topic.replace_paragraph(paragraph_index, paragraph);
         Ok(true)

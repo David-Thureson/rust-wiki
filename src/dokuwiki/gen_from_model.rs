@@ -376,7 +376,10 @@ impl <'a> GenFromModel<'a> {
                     page.add_paragraph(text);
                 }
                 model::Paragraph::Placeholder => {
-                    self.add_error(&msg_func_unexpected("Placeholder"));
+                    // This is OK. It means while creating the model we came across a raw paragraph
+                    // that turned out to be something like bookmarks or an attribute table. We
+                    // dealt with that in some way that meant we no longer needed the paragraph.
+                    // self.add_error(&msg_func_unexpected("Placeholder"));
                 },
                 model::Paragraph::SectionHeader { name, depth } => {
                     page.add_headline(name, *depth);
