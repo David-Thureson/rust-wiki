@@ -16,6 +16,7 @@ pub(crate) struct ListItem {
 
 #[derive(Clone, Debug)]
 pub(crate) enum ListType {
+    AllTopics,
     Articles,
     Books,
     Clients,
@@ -34,8 +35,10 @@ pub(crate) enum ListType {
     SeeAlso,
     Settings,
     Specs,
+    Subcategories,
     Subtopics,
     Tools,
+    Topics,
     ToDo,
     ToRead,
     ToTry,
@@ -111,6 +114,7 @@ impl ListItem {
 impl ListType {
     pub(crate) fn from_header(header: &str) -> Self {
         match header {
+            "All Topics:" => Self::AllTopics,
             "Articles:" => Self::Articles,
             "Books:" => Self::Books,
             "Clients:" => Self::Clients,
@@ -128,8 +132,10 @@ impl ListType {
             "See also:" => Self::SeeAlso,
             "Settings:" => Self::Settings,
             "Specs:" => Self::Specs,
+            "Subcategories:" => Self::Subcategories,
             "Subtopics:" => Self::Subtopics,
             "Tools:" => Self::Tools,
+            "Topics:" => Self::Topics,
             "To do:" => Self::ToDo,
             "To read:" => Self::ToRead,
             "To try:" => Self::ToTry,
@@ -140,6 +146,7 @@ impl ListType {
 
     pub(crate) fn get_variant_name(&self) -> &str {
         match self {
+            Self::AllTopics => "All Topics",
             Self::Articles => "Articles",
             Self::Books => "Books",
             Self::Clients => "Clients",
@@ -158,12 +165,25 @@ impl ListType {
             Self::SeeAlso => "SeeAlso",
             Self::Settings => "Settings",
             Self::Specs => "Specs",
+            Self::Subcategories => "Subcategories",
             Self::Subtopics => "Subtopics",
             Self::Tools => "Tools",
+            Self::Topics => "Topics",
             Self::ToDo => "ToDo",
             Self::ToRead => "ToRead",
             Self::ToTry => "ToTry",
             Self::Tutorials => "Tutorials",
+        }
+    }
+
+    pub(crate) fn is_generated(&self) -> bool {
+        match self {
+            ListType::AllTopics
+            | ListType::Combinations
+            | ListType::Subcategories
+            | ListType::Subtopics
+            | ListType::Topics => true,
+            _ => false,
         }
     }
 

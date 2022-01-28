@@ -200,10 +200,11 @@ impl Model {
     }
 
     fn catalog_inbound_links(&mut self) {
+        let include_generated = false;
         let mut map = BTreeMap::new();
         for topic in self.topics.values() {
             let topic_key = topic.get_key();
-            for outbound_topic_key in topic.get_topic_links_as_topic_keys().drain(..) {
+            for outbound_topic_key in topic.get_topic_links_as_topic_keys(include_generated).drain(..) {
                 let entry = map.entry(outbound_topic_key.clone()).or_insert(vec![]);
                 if !entry.contains(&topic_key) {
                     entry.push(topic_key.clone());
@@ -213,7 +214,7 @@ impl Model {
         for (topic_key, mut inbound_topic_keys) in map.drain_filter(|_k, _v| true) {
             TopicKey::sort_topic_keys_by_name(&mut inbound_topic_keys);
             if let Some(topic) = self.get_topics_mut().get_mut(&topic_key) {
-                topic.add_inbound_topic_keys(inbound_topic_keys);
+                topic.set_inbound_topic_keys(inbound_topic_keys);
             }
         }
     }

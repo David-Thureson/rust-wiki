@@ -16,6 +16,7 @@ pub(crate) struct Topic {
     paragraphs: Vec<Paragraph>,
     inbound_topic_keys: Vec<TopicKey>,
     outbound_links: Vec<Link>,
+    generated_outbound_links: Vec<Link>,
     category_tree_node: Option<Rc<RefCell<TopicTreeNode>>>,
     subtopics: Vec<TopicKey>,
     subtopic_tree_node: Option<Rc<RefCell<TopicTreeNode>>>,
@@ -48,6 +49,7 @@ impl Topic {
             paragraphs: vec![],
             inbound_topic_keys: vec![],
             outbound_links: vec![],
+            generated_outbound_links: vec![],
             category_tree_node: None,
             subtopics: vec![],
             subtopic_tree_node: None,
@@ -270,9 +272,15 @@ impl Topic {
         self.inbound_topic_keys.len()
     }
 
+    pub(crate) fn set_inbound_topic_keys(&mut self, topic_keys: Vec<TopicKey>) {
+        self.inbound_topic_keys = topic_keys;
+    }
+
+    /*
     pub(crate) fn add_inbound_topic_keys(&mut self, mut topic_keys: Vec<TopicKey>) {
         self.inbound_topic_keys.append(&mut topic_keys);
     }
+     */
 
     /*
     pub(crate) fn clear_inbound_topic_keys(&mut self) {
@@ -537,8 +545,13 @@ impl Topic {
         TopicKey::sort_topic_keys_by_name(&mut self.listed_topics);
     }
 
-    pub(crate) fn get_topic_links_as_topic_keys(&self) -> Vec<TopicKey> {
-        self.outbound_links.iter()
+    pub(crate) fn get_topic_links_as_topic_keys(&self, include_generated: bool) -> Vec<TopicKey> {
+        assert!(!include_generated, "The Topic.include_generated list is not getting filled yet.");
+        let mut links = self.outbound_links.clone();
+        if include_generated {
+            links.append(&mut self.generated_outbound_links.clone());
+        }
+        let mut topic_keys = links.iter()
             .filter_map(|link| {
                 match link.get_type() {
                     LinkType::Topic { topic_key } => Some(topic_key.clone()),
@@ -546,7 +559,10 @@ impl Topic {
                     _ => None,
                 }
             })
-            .collect()
+            .collect();
+        TopicKey::sort_topic_keys_by_name(&mut topic_keys);
+        topic_keys.dedup();
+        topic_keys
     }
 
     #[allow(dead_code)]

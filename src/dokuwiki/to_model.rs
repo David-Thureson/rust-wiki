@@ -24,6 +24,7 @@ struct TopicParseState {
     is_in_code: bool,
     is_in_non_code_marker: bool,
     marker_exit_string: Option<String>,
+    is_past_real_sections: bool,
 }
 
 impl BuildProcess {
@@ -133,6 +134,13 @@ impl BuildProcess {
                     },
                     _ => (),
                 }
+                // if self.topic_parse_state.is_past_real_sections {
+                    // We've finished with the more or less hand-written part of the page and are
+                    // now in the fully generated sections like "Inbound Links". We don't want to
+                    // parse these generated sections and include them in the model because they'll
+                    // be created automatically.
+                    //break;
+                // }
             }
             topic.assert_all_text_blocks_resolved();
             self.topic_parse_state.check_end_of_topic();
@@ -141,28 +149,34 @@ impl BuildProcess {
 
     fn refine_one_paragraph_rc(&mut self, topic: &mut Topic, paragraph_index: usize, context: &str) -> Result<(), String> {
         let source_paragraph = topic.replace_paragraph_with_placeholder(paragraph_index);
-        match source_paragraph {
-            Paragraph::Unknown { text } => {
-                let text = util::parse::trim_linefeeds(&text);
-                if !(self.paragraph_as_category_rc(topic, &text, context)?
-                    || self.paragraph_as_section_header_rc(topic, &text, paragraph_index, context)?
-                    || self.paragraph_as_breadcrumb_rc(topic, &text, context)?
-                    || self.paragraph_as_marker_start_or_end_rc(topic, &text, paragraph_index, context)?
-                    || self.paragraph_as_table_rc(topic, &text, paragraph_index, context)?
-                    || self.paragraph_as_list_rc(topic, &text, paragraph_index, context)?
-                    || self.paragraph_as_text_rc(topic, &text, paragraph_index, context)?
-                ) {
-                    panic!("Unable to resolve paragraph.")
-                    // let new_paragraph = Paragraph::new_text_unresolved(&text);
-                    // topic.replace_paragraph(paragraph_index, new_paragraph);
-                }
-                return Ok(());
-            },
-            _ => {},
-        };
-        // if topic.get_name().contains("Zero") { dbg!("new_paragraph", &new_paragraph.get_variant_name()); }
-        // topic.paragraphs[paragraph_index] = new_paragraph;
-        topic.replace_paragraph(paragraph_index, source_paragraph);
+        // Check whether we've finished with the more or less hand-written part of the page and are
+        // now in the fully generated sections like "Inbound Links". We don't want to parse these
+        // generated sections and include them in the model because they'll be created
+        // automatically. So if that's the case, leave the placeholder paragraph in place.
+        if !self.topic_parse_state.is_past_real_sections {
+            match source_paragraph {
+                Paragraph::Unknown { text } => {
+                    let text = util::parse::trim_linefeeds(&text);
+                    if !(self.paragraph_as_category_rc(topic, &text, context)?
+                        || self.paragraph_as_section_header_rc(topic, &text, paragraph_index, context)?
+                        || self.paragraph_as_breadcrumb_rc(topic, &text, context)?
+                        || self.paragraph_as_marker_start_or_end_rc(topic, &text, paragraph_index, context)?
+                        || self.paragraph_as_table_rc(topic, &text, paragraph_index, context)?
+                        || self.paragraph_as_list_rc(topic, &text, paragraph_index, context)?
+                        || self.paragraph_as_text_rc(topic, &text, paragraph_index, context)?
+                    ) {
+                        panic!("Unable to resolve paragraph.")
+                        // let new_paragraph = Paragraph::new_text_unresolved(&text);
+                        // topic.replace_paragraph(paragraph_index, new_paragraph);
+                    }
+                    return Ok(());
+                },
+                _ => {},
+            };
+            // if topic.get_name().contains("Zero") { dbg!("new_paragraph", &new_paragraph.get_variant_name()); }
+            // topic.paragraphs[paragraph_index] = new_paragraph;
+            topic.replace_paragraph(paragraph_index, source_paragraph);
+        }
         Ok(())
     }
 
@@ -226,11 +240,15 @@ impl BuildProcess {
         match parse_header_optional(text) {
             Ok(Some((name, depth))) => {
                 //bg!(&name, depth);
-                topic.replace_paragraph(paragraph_index, Paragraph::new_section_header(&name, depth));
-                //if topic.get_name().contains("A2") { dbg!(text, &name, depth); panic!() }
-                //bg!(topic.get_name(), text, &name, depth);
                 if depth > 0 {
                     self.topic_parse_state.is_past_first_header = true;
+                }
+                if name.eq(HEADLINE_LINKS) {
+                    self.topic_parse_state.is_past_real_sections = true;
+                } else {
+                    topic.replace_paragraph(paragraph_index, Paragraph::new_section_header(&name, depth));
+                    //if topic.get_name().contains("A2") { dbg!(text, &name, depth); panic!() }
+                    //bg!(topic.get_name(), text, &name, depth);
                 }
                 Ok(true)
             },
@@ -424,21 +442,26 @@ impl BuildProcess {
         let err_func = |msg: &str| Err(format!("{} paragraph_as_list_rc: {}: text = \"{}\".", context, msg, text));
         match parse_list_optional(text) {
             Ok(Some(list)) => {
-                // Resolve links and such within the the header, if any.
-                let resolved_header = if let Some(unresolved_header) = list.get_header() {
-                    let resolved_header = self.make_text_block_rc(&unresolved_header.get_unresolved_text(), context)?;
-                    Some(resolved_header)
-                } else {
-                    None
-                };
-                let mut resolved_list = List::new(list.get_type().clone(), resolved_header);
-                for list_item in list.get_items() {
-                    let resolved_text_block = self.make_text_block_rc(&list_item.get_text_block().get_unresolved_text(), context)?;
-                    let resolved_list_item = ListItem::new(list_item.get_depth(), list_item.is_ordered(), resolved_text_block);
-                    resolved_list.add_item(resolved_list_item);
+                // If the list is one of the generated types like "Subcategories" or "All Topics"
+                // we don't want to parse it and add it to the model. It will be generated later
+                // automatically.
+                if !list.get_type().is_generated() {
+                    // Resolve links and such within the the header, if any.
+                    let resolved_header = if let Some(unresolved_header) = list.get_header() {
+                        let resolved_header = self.make_text_block_rc(&unresolved_header.get_unresolved_text(), context)?;
+                        Some(resolved_header)
+                    } else {
+                        None
+                    };
+                    let mut resolved_list = List::new(list.get_type().clone(), resolved_header);
+                    for list_item in list.get_items() {
+                        let resolved_text_block = self.make_text_block_rc(&list_item.get_text_block().get_unresolved_text(), context)?;
+                        let resolved_list_item = ListItem::new(list_item.get_depth(), list_item.is_ordered(), resolved_text_block);
+                        resolved_list.add_item(resolved_list_item);
+                    }
+                    let paragraph = Paragraph::new_list(resolved_list);
+                    topic.replace_paragraph(paragraph_index, paragraph);
                 }
-                let paragraph = Paragraph::new_list(resolved_list);
-                topic.replace_paragraph(paragraph_index, paragraph);
                 Ok(true)
             },
             Ok(None) => {
@@ -549,6 +572,7 @@ impl TopicParseState {
             is_in_code: false,
             is_in_non_code_marker: false,
             marker_exit_string: None,
+            is_past_real_sections: false,
         }
     }
 

@@ -32,6 +32,8 @@ pub(crate) const PAGE_NAME_ATTR_YEAR: &str = "Years";
 pub(crate) const PAGE_NAME_ATTR_DATE: &str = "Dates";
 pub(crate) const PAGE_NAME_TERMS: &str = "Terms";
 
+pub(crate) const HEADLINE_LINKS: &str = "Generated Links";
+
 pub(crate) const DELIM_NAMESPACE: &str = ":";
 pub(crate) const DELIM_LINEFEED: &str = "\n";
 pub(crate) const DELIM_PARAGRAPH: &str = "\n\n";

@@ -157,18 +157,19 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Model, use_l
     if include_start_page {
         links.push(wiki::page_link(model::NAMESPACE_ROOT, wiki::PAGE_NAME_START, None));
     };
-    let qualified_namespace = model.qualify_namespace(&model.namespace_navigation());
+    let namespace_nav = model.qualify_namespace(&model.namespace_navigation());
+    let namespace_main = model.get_main_namespace();
     links.append(&mut vec![
-        wiki::page_link(&qualified_namespace,wiki::PAGE_NAME_MAIN, None),
-        wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_RECENT_TOPICS, None),
-        wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_ALL_TOPICS,None),
-        wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_CATEGORIES, None),
-        wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_SUBTOPICS,None),
-        wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_ATTR,None),
-        wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_ATTR_VALUE,None),
-        wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_ATTR_YEAR,None),
-        wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_ATTR_DATE,None),
-        wiki::page_link(&qualified_namespace, wiki::PAGE_NAME_TERMS, None),
+        wiki::page_link(&namespace_main,wiki::PAGE_NAME_MAIN, None),
+        wiki::page_link(&namespace_nav, wiki::PAGE_NAME_RECENT_TOPICS, None),
+        wiki::page_link(&namespace_nav, wiki::PAGE_NAME_ALL_TOPICS,None),
+        wiki::page_link(&namespace_nav, wiki::PAGE_NAME_CATEGORIES, None),
+        wiki::page_link(&namespace_nav, wiki::PAGE_NAME_SUBTOPICS,None),
+        wiki::page_link(&namespace_nav, wiki::PAGE_NAME_ATTR,None),
+        wiki::page_link(&namespace_nav, wiki::PAGE_NAME_ATTR_VALUE,None),
+        wiki::page_link(&namespace_nav, wiki::PAGE_NAME_ATTR_YEAR,None),
+        wiki::page_link(&namespace_nav, wiki::PAGE_NAME_ATTR_DATE,None),
+        wiki::page_link(&namespace_main, wiki::PAGE_NAME_TERMS, None),
     ]);
     if use_list {
         let mut list = wiki::WikiList::new(None);

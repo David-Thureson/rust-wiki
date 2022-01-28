@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use crate::model::{AttributeValueType, TopicKey, Topic, TableCell};
 use std::collections::BTreeMap;
-use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage};
+use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS};
 use std::fs;
 
 //const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
@@ -397,6 +397,7 @@ impl <'a> GenFromModel<'a> {
                     self.add_error(&msg_func_unexpected("TextUnresolved"));
                 }
                 model::Paragraph::Unknown { .. } => {
+                    dbg!(topic.get_name(), &paragraph);
                     self.add_error(&msg_func_unexpected("Unknown"));
                 }
             }
@@ -528,26 +529,24 @@ impl <'a> GenFromModel<'a> {
     }
 
     fn add_list(&mut self, page: &mut wiki::WikiGenPage, list: &model::List) {
-        match list.get_type() {
-            model::ListType::Subtopics | model::ListType::Combinations => {}, // These are generated elsewhere.
-            _ => {
-                if let Some(header) = list.get_header() {
-                    match header {
-                        model::TextBlock::Unresolved { text } => {
-                            panic!("Text block should be resolved by this point. Page = \"{}\"; text = \"{}\".", page.topic_name, text)
-                        }
-                        _ => {},
-                    }
-                    page.add(&self.text_block_to_markup(header));
-                    page.add_linefeed();
-                }
-                for list_item in list.get_items().iter() {
-                    let markup = &self.text_block_to_markup(list_item.get_text_block());
-                    page.add_list_item(list_item.get_depth(),list_item.is_ordered(), markup);
-                }
-                page.add_linefeed();
-            }
+        if list.get_type().is_generated() {
+            return;
         }
+        if let Some(header) = list.get_header() {
+            match header {
+                model::TextBlock::Unresolved { text } => {
+                    panic!("Text block should be resolved by this point. Page = \"{}\"; text = \"{}\".", page.topic_name, text)
+                }
+                _ => {},
+            }
+            page.add(&self.text_block_to_markup(header));
+            page.add_linefeed();
+        }
+        for list_item in list.get_items().iter() {
+            let markup = &self.text_block_to_markup(list_item.get_text_block());
+            page.add_list_item(list_item.get_depth(),list_item.is_ordered(), markup);
+        }
+        page.add_linefeed();
         // if page.topic_name.contains("10,000") { //bg!(&page.content); }
     }
 
@@ -638,7 +637,7 @@ impl <'a> GenFromModel<'a> {
         let has_attribute_links = self.model.has_attribute_links(&page.topic_name);
         let has_inbound_links = topic.get_inbound_topic_keys_count() > 0;
         if has_attribute_links || has_inbound_links {
-            page.add_headline("Inbound Links", 1);
+            page.add_headline(HEADLINE_LINKS, 1);
             self.add_attribute_value_topics_list_optional(page);
             self.add_inbound_links_optional(page, topic);
         }
