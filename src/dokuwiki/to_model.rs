@@ -474,7 +474,7 @@ impl BuildProcess {
         let text = text.replace(DELIM_IMAGE_START, TEMP_DELIM_IMG_START)
             .replace(DELIM_IMAGE_END, TEMP_DELIM_IMG_END);
         let delimited_splits = util::parse::split_delimited_and_normal_rc(&text, DELIM_LINK_START, DELIM_LINK_END, context)?;
-        if text.contains("format|Num-Format") { dbg!(&delimited_splits); panic!(); }
+        // if text.contains("format|Num-Format") { dbg!(&delimited_splits); panic!(); }
         let mut items = vec![];
         for (item_is_delimited, item_text) in delimited_splits.iter() {
             if *item_is_delimited {

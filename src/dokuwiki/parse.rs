@@ -283,11 +283,14 @@ pub(crate) fn text_or_topic_link_label(text: &str) -> Result<String, String> {
 }
 
 pub(crate) fn parse_list_optional(text: &str) -> Result<Option<model::List>, String> {
+    // let debug = text.contains("on_data_structures_and_algorithms_with_rust|Hands-On Data Structures and Algorithms with Rust]]");
+    let debug = false;
+    if debug { println!("\nparse_list_optional(): text = \"{}\".", text); }
     let mut lines = text.split(DELIM_LINEFEED).collect::<Vec<_>>();
-    //bg!(&lines);
+    if debug { dbg!(&lines); };
     let first_line = lines.remove(0);
     //util::parse::print_chars(first_line);
-    let first_line_as_list_item = parse_list_item_optional(first_line)?;
+    let first_line_as_list_item = parse_list_item_optional(first_line, debug)?;
     if lines.is_empty() {
         // The text is a single line, so if that line is a list item, we call the text a list with
         // no label and only one line.
@@ -305,7 +308,8 @@ pub(crate) fn parse_list_optional(text: &str) -> Result<Option<model::List>, Str
     // the rest of the lines are all list items.
     let mut rest_of_lines_as_list_items = lines.iter()
         .filter_map(|line| {
-            let list_item = parse_list_item_optional(line).ok()?;
+            if debug { dbg!(line); }
+            let list_item = parse_list_item_optional(line, debug).ok()?;
             list_item
         })
         .collect::<Vec<_>>();
@@ -345,7 +349,8 @@ pub(crate) fn parse_list_optional(text: &str) -> Result<Option<model::List>, Str
     }
 }
 
-pub(crate) fn parse_list_item_optional(line: &str) -> Result<Option<model::ListItem>, String> {
+pub(crate) fn parse_list_item_optional(line: &str, debug: bool) -> Result<Option<model::ListItem>, String> {
+    if debug { println!("\nparse_list_item_optional(): line = \"{}\".", line); }
     assert!(!line.contains(DELIM_LINEFEED));
     let (is_list, is_ordered) = if line.trim().starts_with(DELIM_LIST_ITEM_ORDERED) {
         (true, true)
@@ -354,12 +359,12 @@ pub(crate) fn parse_list_item_optional(line: &str) -> Result<Option<model::ListI
     } else {
         (false, false)
     };
-    //bg!(line, is_list, is_ordered);
+    if debug { dbg!(line, is_list, is_ordered); }
     if !is_list {
         return Ok(None);
     }
 
-    let text = if is_list {
+    let text = if is_ordered {
         util::parse::after(line, DELIM_LIST_ITEM_ORDERED).trim()
     } else {
         util::parse::after(line, DELIM_LIST_ITEM_UNORDERED).trim()
