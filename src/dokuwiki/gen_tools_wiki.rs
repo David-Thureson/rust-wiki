@@ -14,34 +14,45 @@ pub fn main() {
     gen_from_connectedtext(copy_image_files, topic_limit);
 }
 
-pub fn gen_from_connectedtext_and_round_trip() {
+pub fn gen_from_connectedtext_round_trip() {
+    round_trip(true);
+}
+
+pub fn dokuwiki_round_trip() {
+    round_trip(false);
+}
+
+fn round_trip(start_from_connectedtext: bool) {
     println!("\nDokuWiki round trip test: Start.");
 
     let path_pages_project = path_pages_project();
 
-    // Back up the existing DokuWiki pages.
-    if util::file::path_exists(&path_pages_project) {
-        let backup_folder_start = util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
-        println!("backup_folder_start = \"{}\".", util::file::path_name(&backup_folder_start));
+    if start_from_connectedtext {
+        // Back up the existing DokuWiki pages.
+        if util::file::path_exists(&path_pages_project) {
+            let backup_folder_start = util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
+            println!("backup_folder_start = \"{}\".", util::file::path_name(&backup_folder_start));
+        }
+
+        gen_from_connectedtext(false, None);
+        assert!(util::file::path_exists(&path_pages_project));
     }
 
-    gen_from_connectedtext(false, None);
-    assert!(util::file::path_exists(&path_pages_project));
-    // Back up the DokuWiki pages created from ConnectedText.
-    let backup_folder_from_connectedtext = util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
-    println!("backup_folder_from_connectedtext = \"{}\".", util::file::path_name(&backup_folder_from_connectedtext));
+    // Back up the DokuWiki pages.
+    let backup_folder_old = util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
+    println!("backup_folder_old = \"{}\".", util::file::path_name(&backup_folder_old));
     // Copy these pages to the "old" comparison folder.
     util::file::copy_folder_recursive_overwrite_r(&path_pages_project, FOLDER_WIKI_COMPARE_OLD).unwrap();
 
-    // Create a model from the DokuWiki pages that were generated just now.
+    // Create a model from the DokuWiki pages.
     let model = super::to_model::build_model(PROJECT_NAME, &PROJECT_NAME.to_lowercase(), None, get_attr_to_index());
 
     // Create DokuWiki pages from this new model.
     gen_tools_project_from_model(&model, false);
 
     // Back up the DokuWiki pages created with a round trip from DokuWiki.
-    let backup_folder_from_dokuwiki = util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
-    println!("backup_folder_from_dokuwiki = \"{}\".", util::file::path_name(&backup_folder_from_dokuwiki));
+    let backup_folder_new = util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
+    println!("backup_folder_new = \"{}\".", util::file::path_name(&backup_folder_new));
     // Copy these pages to the "new" comparison folder.
     util::file::copy_folder_recursive_overwrite_r(&path_pages_project, FOLDER_WIKI_COMPARE_NEW).unwrap();
 
