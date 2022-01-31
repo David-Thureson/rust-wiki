@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 util = { path = "../util" }
+manage-projects = { path = "../manage-projects" }
 chrono = { version = "0.4.13", features = ["serde"] }
 # gnuplot = "0.0.37"
 # plotters = "0.2.15"

@@ -25,6 +25,17 @@ pub fn dokuwiki_round_trip() {
 fn round_trip(start_from_connectedtext: bool) {
     println!("\nDokuWiki round trip test: Start.");
 
+    let compare_only = false;
+
+    let model = prep_round_trip(start_from_connectedtext);
+    complete_round_trip(model, compare_only);
+
+    println!("\nDokuWiki round trip test: Done.");
+}
+
+fn prep_round_trip(start_from_connectedtext: bool) -> model::Model {
+    println!("\ndokuwiki::gen_tools_wiki::prep_round_trip(): Start.");
+
     let path_pages_project = path_pages_project();
 
     if start_from_connectedtext {
@@ -47,16 +58,31 @@ fn round_trip(start_from_connectedtext: bool) {
     // Create a model from the DokuWiki pages.
     let model = super::to_model::build_model(PROJECT_NAME, &PROJECT_NAME.to_lowercase(), None, get_attr_to_index());
 
+    println!("\ndokuwiki::gen_tools_wiki::prep_round_trip(): Done.");
+
+    model
+}
+
+pub(crate) fn complete_round_trip(model: model::Model, compare_only: bool) {
+
+    println!("\ndokuwiki::gen_tools_wiki::complete_round_trip(): Start.");
+
     // Create DokuWiki pages from this new model.
-    gen_tools_project_from_model(&model, false);
+    let gen_path_pages = if compare_only { FOLDER_WIKI_COMPARE_NEW } else { PATH_PAGES };
+    let copy_image_files_to_local_wiki = false;
+    gen_tools_project_from_model(&model, gen_path_pages, copy_image_files_to_local_wiki);
 
-    // Back up the DokuWiki pages created with a round trip from DokuWiki.
-    let backup_folder_new = util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
-    println!("backup_folder_new = \"{}\".", util::file::path_name(&backup_folder_new));
-    // Copy these pages to the "new" comparison folder.
-    util::file::copy_folder_recursive_overwrite_r(&path_pages_project, FOLDER_WIKI_COMPARE_NEW).unwrap();
+    if !compare_only {
+        let path_pages_project = path_pages_project();
+        let backup_folder_new = util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
+        println!("backup_folder_new = \"{}\".", util::file::path_name(&backup_folder_new));
 
-    println!("\nDokuWiki round trip test: Done.");
+        // Back up the DokuWiki pages created with a round trip from DokuWiki.
+        // Copy these pages to the "new" comparison folder.
+        util::file::copy_folder_recursive_overwrite_r(&path_pages_project, FOLDER_WIKI_COMPARE_NEW).unwrap();
+    }
+
+    println!("\ndokuwiki::gen_tools_wiki::complete_round_trip(): Done.");
 }
 
 fn path_pages_project() -> String {
@@ -102,11 +128,11 @@ fn gen_from_connectedtext(copy_image_files_to_local_wiki: bool, topic_limit: Opt
     println!("\nGenerating wiki from ConnectedText: Start.");
     let namespace_main = PROJECT_NAME.to_lowercase();
     let model = build_model(PROJECT_NAME, &namespace_main, topic_limit, get_attr_to_index());
-    gen_tools_project_from_model(&model, copy_image_files_to_local_wiki);
+    gen_tools_project_from_model(&model, PATH_PAGES, copy_image_files_to_local_wiki);
     println!("\nGenerating wiki from ConnectedText: Done.");
 }
 
-fn gen_tools_project_from_model(model: &model::Model, copy_image_files_to_local_wiki: bool) {
+fn gen_tools_project_from_model(model: &model::Model, path_pages: &str, copy_image_files_to_local_wiki: bool) {
     println!("\nGenerating wiki from model: Start.");
 
     let namespace_main = PROJECT_NAME.to_lowercase();
@@ -121,9 +147,9 @@ fn gen_tools_project_from_model(model: &model::Model, copy_image_files_to_local_
 
     // gen_recent_topics_page();
 
-    let mut gen = GenFromModel::new(model);
+    let mut gen = GenFromModel::new(model, path_pages);
     gen_sidebar_page(model, &mut gen);
-    gen_start_page(model);
+    gen_start_page(model, &gen);
     gen.gen_all_topics_page();
     gen.gen_categories_page();
     gen.gen_subtopics_page();
@@ -140,14 +166,14 @@ fn gen_sidebar_page(model: &model::Model, gen: &mut GenFromModel) {
     let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_ROOT), wiki::PAGE_NAME_SIDEBAR, None);
     add_main_page_links(&mut page, model,false, true);
     gen.gen_topic_first_letter_links(&mut page, 6);
-    page.write();
+    page.write(gen.get_path_pages());
 }
 
-fn gen_start_page(model: &model::Model) {
+fn gen_start_page(model: &model::Model, gen: &GenFromModel) {
     let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_ROOT), wiki::PAGE_NAME_START, Some(PROJECT_NAME));
     page.add_headline("Main Pages",2);
     add_main_page_links(&mut page, model, true, false);
-    page.write();
+    page.write(gen.get_path_pages());
 }
 
 /*
@@ -207,4 +233,14 @@ fn add_links_to_all_topics(page: &mut wiki::WikiGenPage, model: &model::Wiki) {
 
 pub(crate) fn get_attr_to_index() -> Vec<&'static str> {
     vec!["Author", "Book", "Company", "Context", "Course", ATTRIBUTE_NAME_DOMAIN, "Domains", "Format", "Founder", "IDE", "Language", "License Type", "LinkedIn", "Narrator", "Operating System", "Organization", "PC Name", "Paradigm", "Platform", "School", "Series", "Status", "Translator"]
+}
+
+pub fn update_coding_project_info(compare_only: bool) {
+    println!("\ndokuwiki::gen_tools_wiki::update_coding_project_info(): Start.");
+
+    let start_from_connectedtext = false;
+    let model = prep_round_trip(start_from_connectedtext);
+    complete_round_trip(model, compare_only);
+
+    println!("\ndokuwiki::gen_tools_wiki::update_coding_project_info(): Done.");
 }

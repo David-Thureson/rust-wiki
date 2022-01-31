@@ -12,18 +12,24 @@ use std::fs;
 
 pub(crate) struct GenFromModel<'a> {
     model: &'a model::Model,
+    path_pages: String,
     current_topic_key: Option<model::TopicKey>,
     errors: model::TopicErrorList,
 }
 
 impl <'a> GenFromModel<'a> {
 
-    pub(crate) fn new(model: &'a model::Model) -> Self {
+    pub(crate) fn new(model: &'a model::Model, path_pages: &str) -> Self {
         Self {
             model: model,
+            path_pages: path_pages.to_string(),
             current_topic_key: None,
             errors: model::TopicErrorList::new(),
         }
+    }
+
+    pub(crate) fn get_path_pages(&self) -> &str {
+        &self.path_pages
     }
 
     pub(crate) fn gen_all_topics_page(&mut self) {
@@ -39,7 +45,7 @@ impl <'a> GenFromModel<'a> {
                 page.add_line_with_break(&link);
             }
         }
-        page.write();
+        page.write(&self.path_pages);
     }
 
     pub(crate) fn gen_topic_first_letter_links(&mut self, page: &mut WikiGenPage, column_count: usize) {
@@ -77,14 +83,14 @@ impl <'a> GenFromModel<'a> {
         // }
 
         self.gen_partial_topic_tree(&mut page, &nodes, true, None);
-        page.write();
+        page.write(&self.path_pages);
     }
 
     pub(crate) fn gen_subtopics_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_SUBTOPICS,None);
         let nodes = self.model.subtopic_tree().unroll_to_depth(None);
         self.gen_partial_topic_tree(&mut page, &nodes, false, None);
-        page.write();
+        page.write(&self.path_pages);
     }
 
     pub(crate) fn gen_attr_page(&self) {
@@ -110,7 +116,7 @@ impl <'a> GenFromModel<'a> {
                 page.add_linefeed();
             }
         }
-        page.write();
+        page.write(&self.path_pages);
     }
 
     pub(crate) fn gen_attr_value_page(&self) {
@@ -141,7 +147,7 @@ impl <'a> GenFromModel<'a> {
             }
             page.add_linefeed();
         }
-        page.write();
+        page.write(&self.path_pages);
     }
 
     fn add_related_domains_optional(&self, page: &mut wiki::WikiGenPage, attribute_value_name: &str, on_attribute_value_page: bool) {
@@ -169,7 +175,7 @@ impl <'a> GenFromModel<'a> {
             }
             page.add_linefeed();
         }
-        page.write();
+        page.write(&self.path_pages);
     }
 
     pub(crate) fn gen_attr_date_page(&self) {
@@ -193,7 +199,7 @@ impl <'a> GenFromModel<'a> {
                 }
             }
         }
-        page.write();
+        page.write(&self.path_pages);
     }
 
     fn page_link_if_exists(&self, topic_name: &str) -> Option<String> {
@@ -238,7 +244,7 @@ impl <'a> GenFromModel<'a> {
             self.add_attributes_optional(&mut page, &topic);
             self.add_paragraphs(&mut page, &topic);
             self.add_inbound_links_section_optional(&mut page, &topic);
-            page.write();
+            page.write(&self.path_pages);
         }
         self.errors.print(Some("GenFromModel::gen()"));
     }

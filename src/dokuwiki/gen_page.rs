@@ -160,7 +160,7 @@ impl WikiGenPage {
         self.content.push_str(&markup);
     }
 
-    pub(crate) fn write(&self) {
+    pub(crate) fn write(&self, path_pages: &str) {
         let mut content = util::parse::trim_linefeeds(&self.content);
         while content.contains("\n\n\n") {
             content = content.replace("\n\n\n", "\n\n");
@@ -174,7 +174,7 @@ impl WikiGenPage {
         }
         let legal_file_name = legal_file_name(&self.topic_name);
         //bg!(PATH_PAGES, &namespace_path, &legal_file_name);
-        let full_file_name = format!("{}{}/{}.txt", PATH_PAGES, namespace_path, legal_file_name);
+        let full_file_name = format!("{}{}/{}.txt", &path_pages, namespace_path, legal_file_name);
         //bg!(&full_file_name);
         if full_file_name.contains("//") {
             panic!("File name has double slashes: \"{}\".", &full_file_name);
