@@ -295,6 +295,10 @@ impl Model {
         self.topics.keys().sorted_by_key(|topic_key| topic_key.get_topic_name().to_lowercase()).map(|x| x.clone()).collect()
     }
 
+    pub(crate) fn get_topic_names(&self) -> Vec<String> {
+        self.topic_keys_alphabetical_by_topic_name().iter().map(|topic_key| topic_key.get_topic_name().to_string()).collect()
+    }
+
     pub(crate) fn add_category_optional(&mut self, name: String) {
         if !self.categories.contains(&name) {
             self.categories.push(name);

@@ -5,6 +5,7 @@ use crate::model::{ATTRIBUTE_NAME_DOMAIN, FOLDER_PREFIX_WIKI_GEN_BACKUP, FOLDER_
 use crate::dokuwiki::gen_from_model::GenFromModel;
 use crate::connectedtext::PATH_CT_EXPORT_IMAGES;
 use crate::dokuwiki::{PATH_MEDIA, PATH_PAGES};
+use std::collections::BTreeMap;
 
 pub(crate) const PROJECT_NAME: &str = "Tools";
 
@@ -235,12 +236,78 @@ pub(crate) fn get_attr_to_index() -> Vec<&'static str> {
     vec!["Author", "Book", "Company", "Context", "Course", ATTRIBUTE_NAME_DOMAIN, "Domains", "Format", "Founder", "IDE", "Language", "License Type", "LinkedIn", "Narrator", "Operating System", "Organization", "PC Name", "Paradigm", "Platform", "School", "Series", "Status", "Translator"]
 }
 
-pub fn update_coding_project_info(compare_only: bool) {
+pub fn update_coding_project_info(_compare_only: bool) {
     println!("\ndokuwiki::gen_tools_wiki::update_coding_project_info(): Start.");
 
     let start_from_connectedtext = false;
     let model = prep_round_trip(start_from_connectedtext);
-    complete_round_trip(model, compare_only);
+    let topic_names_lower = model.get_topic_names().iter().map(|name| name.to_lowercase()).collect::<Vec<_>>();
+
+    let project_model = manage_projects::import::build_model(true);
+    report_projects_not_in_wiki(&project_model, &topic_names_lower);
+
+
+    // complete_round_trip(model, compare_only);
 
     println!("\ndokuwiki::gen_tools_wiki::update_coding_project_info(): Done.");
+}
+
+fn report_projects_not_in_wiki(project_model: &manage_projects::model::Model, topic_names_lower: &Vec<String>) {
+    println!("\nreport_projects_not_in_wiki():");
+    let proj_dep_map = get_project_dependency_map(project_model);
+    for proj_name in proj_dep_map.keys() {
+        let proj_name_1 = proj_name.to_lowercase();
+        let proj_name_2 = format!("{} (coding project)", proj_name_1);
+        let proj_name_3 = format!("{} (rust project)", proj_name_1);
+        if !topic_names_lower.contains(&proj_name_1) && !topic_names_lower.contains(&proj_name_2) && !topic_names_lower.contains(&proj_name_3) {
+            println!("\t{}", proj_name);
+        }
+    }
+}
+
+
+// fn catalog_unknown_crates_in_use(model: &model::Model) {
+
+
+
+    //}
+
+    // let dependency_project_map = get_dependency_project_map(&project_model);
+//}
+
+fn get_project_dependency_map(project_model: &manage_projects::model::Model) -> BTreeMap<String, BTreeMap<String, manage_projects::model::Dependency>> {
+    // This assumes that we won't find the same project name on two PCs, and that within a given
+    // logical project that contains multiple Rust projects, we don't care which dependencies are
+    // in which Rust project.
+    let mut map = BTreeMap::new();
+    for pc in project_model.pcs.values() {
+        for project in pc.projects.values() {
+            let project_key = project.name.clone();
+            assert!(!map.contains_key(&project_key));
+            let entry = map.entry(project_key).or_insert(BTreeMap::new());
+            for rust_project in project.rust_projects.values() {
+                for dependency in rust_project.dependencies.values() {
+                    let dependency_key = dependency.to_string();
+                    entry.insert(dependency_key, dependency.clone());
+                }
+            }
+        }
+    }
+    map
+}
+
+fn get_dependency_project_map(project_model: &manage_projects::model::Model) -> BTreeMap<String, Vec<String>> {
+    let proj_dep_map = get_project_dependency_map(project_model);
+    let mut map = BTreeMap::new();
+    for (project_name, dependencies) in proj_dep_map.iter() {
+        for dep in dependencies.values() {
+            let dep_name = dep.crate_name.to_lowercase();
+            let entry = map.entry(dep_name).or_insert(vec![]);
+            entry.push(project_name.to_string());
+        }
+    }
+    for project_list in map.values_mut() {
+        project_list.sort();
+    }
+    map
 }
