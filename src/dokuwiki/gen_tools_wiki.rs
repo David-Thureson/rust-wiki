@@ -6,6 +6,8 @@ use crate::dokuwiki::gen_from_model::GenFromModel;
 use crate::connectedtext::PATH_CT_EXPORT_IMAGES;
 use crate::dokuwiki::{PATH_MEDIA, PATH_PAGES};
 use std::collections::BTreeMap;
+use util::date_time::datetime_as_date;
+use util::format::first_cap_phrase;
 
 pub(crate) const PROJECT_NAME: &str = "Tools";
 
@@ -254,17 +256,38 @@ pub fn update_coding_project_info(_compare_only: bool) {
 
 fn report_projects_not_in_wiki(project_model: &manage_projects::model::Model, topic_names_lower: &Vec<String>) {
     println!("\nreport_projects_not_in_wiki():");
-    let proj_dep_map = get_project_dependency_map(project_model);
-    for proj_name in proj_dep_map.keys() {
-        let proj_name_1 = proj_name.to_lowercase();
-        let proj_name_2 = format!("{} (coding project)", proj_name_1);
-        let proj_name_3 = format!("{} (rust project)", proj_name_1);
-        if !topic_names_lower.contains(&proj_name_1) && !topic_names_lower.contains(&proj_name_2) && !topic_names_lower.contains(&proj_name_3) {
-            println!("\t{}", proj_name);
+    for pc in project_model.pcs.values() {
+        for project in pc.projects.values() {
+            //rintln!();
+            //bg!(&project.name, ignore_project(&project.name), wiki_has_project(&project.name, topic_names_lower));
+            if !ignore_project(&project.name) && !wiki_has_project(&project.name, topic_names_lower) {
+                println!("\t{}: {}: {}; {} to {}", name_project(&project.name), project.name, project.path, datetime_as_date(&project.first_time()), datetime_as_date(&project.last_time()));
+            }
         }
     }
 }
 
+fn wiki_has_project(project_name: &str, topic_names_lower: &Vec<String>) -> bool {
+    let proj_name_1 = project_name.to_lowercase();
+    let proj_name_2 = format!("{} (coding project)", proj_name_1);
+    let proj_name_3 = format!("{} (rust project)", proj_name_1);
+    //bg!(&proj_name_1, topic_names_lower.contains(&proj_name_1));
+    //bg!(&proj_name_2, topic_names_lower.contains(&proj_name_2));
+    //bg!(&proj_name_3, topic_names_lower.contains(&proj_name_3));
+    topic_names_lower.contains(&proj_name_1) || topic_names_lower.contains(&proj_name_2) || topic_names_lower.contains(&proj_name_3)
+}
+
+fn ignore_project(project_name: &str) -> bool {
+    let proj_name = project_name.trim().to_lowercase();
+    proj_name.ends_with("_hold")
+        || proj_name.ends_with(" hold")
+        || proj_name.ends_with("_old")
+        || proj_name.ends_with(" old")
+        || proj_name.ends_with(" copy")
+        || proj_name.contains(" copy ")
+        || proj_name.ends_with(" compare")
+        || proj_name.ends_with(" check")
+}
 
 // fn catalog_unknown_crates_in_use(model: &model::Model) {
 
@@ -275,6 +298,7 @@ fn report_projects_not_in_wiki(project_model: &manage_projects::model::Model, to
     // let dependency_project_map = get_dependency_project_map(&project_model);
 //}
 
+#[allow(dead_code)]
 fn get_project_dependency_map(project_model: &manage_projects::model::Model) -> BTreeMap<String, BTreeMap<String, manage_projects::model::Dependency>> {
     // This assumes that we won't find the same project name on two PCs, and that within a given
     // logical project that contains multiple Rust projects, we don't care which dependencies are
@@ -296,6 +320,7 @@ fn get_project_dependency_map(project_model: &manage_projects::model::Model) -> 
     map
 }
 
+#[allow(dead_code)]
 fn get_dependency_project_map(project_model: &manage_projects::model::Model) -> BTreeMap<String, Vec<String>> {
     let proj_dep_map = get_project_dependency_map(project_model);
     let mut map = BTreeMap::new();
@@ -310,4 +335,13 @@ fn get_dependency_project_map(project_model: &manage_projects::model::Model) -> 
         project_list.sort();
     }
     map
+}
+
+#[allow(dead_code)]
+fn name_project(folder_name: &str) -> String {
+    if folder_name.eq("wsdl") || folder_name.eq("ddp") {
+        return folder_name.to_uppercase()
+    }
+    let name = folder_name.replace("-", " ").replace("_", " ");
+    first_cap_phrase(&name)
 }
