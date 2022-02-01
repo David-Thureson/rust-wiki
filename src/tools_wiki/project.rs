@@ -14,8 +14,11 @@ pub fn update_coding_project_info(compare_only: bool) {
 
     let project_model = manage_projects::import::build_model(true);
     // report_projects_not_in_wiki(&project_model, &topic_names_lower);
+    report_unknown_crates_in_use(&project_model, &topic_names_lower);
+    panic!();
+    // add_missing_crates(&mut model, &project_model);
     add_missing_projects(&mut model, &project_model, &topic_names_lower);
-
+    
     complete_round_trip(model, compare_only);
 
     println!("\ndokuwiki::gen_tools_wiki::update_coding_project_info(): Done.");
@@ -63,6 +66,36 @@ fn add_missing_projects(model: &mut model::Model, project_model: &manage_project
 
 }
 
+/*
+#[allow(dead_code)]
+fn add_missing_crates(model: &mut model::Model, project_model: &manage_projects::model::Model) {
+    for pc in project_model.pcs.values() {
+        for project in pc.projects.values() {
+            if !ignore_project(&project.name) && !wiki_has_project(&project.name, topic_names_lower) {
+                let topic_name = name_project(&project.name);
+                let first_date = naive_date_to_doc_format(&date_time_to_naive_date(&project.first_time()));
+                let last_date = naive_date_to_doc_format(&date_time_to_naive_date(&project.last_time()));
+                let mut topic = model::Topic::new(model.get_main_namespace(), &topic_name);
+                topic.set_category(CATEGORY_RUST_PROJECTS);
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_LANGUAGE.to_string(), vec!["Rust".to_string()]);
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_PC_NAME.to_string(), vec![pc.name.clone()]);
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_FOLDER.to_string(), vec![project.path.clone()]);
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_PLATFORM.to_string(), vec!["Windows".to_string()]);
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_IDE.to_string(), vec!["IntelliJ IDEA".to_string()]);
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_STARTED.to_string(), vec![first_date.clone()]);
+                if first_date != last_date {
+                    topic.add_temp_attribute_values(ATTRIBUTE_NAME_UPDATED.to_string(), vec![last_date]);
+                }
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_ADDED.to_string(), vec![first_date]);
+                //bg!(&topic.get_temp_attributes()); panic!();
+                model.add_topic(topic);
+            }
+        }
+    }
+
+}
+ */
+
 fn wiki_has_project(project_name: &str, topic_names_lower: &Vec<String>) -> bool {
     let proj_name_1 = project_name.to_lowercase().replace("-", " ").replace("_", " ");
     let proj_name_2 = format!("{} (coding project)", proj_name_1);
@@ -85,9 +118,37 @@ fn ignore_project(project_name: &str) -> bool {
         || proj_name.ends_with(" check")
 }
 
-// fn catalog_unknown_crates_in_use(model: &model::Model) {
+fn report_unknown_crates_in_use(project_model: &manage_projects::model::Model, topic_names_lower: &Vec<String>) { 
+    let dep_proj_map = get_dependency_project_map(project_model);
+    for (crate_name, (dep, project_names)) in dep_proj_map.iter() {
+        // if dep.is_local {
+        //     dbg!(&dep);
+        // }
+        if !wiki_has_crate(crate_name, topic_names_lower) {
+            let project_names = project_names.iter().filter(|project_name| !ignore_project(project_name)).collect::<Vec<_>>();
+            if !project_names.is_empty() {
+                let project_list = project_names.iter().join(", ");
+                println!("{}: {}: {}", name_crate(dep), crate_name, project_list);
+            }
+        }
+    }
+}
 
-
+fn wiki_has_crate(crate_name: &str, topic_names_lower: &Vec<String>) -> bool {
+    let crate_name_1 = crate_name.trim().to_lowercase();
+    let crate_name_2 = crate_name_1.replace("-", " ").replace("_", " ");
+    let crate_names = vec![
+        crate_name_1.clone(),
+        format!("{} (crate)", crate_name_1),
+        format!("{} (rust crate)", crate_name_1),
+        format!("{} (rust project)", crate_name_1),
+        crate_name_2.clone(),
+        format!("{} (crate)", crate_name_2),
+        format!("{} (rust crate)", crate_name_2),
+        format!("{} (rust project)", crate_name_2),
+    ];
+    crate_names.iter().any(|crate_name| topic_names_lower.contains(crate_name))
+}
 
 //}
 
@@ -117,18 +178,18 @@ fn get_project_dependency_map(project_model: &manage_projects::model::Model) -> 
 }
 
 #[allow(dead_code)]
-fn get_dependency_project_map(project_model: &manage_projects::model::Model) -> BTreeMap<String, Vec<String>> {
+fn get_dependency_project_map(project_model: &manage_projects::model::Model) -> BTreeMap<String, (manage_projects::model::Dependency, Vec<String>)> {
     let proj_dep_map = get_project_dependency_map(project_model);
-    let mut map = BTreeMap::new();
+    let mut map: BTreeMap<String, (manage_projects::model::Dependency, Vec<String>)> = BTreeMap::new();
     for (project_name, dependencies) in proj_dep_map.iter() {
         for dep in dependencies.values() {
             let dep_name = dep.crate_name.to_lowercase();
-            let entry = map.entry(dep_name).or_insert(vec![]);
-            entry.push(project_name.to_string());
+            let entry = map.entry(dep_name).or_insert((dep.clone(), vec![]));
+            entry.1.push(project_name.to_string());
         }
     }
-    for project_list in map.values_mut() {
-        project_list.sort();
+    for (_dep, project_names) in map.values_mut() {
+        project_names.sort();
     }
     map
 }
@@ -144,5 +205,17 @@ fn name_project(folder_name: &str) -> String {
     }
     let name = first_cap_phrase(&name);
     let name = format!("{} (Rust project)", name);
+    name
+}
+
+#[allow(dead_code)]
+fn name_crate(dep: &manage_projects::model::Dependency) -> String {
+    let mut name = util::format::first_cap_phrase(&dep.crate_name);
+    name = name.replace("-", " ").replace("_", " ");
+    if dep.is_local {
+        name = format!("{} (Rust project)", name);
+    } else {
+        name = format!("{} (Rust crate)", name);
+    }
     name
 }
