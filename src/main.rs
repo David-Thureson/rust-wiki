@@ -9,5 +9,5 @@ pub(crate) fn main() {
     // dokuwiki::gen_tools_wiki::gen_from_connectedtext_and_round_trip();
 
     // dokuwiki::gen_tools_wiki::dokuwiki_round_trip();
-    dokuwiki::gen_tools_wiki::update_coding_project_info(true);
+    tools_wiki::project::update_coding_project_info(true);
 }

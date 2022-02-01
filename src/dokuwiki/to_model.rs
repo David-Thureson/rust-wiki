@@ -56,7 +56,7 @@ impl BuildProcess {
         self.refine_paragraphs(&mut model);
 
         model.catalog_links();
-        self.check_links(&model);
+        check_links(&model, &mut self.errors);
         //bg!(model.get_topics().keys());
         // It's not necessary to check whether parents link to subtopics, since those links will be
         // generated.
@@ -71,7 +71,7 @@ impl BuildProcess {
         model.add_missing_category_topics();
         model.catalog_links();
         self.errors.clear();
-        self.check_links(&model);
+        check_links(&model, &mut self.errors);
         self.errors.print(Some("After adding missing category topics."));
         // Call the make tree functions after the last call to model.catalog_links().
         model.make_category_tree();
@@ -488,11 +488,6 @@ impl BuildProcess {
         Ok(true)
     }
 
-    fn check_links(&mut self, wiki: &Model) {
-        let mut link_errors = wiki.check_links();
-        self.errors.append(&mut link_errors);
-    }
-
     fn make_text_block_rc(&self, text: &str, context: &str) -> Result<TextBlock, String> {
         //bg!(context);
         // if text.contains("tools:nav") { dbg!(context, text); panic!() };
@@ -598,3 +593,35 @@ fn remove_brackets_rc(text: &str, context: &str) -> Result<String, String> {
     }
 }
 */
+
+pub(crate) fn complete_model(model: &mut Model) {
+    model.catalog_links();
+
+    let mut errors = TopicErrorList::new();
+    check_links(model, &mut errors);
+    errors.list_missing_topics();
+
+    model.add_missing_category_topics();
+    model.catalog_links();
+    errors.clear();
+    check_links(&model, &mut errors);
+    errors.print(Some("After adding missing category topics and checking links."));
+
+    // Call the make tree functions after the last call to model.catalog_links().
+    model.make_category_tree();
+    model.make_subtopic_tree();
+    //bg!(&model.attributes);
+    let attr_errors = model.update_attributes();
+    attr_errors.print(Some("model.catalog_attributes()"));
+    if attr_errors.is_empty() {
+        //report_attributes(&model);
+    }
+    model.catalog_domains();
+}
+
+fn check_links(model: &Model, errors: &mut TopicErrorList) {
+    errors.append(&mut model.check_links());
+}
+
+
+

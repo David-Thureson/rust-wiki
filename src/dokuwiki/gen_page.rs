@@ -179,6 +179,7 @@ impl WikiGenPage {
         if full_file_name.contains("//") {
             panic!("File name has double slashes: \"{}\".", &full_file_name);
         }
+        dbg!(&full_file_name);
         fs::write(full_file_name, content).unwrap();
     }
 }

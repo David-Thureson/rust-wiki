@@ -117,12 +117,17 @@ impl AttributeList {
         topic_keys
     }
 
-    pub(crate) fn set_attribute_types_and_values(&mut self, attribute_types: BTreeMap<String, AttributeType>, attribute_values: BTreeMap<String, Vec<(TopicKey, String)>>) {
+    pub(crate) fn set_types_and_values(&mut self, attribute_types: BTreeMap<String, AttributeType>, attribute_values: BTreeMap<String, Vec<(TopicKey, String)>>) {
         assert!(self.attribute_types.is_empty());
         assert!(self.attribute_values.is_empty());
         self.attribute_types = attribute_types;
         self.attribute_values = attribute_values;
     }
+
+    pub(crate) fn take_types_and_values(&mut self) -> (BTreeMap<String, AttributeType>, BTreeMap<String, Vec<(TopicKey, String)>>) {
+        (std::mem::replace(&mut self.attribute_types, BTreeMap::new()), std::mem::replace(&mut self.attribute_values, BTreeMap::new()))
+    }
+
 }
 
 impl AttributeType {

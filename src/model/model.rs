@@ -269,7 +269,23 @@ impl Model {
         for topic in self.get_topics_mut().values_mut() {
             topic.catalog_attributes(&mut errors, &mut attribute_types, &mut attribute_values, &attribute_orders);
         }
-        self.attribute_list.set_attribute_types_and_values(attribute_types, attribute_values);
+        self.attribute_list.set_types_and_values(attribute_types, attribute_values);
+        // In the values map, each entry is a list of pairs of topic keys and attribute type names.
+        // Sort each of these lists by topic name first, then attribute type name.
+        self.sort_attribute_topic_lists();
+        // Self::list_attribute_types(model);
+        errors
+    }
+
+    pub(crate) fn update_attributes(&mut self) -> TopicErrorList {
+        let mut errors = TopicErrorList::new();
+        AttributeType::fill_attribute_orders(self);
+        let attribute_orders = self.get_attribute_orders().clone();
+        let (mut attribute_types, mut attribute_values) = self.attribute_list.take_types_and_values();
+        for topic in self.get_topics_mut().values_mut() {
+            topic.catalog_attributes(&mut errors, &mut attribute_types, &mut attribute_values, &attribute_orders);
+        }
+        self.attribute_list.set_types_and_values(attribute_types, attribute_values);
         // In the values map, each entry is a list of pairs of topic keys and attribute type names.
         // Sort each of these lists by topic name first, then attribute type name.
         self.sort_attribute_topic_lists();

@@ -111,10 +111,9 @@ impl Topic {
     }
 
     pub(crate) fn catalog_attributes(&mut self, errors: &mut TopicErrorList, attribute_types: &mut BTreeMap<String, AttributeType>, attribute_values: &mut BTreeMap<String, Vec<(TopicKey, String)>>, attribute_orders: &BTreeMap<String, usize>) {
-        // At this point we should have only temp attributes, not references to attribute types
-        // held by the model.
-        assert!(self.attributes.is_empty());
-        // topic.clear_attributes();
+        // At this point we may have a mixture of temp attributes and resolved attributes in this
+        // topic. Any temp attributes will end up replacing resolved attributes with the same name.
+
         // The earlier parsing stage may have left some temp attributes that have no values,
         // either because they were empty in the source text or because they had only
         // placeholder values like "***". We want to ignore those cases.
@@ -166,7 +165,7 @@ impl Topic {
                     Err(msg) => { errors.add(&self.get_key(), &msg) }
                 };
             }
-            self.add_attribute(AttributeInstance::new(temp_attr_name, attribute_type.get_sequence(),values_for_topic));
+            self.replace_attribute(AttributeInstance::new(temp_attr_name, attribute_type.get_sequence(),values_for_topic));
         }
     }
 
@@ -202,6 +201,12 @@ impl Topic {
         let key = attr_instance.get_attribute_type_name();
         assert!(!self.attributes.contains_key(key));
         self.attributes.insert(key.to_string(), attr_instance);
+    }
+
+    pub(crate) fn replace_attribute(&mut self, attr_instance: AttributeInstance) {
+        let key = attr_instance.get_attribute_type_name();
+        self.attributes.remove(key);
+        self.add_attribute(attr_instance);
     }
 
     /*
