@@ -4,7 +4,7 @@
 
 pub(crate) mod connectedtext;
 pub mod dokuwiki;
-pub(crate) mod model;
+pub mod model;
 pub mod tools_wiki;
 
 pub(crate) use util::*;

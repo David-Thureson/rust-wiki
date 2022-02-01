@@ -8,7 +8,6 @@ use chrono::NaiveDate;
 pub(crate) struct AttributeList {
     attribute_types: BTreeMap<String, AttributeType>,
     attribute_orders: BTreeMap<String, usize>,
-    attributes_to_index: Vec<String>,
     attribute_values: BTreeMap<String, Vec<(TopicKey, String)>>,
 }
 
@@ -45,7 +44,6 @@ impl AttributeList {
         Self {
             attribute_types: Default::default(),
             attribute_orders: Default::default(),
-            attributes_to_index: vec![],
             attribute_values: Default::default(),
         }
     }
@@ -57,6 +55,11 @@ impl AttributeList {
     pub(crate) fn sort_attribute_topic_lists(&mut self) {
         // In the values map, each entry is a list of pairs of topic keys and attribute type names.
         // Sort each of these lists by topic name first, then attribute type name.
+        for attr_type in self.attribute_types.values_mut() {
+            for topic_keys in attr_type.values.values_mut() {
+                TopicKey::sort_topic_keys_by_name(topic_keys);
+            }
+        }
         for list in self.attribute_values.values_mut() {
             list.sort_by(|a, b| a.0.get_topic_name().to_lowercase().cmp(&b.0.get_topic_name().to_lowercase()).then(a.1.cmp(&b.1)));
         }
@@ -85,13 +88,8 @@ impl AttributeList {
         &self.attribute_orders
     }
 
-    pub(crate) fn set_attributes_to_index(&mut self, attr: Vec<String>) {
-        debug_assert!(self.attributes_to_index.is_empty());
-        self.attributes_to_index = attr;
-    }
-
     pub(crate) fn is_attribute_indexed(&self, name: &str) -> bool {
-        self.attributes_to_index.contains(&name.to_string())
+        INDEXED_ATTRIBUTES.contains(&name)
     }
 
     pub(crate) fn get_attribute_values(&self) -> &BTreeMap<String, Vec<(TopicKey, String)>> {

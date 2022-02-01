@@ -5,7 +5,7 @@ use super::*;
 pub fn main() {
     let topic_limit = None;
     // let topic_limit = Some(20);
-    build_model(gen_tools_wiki::PROJECT_NAME, &gen_tools_wiki::PROJECT_NAME.to_lowercase(), topic_limit, gen_tools_wiki::get_attr_to_index());
+    build_model(gen_tools_wiki::PROJECT_NAME, &gen_tools_wiki::PROJECT_NAME.to_lowercase(), topic_limit);
 }
 
 struct BuildProcess {
@@ -553,10 +553,9 @@ impl BuildProcess {
      */
 }
 
-pub(crate) fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>, attributes_to_index: Vec<&str>) -> Model {
+pub(crate) fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>) -> Model {
     let mut bp = BuildProcess::new(name, namespace_main,PATH_PAGES, topic_limit);
-    let mut model = bp.build();
-    model.set_attributes_to_index(attributes_to_index.iter().map(|x| x.to_string()).collect::<Vec<_>>());
+    let model = bp.build();
     model
 }
 

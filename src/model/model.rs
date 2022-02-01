@@ -130,10 +130,6 @@ impl Model {
         }
     }
 
-    pub(crate) fn set_attributes_to_index(&mut self, attr: Vec<String>) {
-        self.attribute_list.set_attributes_to_index(attr);
-    }
-
     pub(crate) fn is_attribute_indexed(&self, name: &str) -> bool {
         self.attribute_list.is_attribute_indexed(name)
     }

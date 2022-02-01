@@ -3,7 +3,7 @@ use crate::dokuwiki::gen_tools_wiki::{prep_round_trip, complete_round_trip};
 use util::date_time::{datetime_as_date, naive_date_to_doc_format, date_time_to_naive_date};
 use std::collections::BTreeMap;
 use util::format::first_cap_phrase;
-use crate::model::{CATEGORY_RUST_PROJECTS, ATTRIBUTE_NAME_ADDED, ATTRIBUTE_NAME_LANGUAGE, ATTRIBUTE_NAME_PC_NAME, ATTRIBUTE_NAME_FOLDER, ATTRIBUTE_NAME_STARTED, ATTRIBUTE_NAME_UPDATED};
+use crate::model::{CATEGORY_RUST_PROJECTS, ATTRIBUTE_NAME_ADDED, ATTRIBUTE_NAME_LANGUAGE, ATTRIBUTE_NAME_PC_NAME, ATTRIBUTE_NAME_FOLDER, ATTRIBUTE_NAME_STARTED, ATTRIBUTE_NAME_UPDATED, ATTRIBUTE_NAME_PLATFORM, ATTRIBUTE_NAME_IDE};
 
 pub fn update_coding_project_info(compare_only: bool) {
     println!("\ndokuwiki::gen_tools_wiki::update_coding_project_info(): Start.");
@@ -48,8 +48,12 @@ fn add_missing_projects(model: &mut model::Model, project_model: &manage_project
                 topic.add_temp_attribute_values(ATTRIBUTE_NAME_LANGUAGE.to_string(), vec!["Rust".to_string()]);
                 topic.add_temp_attribute_values(ATTRIBUTE_NAME_PC_NAME.to_string(), vec![pc.name.clone()]);
                 topic.add_temp_attribute_values(ATTRIBUTE_NAME_FOLDER.to_string(), vec![project.path.clone()]);
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_PLATFORM.to_string(), vec!["Windows".to_string()]);
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_IDE.to_string(), vec!["IntelliJ IDEA".to_string()]);
                 topic.add_temp_attribute_values(ATTRIBUTE_NAME_STARTED.to_string(), vec![first_date.clone()]);
-                topic.add_temp_attribute_values(ATTRIBUTE_NAME_UPDATED.to_string(), vec![last_date]);
+                if first_date != last_date {
+                    topic.add_temp_attribute_values(ATTRIBUTE_NAME_UPDATED.to_string(), vec![last_date]);
+                }
                 topic.add_temp_attribute_values(ATTRIBUTE_NAME_ADDED.to_string(), vec![first_date]);
                 //bg!(&topic.get_temp_attributes()); panic!();
                 model.add_topic(topic);
@@ -135,5 +139,10 @@ fn name_project(folder_name: &str) -> String {
         return folder_name.to_uppercase()
     }
     let name = folder_name.replace("-", " ").replace("_", " ");
-    first_cap_phrase(&name)
+    if name.eq("rust asm") {
+        return "Rust ASM (Rust project)".to_string();
+    }
+    let name = first_cap_phrase(&name);
+    let name = format!("{} (Rust project)", name);
+    name
 }

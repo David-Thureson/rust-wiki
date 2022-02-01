@@ -547,7 +547,7 @@ impl BuildProcess {
                     if name.eq("Date") {
                         name = ATTRIBUTE_NAME_ADDED.to_string();
                     }
-                    let max_value_count = if name.eq("Added") { Some(1) } else { None };
+                    let max_value_count = if name.eq(ATTRIBUTE_NAME_ADDED) { Some(1) } else { None };
                     let values = row.remove(0);
                     // let debug = name.eq("Date") && values.eq("[[Date:=20160824]], [[Date:=20160505]]");
                     assert!(row.is_empty());
@@ -856,10 +856,9 @@ impl BuildProcess {
 
 }
 
-pub(crate) fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>, attributes_to_index: Vec<&str>) -> Model {
+pub(crate) fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>) -> Model {
     let mut bp = BuildProcess::new(name, namespace_main,PATH_CT_EXPORT,FILE_NAME_EXPORT_TOOLS, topic_limit);
-    let mut model = bp.build();
-    model.set_attributes_to_index(attributes_to_index.iter().map(|x| x.to_string()).collect::<Vec<_>>());
+    let model = bp.build();
     model
 }
 

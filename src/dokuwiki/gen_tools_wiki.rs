@@ -1,7 +1,7 @@
 use crate::dokuwiki as wiki;
 use crate::model;
 use crate::connectedtext::to_model::build_model;
-use crate::model::{ATTRIBUTE_NAME_DOMAIN, FOLDER_PREFIX_WIKI_GEN_BACKUP, FOLDER_WIKI_GEN_BACKUP, FOLDER_WIKI_COMPARE_OLD, FOLDER_WIKI_COMPARE_NEW};
+use crate::model::{FOLDER_PREFIX_WIKI_GEN_BACKUP, FOLDER_WIKI_GEN_BACKUP, FOLDER_WIKI_COMPARE_OLD, FOLDER_WIKI_COMPARE_NEW};
 use crate::dokuwiki::gen_from_model::GenFromModel;
 use crate::connectedtext::PATH_CT_EXPORT_IMAGES;
 use crate::dokuwiki::{PATH_MEDIA, PATH_PAGES};
@@ -36,27 +36,24 @@ fn round_trip(start_from_connectedtext: bool) {
 pub(crate) fn prep_round_trip(start_from_connectedtext: bool) -> model::Model {
     println!("\ndokuwiki::gen_tools_wiki::prep_round_trip(): Start.");
 
-    let path_pages_project = path_pages_project(PATH_PAGES);
-
     if start_from_connectedtext {
         // Back up the existing DokuWiki pages.
-        if util::file::path_exists(&path_pages_project) {
-            let backup_folder_start = util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
-            println!("backup_folder_start = \"{}\".", util::file::path_name(&backup_folder_start));
-        }
+        let backup_folder_start = util::file::back_up_folder_next_number_r(PATH_PAGES, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
+        println!("backup_folder_start = \"{}\".", util::file::path_name(&backup_folder_start));
 
         gen_from_connectedtext(false, None);
-        assert!(util::file::path_exists(&path_pages_project));
+        // let path_pages_project = path_pages_project(PATH_PAGES);
+        // assert!(util::file::path_exists(&path_pages_project));
     }
 
     // Back up the DokuWiki pages.
-    let backup_folder_old = util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
+    let backup_folder_old = util::file::back_up_folder_next_number_r(PATH_PAGES, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
     println!("backup_folder_old = \"{}\".", util::file::path_name(&backup_folder_old));
     // Copy these pages to the "old" comparison folder.
-    util::file::copy_folder_recursive_overwrite_r(&path_pages_project, FOLDER_WIKI_COMPARE_OLD).unwrap();
+    util::file::copy_folder_recursive_overwrite_r(PATH_PAGES, FOLDER_WIKI_COMPARE_OLD).unwrap();
 
     // Create a model from the DokuWiki pages.
-    let model = super::to_model::build_model(PROJECT_NAME, &PROJECT_NAME.to_lowercase(), None, get_attr_to_index());
+    let model = super::to_model::build_model(PROJECT_NAME, &PROJECT_NAME.to_lowercase(), None);
 
     println!("\ndokuwiki::gen_tools_wiki::prep_round_trip(): Done.");
 
@@ -75,13 +72,13 @@ pub(crate) fn complete_round_trip(mut model: model::Model, compare_only: bool) {
     gen_tools_project_from_model(&model, gen_path_pages, compare_only, copy_image_files_to_local_wiki);
 
     if !compare_only {
-        let path_pages_project = path_pages_project(PATH_PAGES);
-        let backup_folder_new = util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
+        // let path_pages_project = path_pages_project(PATH_PAGES);
+        let backup_folder_new = util::file::back_up_folder_next_number_r(PATH_PAGES, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
         println!("backup_folder_new = \"{}\".", util::file::path_name(&backup_folder_new));
 
         // Back up the DokuWiki pages created with a round trip from DokuWiki.
         // Copy these pages to the "new" comparison folder.
-        util::file::copy_folder_recursive_overwrite_r(&path_pages_project, FOLDER_WIKI_COMPARE_NEW).unwrap();
+        util::file::copy_folder_recursive_overwrite_r(PATH_PAGES, FOLDER_WIKI_COMPARE_NEW).unwrap();
     }
 
     println!("\ndokuwiki::gen_tools_wiki::complete_round_trip(): Done.");
@@ -128,7 +125,7 @@ fn create_tools_wiki_folders(path_pages: &str) {
 fn gen_from_connectedtext(copy_image_files_to_local_wiki: bool, topic_limit: Option<usize>) {
     println!("\nGenerating wiki from ConnectedText: Start.");
     let namespace_main = PROJECT_NAME.to_lowercase();
-    let model = build_model(PROJECT_NAME, &namespace_main, topic_limit, get_attr_to_index());
+    let model = build_model(PROJECT_NAME, &namespace_main, topic_limit);
     let compare_only = false;
     gen_tools_project_from_model(&model, PATH_PAGES, compare_only, copy_image_files_to_local_wiki);
     println!("\nGenerating wiki from ConnectedText: Done.");
@@ -235,8 +232,4 @@ fn add_links_to_all_topics(page: &mut wiki::WikiGenPage, model: &model::Wiki) {
     }
 }
 */
-
-pub(crate) fn get_attr_to_index() -> Vec<&'static str> {
-    vec!["Author", "Book", "Company", "Context", "Course", ATTRIBUTE_NAME_DOMAIN, "Domains", "Format", "Founder", "IDE", "Language", "License Type", "LinkedIn", "Narrator", "Operating System", "Organization", "PC Name", "Paradigm", "Platform", "School", "Series", "Status", "Translator"]
-}
 
