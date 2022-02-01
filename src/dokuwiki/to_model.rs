@@ -46,9 +46,10 @@ impl BuildProcess {
         let namespace_book = model.namespace_book();
         model.add_namespace(&namespace_book);
 
-        let topic_limit_per_namespace = self.topic_limit.map(|topic_limit| topic_limit / 2);
-        self.parse_from_folder(&mut model, &namespace_main, topic_limit_per_namespace);
-        self.parse_from_folder(&mut model, &namespace_book, topic_limit_per_namespace);
+        // let topic_limit_per_namespace = self.topic_limit.map(|topic_limit| topic_limit / 2);
+        self.parse_from_folder(&mut model, &namespace_main, self.topic_limit);
+        // self.parse_from_folder(&mut model, &namespace_book, topic_limit_per_namespace);
+        assert!(!model.get_topics().is_empty());
 
         self.topic_refs = model.get_topic_refs().clone();
 

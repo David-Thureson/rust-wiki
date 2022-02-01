@@ -36,7 +36,7 @@ fn round_trip(start_from_connectedtext: bool) {
 pub(crate) fn prep_round_trip(start_from_connectedtext: bool) -> model::Model {
     println!("\ndokuwiki::gen_tools_wiki::prep_round_trip(): Start.");
 
-    let path_pages_project = path_pages_project();
+    let path_pages_project = path_pages_project(PATH_PAGES);
 
     if start_from_connectedtext {
         // Back up the existing DokuWiki pages.
@@ -72,10 +72,10 @@ pub(crate) fn complete_round_trip(mut model: model::Model, compare_only: bool) {
     // Create DokuWiki pages from this new model.
     let gen_path_pages = if compare_only { FOLDER_WIKI_COMPARE_NEW } else { PATH_PAGES };
     let copy_image_files_to_local_wiki = false;
-    gen_tools_project_from_model(&model, gen_path_pages, copy_image_files_to_local_wiki);
+    gen_tools_project_from_model(&model, gen_path_pages, compare_only, copy_image_files_to_local_wiki);
 
     if !compare_only {
-        let path_pages_project = path_pages_project();
+        let path_pages_project = path_pages_project(PATH_PAGES);
         let backup_folder_new = util::file::back_up_folder_next_number_r(&path_pages_project, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
         println!("backup_folder_new = \"{}\".", util::file::path_name(&backup_folder_new));
 
@@ -87,8 +87,8 @@ pub(crate) fn complete_round_trip(mut model: model::Model, compare_only: bool) {
     println!("\ndokuwiki::gen_tools_wiki::complete_round_trip(): Done.");
 }
 
-fn path_pages_project() -> String {
-    format!("{}/{}", PATH_PAGES, PROJECT_NAME.to_lowercase())
+fn path_pages_project(path_pages: &str) -> String {
+    format!("{}/{}", path_pages, PROJECT_NAME.to_lowercase())
 }
 
 fn path_media_project() -> String {
@@ -96,7 +96,7 @@ fn path_media_project() -> String {
 }
 
 fn clean_up_tools_dokuwiki_files(include_images: bool) {
-    let path_pages_project = path_pages_project();
+    let path_pages_project = path_pages_project(PATH_PAGES);
     if util::file::path_exists(&path_pages_project) {
         std::fs::remove_dir_all(&path_pages_project).unwrap();
     }
@@ -117,11 +117,10 @@ fn clean_up_tools_dokuwiki_files(include_images: bool) {
     }
 }
 
-fn create_tools_wiki_folders() {
-    util::file::path_create_if_necessary_r(path_pages_project()).unwrap();
-    util::file::path_create_if_necessary_r(path_media_project()).unwrap();
+fn create_tools_wiki_folders(path_pages: &str) {
+    util::file::path_create_if_necessary_r(path_pages_project(path_pages)).unwrap();
     for namespace in ["book", "nav"].iter() {
-        let path = format!("{}/{}", path_pages_project(), namespace);
+        let path = format!("{}/{}", path_pages_project(path_pages), namespace);
         util::file::path_create_if_necessary_r(path).unwrap();
     }
 }
@@ -130,17 +129,21 @@ fn gen_from_connectedtext(copy_image_files_to_local_wiki: bool, topic_limit: Opt
     println!("\nGenerating wiki from ConnectedText: Start.");
     let namespace_main = PROJECT_NAME.to_lowercase();
     let model = build_model(PROJECT_NAME, &namespace_main, topic_limit, get_attr_to_index());
-    gen_tools_project_from_model(&model, PATH_PAGES, copy_image_files_to_local_wiki);
+    let compare_only = false;
+    gen_tools_project_from_model(&model, PATH_PAGES, compare_only, copy_image_files_to_local_wiki);
     println!("\nGenerating wiki from ConnectedText: Done.");
 }
 
-fn gen_tools_project_from_model(model: &model::Model, path_pages: &str, copy_image_files_to_local_wiki: bool) {
+fn gen_tools_project_from_model(model: &model::Model, path_pages: &str, compare_only: bool, copy_image_files_to_local_wiki: bool) {
     println!("\nGenerating wiki from model: Start.");
 
     let namespace_main = PROJECT_NAME.to_lowercase();
 
-    clean_up_tools_dokuwiki_files(copy_image_files_to_local_wiki);
-    create_tools_wiki_folders();
+    if !compare_only {
+        clean_up_tools_dokuwiki_files(copy_image_files_to_local_wiki);
+        util::file::path_create_if_necessary_r(path_media_project()).unwrap();
+    }
+    create_tools_wiki_folders(path_pages);
 
     if copy_image_files_to_local_wiki {
         let path_to = format!("{}/{}", PATH_MEDIA, namespace_main);

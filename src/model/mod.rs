@@ -84,10 +84,10 @@ pub(crate) const ATTRIBUTE_ORDER: [&str; 54] = ["School", "Title", "Series", "Co
     "Signed Up", "Downloaded", "Installed", "Used Online", "Used Locally", "Presented", "Created",
     "Added"];
 
-pub(crate) const FOLDER_WIKI_GEN_BACKUP: &str = r"C:\Wiki Gen Backup";
+pub(crate) const FOLDER_WIKI_GEN_BACKUP: &str = "C:/Wiki Gen Backup";
 pub(crate) const FOLDER_PREFIX_WIKI_GEN_BACKUP: &str = "Wiki Gen";
-pub(crate) const FOLDER_WIKI_COMPARE_OLD: &str = r"C:\Wiki Gen Backup\Old";
-pub(crate) const FOLDER_WIKI_COMPARE_NEW: &str = r"C:\Wiki Gen Backup\New";
+pub(crate) const FOLDER_WIKI_COMPARE_OLD: &str = "C:/Wiki Gen Backup/Old";
+pub(crate) const FOLDER_WIKI_COMPARE_NEW: &str = r"C:/Wiki Gen Backup/New";
 
 pub(crate) const PREFIX_HTTP: &str = "http://";
 pub(crate) const PREFIX_HTTPS: &str = "https://";

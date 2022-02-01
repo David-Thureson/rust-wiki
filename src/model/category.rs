@@ -67,6 +67,7 @@ pub(crate) fn move_topics_to_namespace_by_category(model: &mut Model, category_n
 */
 
 pub(crate) fn make_category_tree(model: &mut Model) -> TopicTree {
+    assert!(!model.get_topics().is_empty());
     let mut parent_child_pairs = vec![];
     for topic in model.get_topics().values() {
         if let Some(category_name) = topic.get_category() {
@@ -75,6 +76,7 @@ pub(crate) fn make_category_tree(model: &mut Model) -> TopicTree {
             parent_child_pairs.push((category_topic_key, topic.get_key()));
         }
     }
+    assert!(!parent_child_pairs.is_empty());
     let mut tree = util::tree::Tree::create(parent_child_pairs, true);
     Topic::sort_topic_tree(&mut tree);
     // Have each category topic point to its node in the category tree.
