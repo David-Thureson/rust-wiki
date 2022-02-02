@@ -59,6 +59,7 @@ const NAMESPACE_ATTRIBUTE: &str = ":attr";
 
 // pub(crate) const ATTRIBUTE_VALUE_MISSING: &str = "{missing}";
 
+pub(crate) const CATEGORY_RUST_CRATES: &str = "Rust Crates";
 pub(crate) const CATEGORY_RUST_PROJECTS: &str = "Rust Projects";
 
 pub(crate) const LIST_LABEL_SUBCATEGORIES: &str = "Subcategories:";
@@ -212,6 +213,10 @@ pub(crate) const INDEXED_ATTRIBUTES: [&str; 22] = [
     ATTRIBUTE_NAME_STATUS,
     ATTRIBUTE_NAME_TRANSLATOR,
 ];
+
+pub fn date_now_to_doc_format() -> String {
+    util::date_time::naive_date_to_doc_format(&util::date_time::naive_date_now())
+}
 
 /*
 pub fn gen_attr_type_name_constants() {

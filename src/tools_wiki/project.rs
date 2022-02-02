@@ -3,7 +3,7 @@ use crate::dokuwiki::gen_tools_wiki::{prep_round_trip, complete_round_trip};
 use util::date_time::{datetime_as_date, naive_date_to_doc_format, date_time_to_naive_date};
 use std::collections::BTreeMap;
 use util::format::first_cap_phrase;
-use crate::model::{CATEGORY_RUST_PROJECTS, ATTRIBUTE_NAME_ADDED, ATTRIBUTE_NAME_LANGUAGE, ATTRIBUTE_NAME_PC_NAME, ATTRIBUTE_NAME_FOLDER, ATTRIBUTE_NAME_STARTED, ATTRIBUTE_NAME_UPDATED, ATTRIBUTE_NAME_PLATFORM, ATTRIBUTE_NAME_IDE};
+use crate::model::{CATEGORY_RUST_PROJECTS, ATTRIBUTE_NAME_ADDED, ATTRIBUTE_NAME_LANGUAGE, ATTRIBUTE_NAME_PC_NAME, ATTRIBUTE_NAME_FOLDER, ATTRIBUTE_NAME_STARTED, ATTRIBUTE_NAME_UPDATED, ATTRIBUTE_NAME_PLATFORM, ATTRIBUTE_NAME_IDE, CATEGORY_RUST_CRATES, date_now_to_doc_format};
 
 pub fn update_coding_project_info(compare_only: bool) {
     println!("\ndokuwiki::gen_tools_wiki::update_coding_project_info(): Start.");
@@ -14,9 +14,9 @@ pub fn update_coding_project_info(compare_only: bool) {
 
     let project_model = manage_projects::import::build_model(true);
     // report_projects_not_in_wiki(&project_model, &topic_names_lower);
-    report_unknown_crates_in_use(&project_model, &topic_names_lower);
-    panic!();
-    // add_missing_crates(&mut model, &project_model);
+    // report_unknown_crates_in_use(&project_model, &topic_names_lower);
+    // panic!();
+    add_missing_crates(&mut model, &project_model, &topic_names_lower);
     add_missing_projects(&mut model, &project_model, &topic_names_lower);
     
     complete_round_trip(model, compare_only);
@@ -63,7 +63,6 @@ fn add_missing_projects(model: &mut model::Model, project_model: &manage_project
             }
         }
     }
-
 }
 
 /*
@@ -118,6 +117,7 @@ fn ignore_project(project_name: &str) -> bool {
         || proj_name.ends_with(" check")
 }
 
+#[allow(dead_code)]
 fn report_unknown_crates_in_use(project_model: &manage_projects::model::Model, topic_names_lower: &Vec<String>) { 
     let dep_proj_map = get_dependency_project_map(project_model);
     for (crate_name, (dep, project_names)) in dep_proj_map.iter() {
@@ -125,10 +125,30 @@ fn report_unknown_crates_in_use(project_model: &manage_projects::model::Model, t
         //     dbg!(&dep);
         // }
         if !wiki_has_crate(crate_name, topic_names_lower) {
-            let project_names = project_names.iter().filter(|project_name| !ignore_project(project_name)).collect::<Vec<_>>();
+            // let project_names = project_names.iter().filter(|project_name| !ignore_project(project_name)).collect::<Vec<_>>();
             if !project_names.is_empty() {
                 let project_list = project_names.iter().join(", ");
                 println!("{}: {}: {}", name_crate(dep), crate_name, project_list);
+            }
+        }
+    }
+}
+
+#[allow(dead_code)]
+fn add_missing_crates(model: &mut model::Model, project_model: &manage_projects::model::Model, topic_names_lower: &Vec<String>) {
+    let dep_proj_map = get_dependency_project_map(project_model);
+    for (crate_name, (dep, _project_names)) in dep_proj_map.iter() {
+        if !wiki_has_crate(crate_name, topic_names_lower) {
+            let topic_name = name_crate(dep);
+            // We don't want references from one Rust project to another within an overall project
+            // to count as crate dependencies.
+            if !topic_name.contains("(Rust project)") {
+                let mut topic = model::Topic::new(model.get_main_namespace(), &topic_name);
+                topic.set_category(CATEGORY_RUST_CRATES);
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_LANGUAGE.to_string(), vec!["Rust".to_string()]);
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_ADDED.to_string(), vec![date_now_to_doc_format()]);
+                //bg!(&topic.get_temp_attributes()); panic!();
+                model.add_topic(topic);
             }
         }
     }
@@ -163,13 +183,15 @@ fn get_project_dependency_map(project_model: &manage_projects::model::Model) -> 
     let mut map = BTreeMap::new();
     for pc in project_model.pcs.values() {
         for project in pc.projects.values() {
-            let project_key = project.name.clone();
-            assert!(!map.contains_key(&project_key));
-            let entry = map.entry(project_key).or_insert(BTreeMap::new());
-            for rust_project in project.rust_projects.values() {
-                for dependency in rust_project.dependencies.values() {
-                    let dependency_key = dependency.to_string();
-                    entry.insert(dependency_key, dependency.clone());
+            if !ignore_project(&project.name) {
+                let project_key = project.name.clone();
+                assert!(!map.contains_key(&project_key));
+                let entry = map.entry(project_key).or_insert(BTreeMap::new());
+                for rust_project in project.rust_projects.values() {
+                    for dependency in rust_project.dependencies.values() {
+                        let dependency_key = dependency.to_string();
+                        entry.insert(dependency_key, dependency.clone());
+                    }
                 }
             }
         }
@@ -182,10 +204,12 @@ fn get_dependency_project_map(project_model: &manage_projects::model::Model) -> 
     let proj_dep_map = get_project_dependency_map(project_model);
     let mut map: BTreeMap<String, (manage_projects::model::Dependency, Vec<String>)> = BTreeMap::new();
     for (project_name, dependencies) in proj_dep_map.iter() {
-        for dep in dependencies.values() {
-            let dep_name = dep.crate_name.to_lowercase();
-            let entry = map.entry(dep_name).or_insert((dep.clone(), vec![]));
-            entry.1.push(project_name.to_string());
+        if !ignore_project(project_name) {
+            for dep in dependencies.values() {
+                let dep_name = dep.crate_name.to_lowercase();
+                let entry = map.entry(dep_name).or_insert((dep.clone(), vec![]));
+                entry.1.push(project_name.to_string());
+            }
         }
     }
     for (_dep, project_names) in map.values_mut() {
@@ -212,7 +236,8 @@ fn name_project(folder_name: &str) -> String {
 fn name_crate(dep: &manage_projects::model::Dependency) -> String {
     let mut name = util::format::first_cap_phrase(&dep.crate_name);
     name = name.replace("-", " ").replace("_", " ");
-    if dep.is_local {
+    // if dep.is_local {
+    if dep.crate_name.eq("sim") {
         name = format!("{} (Rust project)", name);
     } else {
         name = format!("{} (Rust crate)", name);

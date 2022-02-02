@@ -10,6 +10,7 @@ pub(crate) fn main() {
 
     // dokuwiki::gen_tools_wiki::dokuwiki_round_trip();
 
-    tools_wiki::project::update_coding_project_info(true);
+    tools_wiki::project::update_coding_project_info(false);
+
 
 }
