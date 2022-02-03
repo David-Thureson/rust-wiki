@@ -1,3 +1,4 @@
+use crate::*;
 use crate::model::*;
 use std::fs;
 use super::*;
@@ -56,7 +57,7 @@ impl BuildProcess {
         // Figure out the real nature of each paragraph.
         self.refine_paragraphs(&mut model);
 
-        model.catalog_links();
+        // model.catalog_links();
         check_links(&model, &mut self.errors);
         //bg!(model.get_topics().keys());
         // It's not necessary to check whether parents link to subtopics, since those links will be
@@ -70,7 +71,7 @@ impl BuildProcess {
         // model.catalog_possible_list_types().print_by_count(0, None);
 
         model.add_missing_category_topics();
-        model.catalog_links();
+        // model.catalog_links();
         self.errors.clear();
         check_links(&model, &mut self.errors);
         self.errors.print(Some("After adding missing category topics."));
@@ -281,7 +282,10 @@ impl BuildProcess {
         match parse_breadcrumb_optional(text) {
             Ok(Some(parent_topic_keys)) => {
                 //bg!(&parent_topic_keys);
-                topic.set_parents(parent_topic_keys);
+                let parent_links = parent_topic_keys.iter()
+                    .map(|topic_key| r!(Link::new_topic(None, topic_key.get_namespace(), topic_key.get_topic_name())))
+                    .collect::<Vec<_>>();
+                topic.set_parents(parent_links);
                 Ok(true)
             },
             Ok(None) => {
@@ -602,7 +606,7 @@ pub(crate) fn complete_model(model: &mut Model) {
     errors.list_missing_topics();
 
     model.add_missing_category_topics();
-    model.catalog_links();
+    // model.catalog_links();
     errors.clear();
     check_links(&model, &mut errors);
     errors.print(Some("After adding missing category topics and checking links."));

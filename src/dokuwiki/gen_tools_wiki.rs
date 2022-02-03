@@ -14,18 +14,18 @@ pub fn main() {
     gen_from_connectedtext(copy_image_files, topic_limit);
 }
 
-pub fn gen_from_connectedtext_round_trip() {
-    round_trip(true);
+pub fn gen_from_connectedtext_round_trip(compare_only: bool) {
+    let start_from_connectedtext = true;
+    round_trip(compare_only, start_from_connectedtext);
 }
 
-pub fn dokuwiki_round_trip() {
-    round_trip(false);
+pub fn dokuwiki_round_trip(compare_only: bool) {
+    let start_from_connectedtext = false;
+    round_trip(compare_only, start_from_connectedtext);
 }
 
-fn round_trip(start_from_connectedtext: bool) {
+fn round_trip(compare_only: bool, start_from_connectedtext: bool) {
     println!("\nDokuWiki round trip test: Start.");
-
-    let compare_only = false;
 
     let model = prep_round_trip(start_from_connectedtext);
     complete_round_trip(model, compare_only);

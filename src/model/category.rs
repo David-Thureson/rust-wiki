@@ -73,7 +73,7 @@ pub(crate) fn make_category_tree(model: &mut Model) -> TopicTree {
         if let Some(category_name) = topic.get_category() {
             debug_assert!(!category_name.eq("Terms"), "Topic is {}", topic.get_name());
             let category_topic_key = TopicKey::new(&model.get_main_namespace(), &category_name);
-            parent_child_pairs.push((category_topic_key, topic.get_key()));
+            parent_child_pairs.push((category_topic_key, topic.get_topic_key()));
         }
     }
     assert!(!parent_child_pairs.is_empty());
@@ -81,7 +81,7 @@ pub(crate) fn make_category_tree(model: &mut Model) -> TopicTree {
     Topic::sort_topic_tree(&mut tree);
     // Have each category topic point to its node in the category tree.
     for topic in model.get_topics_mut().values_mut() {
-        topic.set_category_tree_node(tree.get_node(&topic.get_key()));
+        topic.set_category_tree_node(tree.get_node(&topic.get_topic_key()));
     }
     tree
 }

@@ -3,7 +3,7 @@ use crate::{model, Itertools};
 use crate::dokuwiki as wiki;
 use std::rc::Rc;
 use std::cell::RefCell;
-use crate::model::{AttributeValueType, TopicKey, Topic, TableCell};
+use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys};
 use std::collections::BTreeMap;
 use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS};
 use std::fs;
@@ -236,14 +236,14 @@ impl <'a> GenFromModel<'a> {
 
     pub(crate) fn gen(&mut self) {
         for topic in self.model.get_topics().values() {
-            self.current_topic_key = Some(topic.get_key());
+            self.current_topic_key = Some(topic.get_topic_key());
             //bg!(&self.current_topic_key);
             let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(topic.get_namespace()), topic.get_name(), None);
             self.add_breadcrumbs_optional(&mut page, &topic);
             self.add_category_optional(&mut page, &topic);
             self.add_attributes_optional(&mut page, &topic);
             self.add_paragraphs(&mut page, &topic);
-            self.add_inbound_links_section_optional(&mut page, &topic);
+            self.add_inbound_links_section_optional(&mut page,  &topic);
             page.write(&self.path_pages);
         }
         self.errors.print(Some("GenFromModel::gen()"));
@@ -258,7 +258,7 @@ impl <'a> GenFromModel<'a> {
             1 => {
                 //bg!(topic.get_name(), &topic.parents);
                 let mut topic_keys = vec![];
-                let mut parent_topic_key = topic.get_parent(0).clone();
+                let mut parent_topic_key = b!(&topic.get_parent(0)).get_topic_key().unwrap();
                 loop {
                     //bg!(&parent_topic_key);
                     topic_keys.push(parent_topic_key.clone());
@@ -269,7 +269,7 @@ impl <'a> GenFromModel<'a> {
                             break;
                         },
                         1 => {
-                            parent_topic_key = parent_topic.get_parent(0).clone();
+                            parent_topic_key = b!(&parent_topic.get_parent(0)).get_topic_key().unwrap();
                         },
                         _ => {
                             panic!("Unexpected number of parent topics for topic \"{}\".", parent_topic.get_name());
@@ -286,8 +286,8 @@ impl <'a> GenFromModel<'a> {
             },
             2 => {
                 // Combination topic.
-                let link_a = self.page_link_simple(&topic.get_parent(0));
-                let link_b = self.page_link_simple(&topic.get_parent(1));
+                let link_a = self.page_link_simple_from_link(&topic.get_parent(0));
+                let link_b = self.page_link_simple_from_link(&topic.get_parent(1));
                 let breadcrumbs = format!("{}{} {} {} {} {}{}", wiki::DELIM_BOLD, link_a, wiki::DELIM_BREADCRUMB_RIGHT, topic.get_name(), wiki::DELIM_BREADCRUMB_LEFT, link_b, wiki::DELIM_BOLD);
                 page.add_paragraph(&breadcrumbs);
             },
@@ -424,14 +424,14 @@ impl <'a> GenFromModel<'a> {
             self.add_subcategory_tree(page, topic);
             let direct_topics = topic.direct_topics_in_category();
             let indirect_topics = topic.indirect_topics_in_category();
-            Self::add_topic_list(self, page, &direct_topics, model::LIST_LABEL_CATEGORY_TOPICS);
+            self.add_topic_list(page, &direct_topics, model::LIST_LABEL_CATEGORY_TOPICS);
             if indirect_topics.len() > direct_topics.len() {
                 self.add_topic_list(page, &indirect_topics, model::LIST_LABEL_CATEGORY_TOPICS_ALL);
             }
         }
         // Self::add_topic_list(page, &topic.subtopics,model::LIST_LABEL_SUBTOPICS);
         self.add_subtopic_tree(page, topic);
-        self.add_topic_list(page,&topic.get_combo_subtopics(),model::LIST_LABEL_COMBINATIONS);
+        self.add_topic_list(page,&links_to_topic_keys(topic.get_combo_subtopics()),model::LIST_LABEL_COMBINATIONS);
     }
 
     fn add_topic_list(&self, page: &mut wiki::WikiGenPage, topic_keys: &Vec<model::TopicKey>, label: &str) {
@@ -594,8 +594,9 @@ impl <'a> GenFromModel<'a> {
         page.add_text(&markup);
     }
 
-    fn link_to_markup(&mut self, link: &model::Link) -> String {
+    fn link_to_markup(&mut self, link: &model::LinkRc) -> String {
         let msg_func_unexpected = |type_, variant: &str| format!("In gen_from_model::add_link(), unexpected {} variant = \"{}\"", type_, variant);
+        let link = b!(link);
         let label = link.get_label().map(|label| label.to_string());
         match link.get_type() {
             model::LinkType::External { url } => {
@@ -641,7 +642,7 @@ impl <'a> GenFromModel<'a> {
 
     pub(crate) fn add_inbound_links_section_optional(&self, page: &mut wiki::WikiGenPage, topic: &Topic) {
         let has_attribute_links = self.model.has_attribute_links(&page.topic_name);
-        let has_inbound_links = topic.get_inbound_topic_keys_count() > 0;
+        let has_inbound_links = !topic.get_inbound_topic_keys().is_empty();
         if has_attribute_links || has_inbound_links {
             page.add_headline(HEADLINE_LINKS, 1);
             self.add_attribute_value_topics_list_optional(page);
@@ -663,7 +664,7 @@ impl <'a> GenFromModel<'a> {
     }
 
     pub(crate) fn add_inbound_links_optional(&self, page: &mut wiki::WikiGenPage, topic: &Topic) {
-        if topic.get_inbound_topic_keys_count() > 0 {
+        if !topic.get_inbound_topic_keys().is_empty() {
             page.add_line("Inbound links:");
             for topic_key in topic.get_inbound_topic_keys().iter() {
                 let link = self.page_link_simple(&topic_key);
@@ -680,6 +681,11 @@ impl <'a> GenFromModel<'a> {
     pub(crate) fn page_link_simple(&self, topic_key: &model::TopicKey) -> String {
         //ebug_assert!(self.model.has_topic(topic_key), "Topic key not found: {}", topic_key.to_string());
         Self::page_link(topic_key)
+    }
+
+    pub(crate) fn page_link_simple_from_link(&self, link_rc: &LinkRc) -> String {
+        let topic_key = b!(link_rc).get_topic_key().unwrap();
+        self.page_link_simple(&topic_key)
     }
 
     #[allow(dead_code)]

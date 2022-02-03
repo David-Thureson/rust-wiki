@@ -86,6 +86,18 @@ impl List {
         }
         text_blocks
     }
+
+    pub(crate) fn get_links(&self) -> Vec<LinkRc> {
+        let mut links = vec![];
+        if let Some(header) = &self.header {
+            links.append(&mut header.get_links())
+        }
+        for item in self.items.iter() {
+            links.append(&mut item.text_block.get_links());
+        }
+        links
+    }
+
 }
 
 impl ListItem {

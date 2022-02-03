@@ -1,4 +1,4 @@
-use crate::model::TextBlock;
+use crate::model::{TextBlock, LinkRc};
 
 // This is a simple table abstraction used during parsing. It's not part of the model. In the
 // model, use Paragraph::Table.
@@ -97,6 +97,16 @@ impl Table {
             }
         }
         text_blocks
+    }
+
+    pub(crate) fn get_links(&self) -> Vec<LinkRc> {
+        let mut links = vec![];
+        for row in self.rows.iter() {
+            for cell in row.iter() {
+                links.append(&mut cell.text_block.get_links());
+            }
+        }
+        links
     }
 
 }

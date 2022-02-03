@@ -115,4 +115,25 @@ impl Paragraph {
         text_blocks
     }
 
+    pub(crate) fn get_links(&self) -> Vec<LinkRc> {
+        let mut links = vec![];
+        match self {
+            Paragraph::List { list } => {
+                links.append(&mut list.get_links());
+            },
+            Paragraph::Table { table } => {
+                links.append(&mut table.get_links());
+            },
+            Paragraph::Text { text_block } => {
+                links.append(&mut text_block.get_links());
+            },
+            Paragraph::Attributes | Paragraph::Breadcrumbs | Paragraph::Category | Paragraph::GenStart
+            | Paragraph::GenEnd | Paragraph::Marker { .. } | Paragraph::Placeholder | Paragraph::SectionHeader { .. }
+            | Paragraph::TextUnresolved { .. } | Paragraph::Unknown { .. } => {},
+        }
+        links
+    }
+
+
+
 }

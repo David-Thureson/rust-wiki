@@ -18,7 +18,7 @@ pub(crate) enum TextItem {
         text: String,
     },
     Link {
-        link: Link,
+        link: LinkRc,
     },
 }
 
@@ -51,6 +51,24 @@ impl TextBlock {
         }
     }
 
+   pub(crate) fn get_links(&self) -> Vec<LinkRc> {
+        let mut links = vec![];
+        match self {
+            TextBlock::Resolved { items } => {
+                for text_item in items.iter() {
+                    match text_item {
+                        TextItem::Link { link } => {
+                            links.push(link.clone());
+                        },
+                        TextItem::Text { .. } => {},
+                    }
+                }
+            },
+            TextBlock::Unresolved { .. } => {},
+        }
+        links
+    }
+
     /*
     pub(crate) fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
         match self {
@@ -81,7 +99,7 @@ impl TextItem {
 
     pub(crate) fn new_link(link: Link) -> Self {
         TextItem::Link {
-            link,
+            link: r!(link),
         }
     }
 

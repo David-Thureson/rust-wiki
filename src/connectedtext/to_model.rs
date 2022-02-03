@@ -1,3 +1,4 @@
+use crate::*;
 use crate::model::*;
 use crate::connectedtext::NAMESPACE_TOOLS;
 use std::path::PathBuf;
@@ -79,7 +80,7 @@ impl BuildProcess {
         wiki.add_namespace(&wiki.namespace_navigation());
         wiki.add_namespace(&wiki.namespace_attribute());
         self.parse_from_text_file(&mut wiki);
-        wiki.catalog_links();
+        // wiki.catalog_links();
         self.check_links(&wiki);
         self.check_subtopic_relationships(&mut wiki);
         self.errors.print(Some("First pass"));
@@ -91,7 +92,7 @@ impl BuildProcess {
         wiki.add_missing_category_topics();
         // wiki.move_topics_to_namespace_by_category("Navigation", &wiki.namespace_navigation());
         // wiki.move_topics_to_namespace_by_category("Nonfiction Books", &wiki.namespace_book());
-        wiki.catalog_links();
+        // wiki.catalog_links();
         self.errors.clear();
         self.check_links(&wiki);
         self.errors.print(Some("After moving navigation and book topics."));
@@ -475,7 +476,8 @@ impl BuildProcess {
             };
             for parent in parents.iter() {
                 let parent = remove_brackets_rc(parent, context)?;
-                topic.add_parent(&TopicKey::new(NAMESPACE_TOOLS, &parent));
+                let link_rc = r!(Link::new_topic(None, NAMESPACE_TOOLS, &parent));
+                topic.add_parent(link_rc);
             }
             //bg!(topic.get_name(), &parents, &topic.parents);
             Ok(Some(Paragraph::Breadcrumbs))

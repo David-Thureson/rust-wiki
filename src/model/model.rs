@@ -15,6 +15,7 @@ pub(crate) struct Model {
     subtopic_tree: Option<TopicTree>,
     attribute_list: AttributeList,
     domain_list: DomainList,
+    // links: Vec<LinkRc>,
 }
 
 impl Model {
@@ -31,6 +32,7 @@ impl Model {
             subtopic_tree: None,
             attribute_list: AttributeList::new(),
             domain_list: DomainList::new(),
+            // links: vec![],
         };
         wiki.add_namespace(main_namespace);
         wiki
@@ -88,7 +90,7 @@ impl Model {
 
     pub(crate) fn add_topic(&mut self, topic: Topic) {
         assert!(self.namespaces.contains_key(topic.get_namespace()));
-        let topic_key = topic.get_key();
+        let topic_key = topic.get_topic_key();
 
         let topic_ref = make_topic_ref(topic_key.get_namespace(), topic_key.get_topic_name());
         if self.topic_refs.contains_key(&topic_ref) {
@@ -130,6 +132,46 @@ impl Model {
         }
     }
 
+    pub(crate) fn catalog_links(&mut self) {
+        for topic in self.topics.values_mut() {
+            topic.clear_inbound_topic_keys();
+        }
+        let mut map = BTreeMap::new();
+        for topic in self.topics.values() {
+            for dest_topic_key in topic.get_links().iter()
+                .filter_map(|link_rc| b!(link_rc).get_topic_key()) {
+                let entry = map.entry(dest_topic_key).or_insert(vec![]);
+                entry.push(topic.get_topic_key());
+            }
+        }
+        for (topic_key, inbound_topic_keys) in map.drain_filter(|_, _| true) {
+            let topic = self.topics.get_mut(&topic_key).unwrap();
+            topic.set_inbound_topic_keys(inbound_topic_keys);
+            topic.finalize_inbound_topic_keys();
+        }
+    }
+
+    /*
+    fn get_links(&self) -> Vec<LinkRc> {
+        let mut links = vec![];
+        for topic in self.topics.values() {
+            links.append(&mut topic.get_links());
+        }
+        links
+    }
+    */
+
+    /*
+    pub(crate) fn get_inbound_link_topic_keys(&self, topic_key: &TopicKey) -> Vec<TopicKey> {
+        let mut topic_keys = self.get_links().iter()
+            .filter_map(|link_rc| b!(link_rc).get_topic_key())
+            .filter(|link_topic_key| link_topic_key.eq(topic_key))
+            .collect::<Vec<_>>();
+        TopicKey::sort_topic_keys_by_name(&mut topic_keys);
+        topic_keys.dedup();
+        topic_keys
+    }
+    */
     pub(crate) fn is_attribute_indexed(&self, name: &str) -> bool {
         self.attribute_list.is_attribute_indexed(name)
     }
@@ -188,6 +230,7 @@ impl Model {
         self.domain_list.get_domain(name)
     }
 
+    /*
     pub(crate) fn catalog_links(&mut self) {
         for topic in self.topics.values_mut() {
             topic.catalog_outbound_links();
@@ -199,7 +242,7 @@ impl Model {
         let include_generated = false;
         let mut map = BTreeMap::new();
         for topic in self.topics.values() {
-            let topic_key = topic.get_key();
+            let topic_key = topic.get_topic_key();
             for outbound_topic_key in topic.get_topic_links_as_topic_keys(include_generated).drain(..) {
                 let entry = map.entry(outbound_topic_key.clone()).or_insert(vec![]);
                 if !entry.contains(&topic_key) {
@@ -214,9 +257,28 @@ impl Model {
             }
         }
     }
+    */
 
     pub(crate) fn check_links(&self) -> TopicErrorList {
-        Topic::check_links(self)
+        let mut errors = TopicErrorList::new();
+        for topic in self.topics.values() {
+            let this_topic_key = topic.get_topic_key();
+            for link_rc in topic.get_links().iter() {
+                let link = b!(link_rc);
+                match &link.get_type() {
+                    LinkType::Topic { topic_key } => {
+                        self.check_topic_link(&mut errors, "links", &this_topic_key, topic_key);
+                    },
+                    LinkType::Section { section_key } => {
+                        if !self.has_section(section_key) {
+                            errors.add(&topic.get_topic_key(), &format!("wiki::check_links(): Section link {} not found.", section_key));
+                        }
+                    },
+                    _ => {},
+                }
+            }
+        }
+        errors
     }
 
     pub(crate) fn check_topic_link(&self, errors: &mut TopicErrorList, list_name: &str, this_topic_key: &TopicKey, ref_topic_key: &TopicKey) {

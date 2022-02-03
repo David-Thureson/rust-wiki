@@ -2,6 +2,8 @@
 
 use super::*;
 
+pub(crate) type LinkRc = Rc<RefCell<Link>>;
+
 #[derive(Clone, Debug)]
 pub(crate) struct Link {
     label: Option<String>,
@@ -174,6 +176,14 @@ impl Link {
         &self.type_
     }
 
+    pub(crate) fn get_topic_key(&self) -> Option<TopicKey> {
+        match &self.type_ {
+            LinkType::Topic { topic_key } => Some(topic_key.clone()),
+            LinkType::Section { section_key } => Some(section_key.get_topic_key().clone()),
+            _ => None,
+        }
+    }
+
     /*
     pub(crate) fn catalog_links(model: &mut Model) {
         for topic in model.get_topics_mut().values_mut() {
@@ -253,6 +263,7 @@ impl Link {
     }
     */
 
+    /*
     pub(crate) fn catalog_links_text_block(text_block: &TextBlock) -> Vec<Link> {
         match text_block {
             TextBlock::Resolved { items } => {
@@ -272,6 +283,7 @@ impl Link {
             },
         }
     }
+    */
 
     pub fn is_external_ref(reference: &str) -> bool {
         let reference = reference.to_lowercase().trim().to_string();
@@ -308,4 +320,15 @@ impl ImageSize {
             ImageSize::WidthHeight { width, height } => format!("width = {}; height = {}", width, height),
         }
     }
+}
+
+pub(crate) fn links_to_topic_keys(links: &Vec<LinkRc>) -> Vec<TopicKey> {
+    let mut topic_keys = links.iter().filter_map(|link_rc| b!(link_rc).get_topic_key()).collect::<Vec<_>>();
+    TopicKey::sort_topic_keys_by_name(&mut topic_keys);
+    topic_keys.dedup();
+    topic_keys
+}
+
+pub(crate) fn link_list_contains_topic_key(links: &Vec<LinkRc>, topic_key: &TopicKey) -> bool {
+    links.iter().any(|link_rc| b!(link_rc).get_topic_key().map_or(false, |link_topic_key| link_topic_key.eq(topic_key)))
 }

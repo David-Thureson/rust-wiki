@@ -7,7 +7,7 @@ use std::cell::{RefCell, Ref};
 use chrono::NaiveDate;
 
 pub(crate) struct Topic {
-    parents: Vec<TopicKey>,
+    parents: Vec<LinkRc>,
     namespace: String,
     name: String,
     category: Option<String>,
@@ -15,13 +15,13 @@ pub(crate) struct Topic {
     attributes: BTreeMap<String, AttributeInstance>,
     paragraphs: Vec<Paragraph>,
     inbound_topic_keys: Vec<TopicKey>,
-    outbound_links: Vec<Link>,
-    generated_outbound_links: Vec<Link>,
+    // outbound_links: Vec<Link>,
+    // generated_outbound_links: Vec<Link>,
     category_tree_node: Option<Rc<RefCell<TopicTreeNode>>>,
-    subtopics: Vec<TopicKey>,
+    subtopics: Vec<LinkRc>,
     subtopic_tree_node: Option<Rc<RefCell<TopicTreeNode>>>,
-    combo_subtopics: Vec<TopicKey>,
-    listed_topics: Vec<TopicKey>,
+    combo_subtopics: Vec<LinkRc>,
+    // listed_topics: Vec<TopicKey>,
 }
 
 #[derive(Clone, Debug)]
@@ -48,28 +48,27 @@ impl Topic {
             attributes: Default::default(),
             paragraphs: vec![],
             inbound_topic_keys: vec![],
-            outbound_links: vec![],
-            generated_outbound_links: vec![],
+            // outbound_links: vec![],
+            // generated_outbound_links: vec![],
             category_tree_node: None,
             subtopics: vec![],
             subtopic_tree_node: None,
             combo_subtopics: vec![],
-            listed_topics: vec![],
+            // listed_topics: vec![],
             // sections: Default::default(),
         }
     }
 
-    pub(crate) fn get_key(&self) -> TopicKey {
+    pub(crate) fn get_topic_key(&self) -> TopicKey {
         TopicKey::new(&self.namespace, &self.name)
     }
 
-    pub(crate) fn add_parent(&mut self, topic_key: &TopicKey) {
-        assert!(!self.parents.contains(topic_key));
+    pub(crate) fn add_parent(&mut self, link: LinkRc) {
         assert!(self.parents.len() < 2);
-        self.parents.push(topic_key.clone());
+        self.parents.push(link);
     }
 
-    pub(crate) fn set_parents(&mut self, parents: Vec<TopicKey>) {
+    pub(crate) fn set_parents(&mut self, parents: Vec<LinkRc>) {
         assert!(self.parents.is_empty());
         assert!(!parents.is_empty());
         assert!(parents.len() <= 2);
@@ -80,8 +79,8 @@ impl Topic {
         self.parents.len()
     }
 
-    pub(crate) fn get_parent(&self, index: usize) -> &TopicKey {
-        &self.parents[index]
+    pub(crate) fn get_parent(&self, index: usize) -> LinkRc {
+        self.parents[index].clone()
     }
 
     pub(crate) fn get_namespace(&self) -> &str {
@@ -135,7 +134,7 @@ impl Topic {
                     // will appear together.
                     let sequence = attribute_orders.get(temp_attr_name).map_or_else(
                         || {
-                            errors.add(&self.get_key(), &format!("No sequence found for attribute type \"{}\".", temp_attr_name));
+                            errors.add(&self.get_topic_key(), &format!("No sequence found for attribute type \"{}\".", temp_attr_name));
                             ATTRIBUTE_ORDER.len()
                         },
                         |sequence| { *sequence }
@@ -151,18 +150,18 @@ impl Topic {
                 // If this attribute type does not have the value, add it. Then either way add
                 // a reference to the topic, showing that this topic has this value for this
                 // attribute type.
-                match attribute_type.add_value_for_topic(temp_value,&self.get_key()) {
+                match attribute_type.add_value_for_topic(temp_value,&self.get_topic_key()) {
                     Ok(canonical_value) => {
                         AttributeType::assert_legal_attribute_value(&canonical_value);
                         // Don't add a topic item if the topic has itself as an attribute.
                         if self.name.ne(&canonical_value) {
                             let entry = attribute_values.entry(canonical_value.clone()).or_insert(vec![]);
-                            entry.push((self.get_key(), attribute_type.get_name().to_string()));
+                            entry.push((self.get_topic_key(), attribute_type.get_name().to_string()));
                             // model.add_attribute_value(canonical_value.clone(), topic.get_key(), attribute_type.get_name().clone());
                         }
                         values_for_topic.push(canonical_value)
                     },
-                    Err(msg) => { errors.add(&self.get_key(), &msg) }
+                    Err(msg) => { errors.add(&self.get_topic_key(), &msg) }
                 };
             }
             self.replace_attribute(AttributeInstance::new(temp_attr_name, attribute_type.get_sequence(),values_for_topic));
@@ -263,19 +262,31 @@ impl Topic {
     }
     */
 
-    /*
-    pub(crate) fn clear_outbound_links(&mut self) {
-        self.outbound_links.clear();
-    }
-    */
-
     pub(crate) fn get_inbound_topic_keys(&self) -> &Vec<TopicKey> {
         &self.inbound_topic_keys
     }
 
+    /*
+    pub(crate) fn add_inbound_topic_key(&mut self, topic_key: TopicKey) {
+        self.inbound_topic_keys.push(topic_key);
+    }
+    *
+
+     */
+    pub(crate) fn clear_inbound_topic_keys(&mut self) {
+        self.inbound_topic_keys.clear();
+    }
+
+    pub(crate) fn finalize_inbound_topic_keys(&mut self) {
+        TopicKey::sort_topic_keys_by_name(&mut self.inbound_topic_keys);
+        self.inbound_topic_keys.dedup();
+    }
+
+    /*
     pub(crate) fn get_inbound_topic_keys_count(&self) -> usize {
         self.inbound_topic_keys.len()
     }
+    */
 
     pub(crate) fn set_inbound_topic_keys(&mut self, topic_keys: Vec<TopicKey>) {
         self.inbound_topic_keys = topic_keys;
@@ -317,7 +328,7 @@ impl Topic {
         &self.subtopic_tree_node
     }
 
-    pub(crate) fn get_combo_subtopics(&self) -> &Vec<TopicKey> {
+    pub(crate) fn get_combo_subtopics(&self) -> &Vec<LinkRc> {
         &self.combo_subtopics
     }
 
@@ -412,19 +423,20 @@ impl Topic {
         let err_msg_func = |msg: &str| format!("Topic::check_subtopic_relationships: {}", msg);
         let cat_combo = "Combinations".to_string();
         for topic in model.get_topics().values() {
-            let topic_key = topic.get_key();
+            let topic_key = topic.get_topic_key();
             let parent_count = topic.parents.len();
             if topic.category.as_ref().is_none() || topic.category.as_ref().unwrap().to_string() != cat_combo {
                 // Not a combination topic.
                 if parent_count > 1 {
                     errors.add(&topic_key, &format!("Non-combo category, so expected 0 or 1 parents, found {}.", parent_count));
                 } else {
-                    for parent_topic_key in topic.parents.iter() {
+                    for parent_link_rc in topic.parents.iter() {
+                        let parent_topic_key = b!(parent_link_rc).get_topic_key().unwrap();
                         //bg!(topic.get_name(), parent_topic_key);
-                        assert!(model.get_topics().contains_key(parent_topic_key), "No topic found for parent key = \"{:?}\" in topic = \"{}\". This should have been caught earlier.", parent_topic_key, topic.get_name());
-                        if !model.get_topics()[parent_topic_key].listed_topics.contains(&topic_key) {
-                            errors.add(&parent_topic_key,&err_msg_func(&format!("[[{}]]", topic.get_name())));
-                        }
+                        assert!(model.get_topics().contains_key(&parent_topic_key), "No topic found for parent key = \"{:?}\" in topic = \"{}\". This should have been caught earlier.", parent_topic_key, topic.get_name());
+                        // if !link_list_contains_topic_key(&model.get_topics()[&parent_topic_key].listed_topics, &topic_key) {
+                        //     errors.add(&parent_topic_key,&err_msg_func(&format!("[[{}]]", topic.get_name())));
+                        // }
                     }
                 }
             } else {
@@ -432,9 +444,10 @@ impl Topic {
                 if parent_count != 2 {
                     errors.add(&topic_key,&err_msg_func(&format!("Combo category, so expected 2 parents, found {}.", parent_count)));
                 } else {
-                    for parent_topic_key in topic.parents.iter() {
-                        assert!(model.get_topics().contains_key(parent_topic_key), "No topic found for parent key = \"{:?}\" in topic = \"{}\". This should have been caught earlier.", parent_topic_key, topic.get_name());
-                        if !model.get_topics()[parent_topic_key].combo_subtopics.contains(&topic_key) {
+                    for parent_link_rc in topic.parents.iter() {
+                        let parent_topic_key = b!(parent_link_rc).get_topic_key().unwrap();
+                        assert!(model.get_topics().contains_key(&parent_topic_key), "No topic found for parent key = \"{:?}\" in topic = \"{}\". This should have been caught earlier.", parent_topic_key, topic.get_name());
+                        if !link_list_contains_topic_key(&model.get_topics()[&parent_topic_key].combo_subtopics, &topic_key) {
                             errors.add(&parent_topic_key, &err_msg_func(&format!("No combination link to child [[{}]].", topic.get_name())));
                         }
                     }
@@ -452,20 +465,20 @@ impl Topic {
         let mut parent_child_pairs = vec![];
         let mut parent_combo_pairs = vec![];
         for topic in model.get_topics().values() {
-            let topic_key = topic.get_key();
+            let topic_key = topic.get_topic_key();
             match topic.parents.len() {
                 0 => {
                     // This is not a subtopic.
                 },
                 1 => {
                     // Normal (non-combo) subtopic.
-                    let parent_topic_key = topic.parents[0].clone();
+                    let parent_topic_key = b!(&topic.parents[0]).get_topic_key().unwrap();
                     parent_child_pairs.push((parent_topic_key, topic_key));
                 },
                 2 => {
                     // Combination topic.
-                    for parent_topic_key in topic.parents.iter() {
-                        parent_combo_pairs.push((parent_topic_key.clone(), topic_key.clone()))
+                    for parent_link_rc in topic.parents.iter() {
+                        parent_combo_pairs.push((b!(parent_link_rc).get_topic_key().unwrap(), topic_key.clone()))
                     }
                     // Don't include combination topics in the subcategory tree.
                 },
@@ -475,26 +488,26 @@ impl Topic {
             }
         }
         for (parent_topic_key, child_topic_key) in parent_child_pairs.iter() {
-            model.get_topics_mut().get_mut(&parent_topic_key).unwrap().subtopics.push(child_topic_key.clone());
+            // let parent_topic_key= b!(parent_link_rc).get_topic_key().unwrap();
+            let link_rc = r!(Link::new_topic(None, child_topic_key.get_namespace(), child_topic_key.get_topic_name()));
+            model.get_topics_mut().get_mut(&parent_topic_key).unwrap().subtopics.push(link_rc);
         }
         for (parent_topic_key, combo_topic_key) in parent_combo_pairs.iter() {
-            model.get_topics_mut().get_mut(&parent_topic_key).unwrap().combo_subtopics.push(combo_topic_key.clone());
-        }
-        for topic in model.get_topics_mut().values_mut() {
-            topic.subtopics.sort_by_cached_key(|topic_key| topic_key.topic_name.clone());
-            topic.combo_subtopics.sort_by_cached_key(|topic_key| topic_key.topic_name.clone());
+            let link_rc = r!(Link::new_topic(None, combo_topic_key.get_namespace(), combo_topic_key.get_topic_name()));
+            model.get_topics_mut().get_mut(&parent_topic_key).unwrap().combo_subtopics.push(link_rc);
         }
         let mut tree = util::tree::Tree::create(parent_child_pairs, true);
         Topic::sort_topic_tree(&mut tree);
         // Have each topic with a subtopic point to its node in the subtopic tree.
         for topic in model.get_topics_mut().values_mut() {
-            topic.subtopic_tree_node = tree.get_node(&topic.get_key());
+            topic.subtopic_tree_node = tree.get_node(&topic.get_topic_key());
         }
         // tree.print_counts_to_depth();
         // tree.print_with_items(None);
         tree
     }
 
+    /*
     pub(crate) fn catalog_outbound_links(&mut self) {
         self.outbound_links.clear();
         self.listed_topics.clear();
@@ -549,7 +562,9 @@ impl Topic {
         TopicKey::sort_topic_keys_by_name(&mut self.combo_subtopics);
         TopicKey::sort_topic_keys_by_name(&mut self.listed_topics);
     }
+    */
 
+    /*
     pub(crate) fn get_topic_links_as_topic_keys(&self, include_generated: bool) -> Vec<TopicKey> {
         assert!(!include_generated, "The Topic.include_generated list is not getting filled yet.");
         let mut links = self.outbound_links.clone();
@@ -569,20 +584,35 @@ impl Topic {
         topic_keys.dedup();
         topic_keys
     }
+    */
+
+    pub(crate) fn get_links(&self) -> Vec<LinkRc> {
+        let mut links = vec![];
+        // for parent in self.parents.iter() {
+        //     links.push(parent.clone());
+        // }
+        for paragraph in self.paragraphs.iter() {
+            links.append(&mut paragraph.get_links());
+        }
+        // links.append(&mut self.subtopics.iter().map(|link_rc| link_rc.clone()).collect());
+        // links.append(&mut self.combo_subtopics.iter().map(|link_rc| link_rc.clone()).collect());
+        links
+    }
 
     #[allow(dead_code)]
     pub(crate) fn set_attribute_date(&mut self, attr_type_name: &str, sequence: usize, value: &NaiveDate) {
         AttributeType::assert_legal_attribute_type_name(attr_type_name);
         self.attributes.remove(attr_type_name);
         let mut attr_type = AttributeType::new(attr_type_name, &AttributeValueType::Date, sequence);
-        attr_type.add_date_value(value, &self.get_key()).unwrap();
+        attr_type.add_date_value(value, &self.get_topic_key()).unwrap();
     }
 
+    /*
     pub(crate) fn check_links(model: &Model) -> TopicErrorList {
         //bg!(model.get_topics().keys());
         let mut errors = TopicErrorList::new();
         for topic in model.get_topics().values() {
-            let this_topic_key = topic.get_key();
+            let this_topic_key = topic.get_topic_key();
             for link in topic.outbound_links.iter() {
                 match &link.get_type() {
                     LinkType::Topic { topic_key } => {
@@ -591,7 +621,7 @@ impl Topic {
                     LinkType::Section { section_key } => {
                         //bg!(&section_key);
                         if !model.has_section(section_key) {
-                            errors.add(&topic.get_key(), &format!("wiki::check_links(): Section link {} not found.", section_key));
+                            errors.add(&topic.get_topic_key(), &format!("wiki::check_links(): Section link {} not found.", section_key));
                         }
                     },
                     _ => {},
@@ -605,7 +635,7 @@ impl Topic {
         }
         errors
     }
-
+    */
     /*
     pub(crate) fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
         //bg!(&keys);
@@ -667,12 +697,11 @@ impl Topic {
         }
         text_blocks
     }
-
 }
 
 impl PartialEq for Topic {
     fn eq(&self, other: &Self) -> bool {
-        self.get_key() == other.get_key()
+        self.get_topic_key() == other.get_topic_key()
     }
 }
 
@@ -681,13 +710,13 @@ impl Eq for Topic {
 
 impl PartialOrd for Topic {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.get_key().partial_cmp(&other.get_key())
+        self.get_topic_key().partial_cmp(&other.get_topic_key())
     }
 }
 
 impl Ord for Topic {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.get_key().cmp(&other.get_key())
+        self.get_topic_key().cmp(&other.get_topic_key())
     }
 }
 
