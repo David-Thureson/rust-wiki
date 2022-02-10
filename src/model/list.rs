@@ -73,6 +73,7 @@ impl List {
         &self.items
     }
 
+    #[allow(dead_code)]
     pub(crate) fn is_generated(&self) -> bool {
         GENERATED_LIST_TYPES.contains(&&*self.type_)
     }
@@ -117,6 +118,13 @@ impl List {
         }
     }
 
+    pub fn contains_topic_link(&self, topic_key: &TopicKey) -> bool {
+        if self.header.as_ref().map_or(false, |header| header.contains_topic_link(topic_key)) {
+            return true;
+        }
+        self.items.iter().any(|item| item.contains_topic_link(topic_key))
+    }
+
 }
 
 impl ListItem {
@@ -143,6 +151,10 @@ impl ListItem {
 
     pub(crate) fn get_display_text(&self) -> String {
         self.text_block.get_display_text()
+    }
+
+    pub fn contains_topic_link(&self, topic_key: &TopicKey) -> bool {
+        self.text_block.contains_topic_link(topic_key)
     }
 }
 

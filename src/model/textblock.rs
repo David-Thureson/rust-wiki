@@ -44,6 +44,7 @@ impl TextBlock {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn get_resolved_items(&self) -> &Vec<TextItem> {
         match self {
             Self::Resolved { items } => items,
@@ -76,6 +77,12 @@ impl TextBlock {
         }
     }
 
+    pub fn contains_topic_link(&self, topic_key: &TopicKey) -> bool {
+        match self {
+            TextBlock::Resolved { items } => items.iter().any(|item| item.contains_topic_link(topic_key)),
+            TextBlock::Unresolved { .. } => panic!("This should be called only for resolved text blocks."),
+        }
+    }
 
         /*
         pub(crate) fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
@@ -115,6 +122,18 @@ impl TextItem {
         match self {
             TextItem::Link { link } => b!(link).get_display_text(),
             TextItem::Text { text } => text.to_string(),
+        }
+    }
+
+    pub fn contains_topic_link(&self, match_topic_key: &TopicKey) -> bool {
+        match self {
+            TextItem::Link { link } => {
+                match b!(link).get_type() {
+                    LinkType::Topic { topic_key} => topic_key.eq(match_topic_key),
+                    _ => false,
+                }
+            },
+            _ => false,
         }
     }
 

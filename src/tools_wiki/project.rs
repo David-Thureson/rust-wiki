@@ -28,7 +28,6 @@ pub(crate) fn update_projects_and_libraries(model: &mut Model) {
     print_name_map(&name_map, Some(&name_map_clone), "Diff from add_missing_libraries()");
 
     update_dependency_and_used_by_paragraphs(model, &project_model, &name_map);
-    panic!();
 }
 
 #[allow(dead_code)]
@@ -83,6 +82,8 @@ fn add_missing_libraries(model: &mut Model, project_model: &ProjectModel, name_m
 }
 
 fn update_dependency_and_used_by_paragraphs(model: &mut Model, project_model: &ProjectModel, name_map: &NameMap) {
+    //bg!(&project_model);
+    //bg!(&name_map);
     // If a project doesn't show up in the project_model returned from the manage-projects app, we
     // leave it alone.
     for pc in project_model.pcs.values() {
@@ -99,16 +100,29 @@ fn update_dependency_and_used_by_paragraphs(model: &mut Model, project_model: &P
                         Paragraph::new_list(list)
                     },
                 };
-                let links = dep_paragraph.get_links();
-                let mut list = dep_paragraph.get_list_mut();
+                let list = dep_paragraph.get_list_mut();
                 for rust_project in project.rust_projects.values() {
                     for dep in rust_project.dependencies.values() {
-                        let dep_topic_name = name_crate(dep);
-                        let dep_topic_key =
+                        // let dep_topic_name = name_crate(dep);
+                        // let dep_topic_key = TopicKey::new(&namespace_root, &dep_topic_name);
+                        match name_map.get(&dep.crate_name.to_lowercase()) {
+                            Some(dep_topic_key) => {
+                                if !list.contains_topic_link(&dep_topic_key) {
+                                    // Add a list item with a link to the topic for this dependency.
+                                    let link = Link::new_topic(None, dep_topic_key.get_namespace(), dep_topic_key.get_topic_name());
+                                    let text_block = TextBlock::new_resolved(vec![TextItem::new_link(link)]);
+                                    list.add_item(ListItem::new(1, true, text_block));
+                                }
+                            },
+                            None => {
+                                println!("In topic \"{}\", dependency \"{}\" not found.", &topic.get_name(), &dep.crate_name);
+                            }
+                        }
                     }
                 }
-
-
+                list.sort_items();
+                let dep_paragraph_index = topic.get_paragraph_index_end_of_first_section();
+                topic.insert_paragraph(dep_paragraph_index, dep_paragraph);
             }
         }
     }
@@ -137,7 +151,9 @@ fn make_name_map(model: &Model, project_model: &ProjectModel) -> NameMap {
             for rust_project in project.rust_projects.values() {
                 for dependency in rust_project.dependencies.values() {
                     for possible_name in project_potential_crate_names_lower(&dependency.crate_name).iter() {
+                        let debug = possible_name.eq("sim");
                         if let Some(topic_key) = topic_names.get(possible_name) {
+                            if debug { dbg!(&topic_key); }
                             name_map.insert(dependency.crate_name.to_lowercase(), topic_key.clone());
                             break;
                         }
@@ -372,7 +388,7 @@ fn name_project(folder_name: &str) -> String {
         return folder_name.to_uppercase()
     }
     let name = folder_name.replace("-", " ").replace("_", " ");
-    if name.eq("rust asm") {
+    if name.eq("rust asm") || name.eq("util") {
         return "Rust ASM (Rust project)".to_string();
     }
     let name = first_cap_phrase(&name);
@@ -385,7 +401,7 @@ fn name_crate(dep: &manage_projects::model::Dependency) -> String {
     let mut name = util::format::first_cap_phrase(&dep.crate_name);
     name = name.replace("-", " ").replace("_", " ");
     // if dep.is_local {
-    if dep.crate_name.eq("sim") {
+    if dep.crate_name.eq("sim") || dep.crate_name.eq("util") {
         name = format!("{} (Rust project)", name);
     } else {
         name = format!("{} (Rust crate)", name);

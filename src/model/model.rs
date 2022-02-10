@@ -15,8 +15,8 @@ pub(crate) struct Model {
     subtopic_tree: Option<TopicTree>,
     attribute_list: AttributeList,
     domain_list: DomainList,
-    projects: Option<manage_projects::model::Model>,
-    used_by_map: BTreeMap<TopicKey, Vec<TopicKey>>,
+    // projects: Option<manage_projects::model::Model>,
+    // used_by_map: BTreeMap<TopicKey, Vec<TopicKey>>,
     // links: Vec<LinkRc>,
 }
 
@@ -34,8 +34,8 @@ impl Model {
             subtopic_tree: None,
             attribute_list: AttributeList::new(),
             domain_list: DomainList::new(),
-            projects: None,
-            used_by_map: Default::default(),
+            // projects: None,
+            // used_by_map: Default::default(),
             // links: vec![],
         };
         wiki.add_namespace(main_namespace);
@@ -373,6 +373,7 @@ impl Model {
         self.topics.keys().sorted_by_key(|topic_key| topic_key.get_topic_name().to_lowercase()).map(|x| x.clone()).collect()
     }
 
+    #[allow(dead_code)]
     pub(crate) fn get_topic_names(&self) -> Vec<String> {
         self.topic_keys_alphabetical_by_topic_name().iter().map(|topic_key| topic_key.get_topic_name().to_string()).collect()
     }
@@ -483,14 +484,19 @@ impl Model {
         map
     }
 
+    /*
     pub(crate) fn set_projects(&mut self, projects: manage_projects::model::Model) {
         self.projects = Some(projects);
     }
+    */
 
+    /*
+    #[allow(dead_code)]
     pub(crate) fn add_used_by(&mut self, dependency: TopicKey, user: TopicKey) {
         let entry = self.used_by_map.entry(dependency).or_insert(vec![]);
         if !entry.contains(&user) {
             entry.push(user);
         }
     }
+     */
 }

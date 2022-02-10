@@ -267,6 +267,24 @@ impl Topic {
         self.paragraphs.push(paragraph);
     }
 
+    pub(crate) fn insert_paragraph(&mut self, index: usize, paragraph: Paragraph) {
+        self.paragraphs.insert(index, paragraph);
+    }
+
+    pub(crate) fn get_paragraph_index_end_of_first_section(&self) -> usize {
+        for (index, paragraph) in self.paragraphs.iter().enumerate() {
+            match paragraph {
+                Paragraph::SectionHeader { name: _, depth } => {
+                    if *depth == 1 {
+                        return index;
+                    }
+                },
+                _ => {},
+            }
+        }
+        self.paragraphs.len()
+    }
+
     /*
     pub(crate) fn get_outbound_links(&self) -> &Vec<Link> {
         &self.outbound_links
