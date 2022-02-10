@@ -675,11 +675,11 @@ impl BuildProcess {
         if lines[0].trim().starts_with("*") {
             return err_func("List with no header.");
         }
-        let type_ = ListType::from_header(lines[0].trim());
+        let type_ = List::header_to_type(lines[0].trim());
         // The header may be a simple label like "Subtopics:" but it could also be a longer piece
         // of text containing links and other markup.
         let header = self.make_text_block_rc(topic.get_name(), lines[0], context)?;
-        let mut list = List::new(type_, Some(header));
+        let mut list = List::new(&type_, Some(header));
         for line in lines.iter().skip(1) {
             // The depth of the list item is the number of spaces before the asterisk.
             match line.find("*") {

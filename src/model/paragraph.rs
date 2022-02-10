@@ -1,5 +1,19 @@
 use super::*;
 
+pub(crate) const PARAGRAPH_VARIANT_NAME_ATTRIBUTES: &str = "Attributes";
+pub(crate) const PARAGRAPH_VARIANT_NAME_BREADCRUMBS: &str = "Breadcrumbs";
+pub(crate) const PARAGRAPH_VARIANT_NAME_CATEGORY: &str = "Category";
+pub(crate) const PARAGRAPH_VARIANT_NAME_GEN_START: &str = "GenStart";
+pub(crate) const PARAGRAPH_VARIANT_NAME_GEN_END: &str = "GenEnd";
+pub(crate) const PARAGRAPH_VARIANT_NAME_LIST: &str = "List";
+pub(crate) const PARAGRAPH_VARIANT_NAME_MARKER: &str = "Marker";
+pub(crate) const PARAGRAPH_VARIANT_NAME_PLACEHOLDER: &str = "Placeholder";
+pub(crate) const PARAGRAPH_VARIANT_NAME_SECTION_HEADER: &str = "SectionHeader";
+pub(crate) const PARAGRAPH_VARIANT_NAME_TABLE: &str = "Table";
+pub(crate) const PARAGRAPH_VARIANT_NAME_TEXT: &str = "Text";
+pub(crate) const PARAGRAPH_VARIANT_NAME_TEXT_UNRESOLVED: &str = "TextUnresolved";
+pub(crate) const PARAGRAPH_VARIANT_NAME_UNKNOWN: &str = "Unknown";
+
 #[derive(Clone, Debug)]
 #[allow(dead_code)]
 pub(crate) enum Paragraph {
@@ -80,19 +94,19 @@ impl Paragraph {
 
     pub(crate) fn get_variant_name(&self) -> &str {
         match self {
-            Paragraph::Attributes { .. } => "Attributes",
-            Paragraph::Breadcrumbs { .. } => "Breadcrumbs",
-            Paragraph::Category { .. } => "Category",
-            Paragraph::GenStart { .. } => "GenStart",
-            Paragraph::GenEnd { .. } => "GenEnd",
-            Paragraph::List { .. } => "List",
-            Paragraph::Marker { .. } => "Marker",
-            Paragraph::Placeholder { .. } => "Placeholder",
-            Paragraph::SectionHeader { .. } => "SectionHeader",
-            Paragraph::Table { .. } => "Table",
-            Paragraph::Text { .. } => "Text",
-            Paragraph::TextUnresolved { .. } => "TextUnresolved",
-            Paragraph::Unknown { .. } => "Unknown",
+            Paragraph::Attributes { .. } => PARAGRAPH_VARIANT_NAME_ATTRIBUTES,
+            Paragraph::Breadcrumbs { .. } => PARAGRAPH_VARIANT_NAME_BREADCRUMBS,
+            Paragraph::Category { .. } => PARAGRAPH_VARIANT_NAME_CATEGORY,
+            Paragraph::GenStart { .. } => PARAGRAPH_VARIANT_NAME_GEN_START,
+            Paragraph::GenEnd { .. } => PARAGRAPH_VARIANT_NAME_GEN_END,
+            Paragraph::List { .. } => PARAGRAPH_VARIANT_NAME_LIST,
+            Paragraph::Marker { .. } => PARAGRAPH_VARIANT_NAME_MARKER,
+            Paragraph::Placeholder { .. } => PARAGRAPH_VARIANT_NAME_PLACEHOLDER,
+            Paragraph::SectionHeader { .. } => PARAGRAPH_VARIANT_NAME_SECTION_HEADER,
+            Paragraph::Table { .. } => PARAGRAPH_VARIANT_NAME_TABLE,
+            Paragraph::Text { .. } => PARAGRAPH_VARIANT_NAME_TEXT,
+            Paragraph::TextUnresolved { .. } => PARAGRAPH_VARIANT_NAME_TEXT_UNRESOLVED,
+            Paragraph::Unknown { .. } => PARAGRAPH_VARIANT_NAME_UNKNOWN,
         }
     }
 
@@ -134,6 +148,11 @@ impl Paragraph {
         links
     }
 
-
+    pub(crate) fn get_list_mut(&mut self) -> &mut List {
+        match self {
+            Paragraph::List { list } => list,
+            _ => panic!(),
+        }
+    }
 
 }

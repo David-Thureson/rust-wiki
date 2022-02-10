@@ -1,6 +1,6 @@
 use crate::*;
 use super::*;
-use crate::model::{TopicKey, HorizontalAlignment, Model, TopicRefs};
+use crate::model::{TopicKey, HorizontalAlignment, Model, TopicRefs, LIST_TYPE_GENERAL};
 
 pub(crate) fn parse_link_optional(topic_refs: &TopicRefs, text: &str) -> Result<Option<model::Link>, String> {
     // Example topic link:
@@ -295,7 +295,7 @@ pub(crate) fn parse_list_optional(text: &str) -> Result<Option<model::List>, Str
         // The text is a single line, so if that line is a list item, we call the text a list with
         // no label and only one line.
         if let Some(list_item) = first_line_as_list_item {
-            let mut list = model::List::new(model::ListType::General, None);
+            let mut list = model::List::new(LIST_TYPE_GENERAL, None);
             list.add_item(list_item);
             return Ok(Some(list));
         } else {
@@ -328,13 +328,13 @@ pub(crate) fn parse_list_optional(text: &str) -> Result<Option<model::List>, Str
         let mut list = if let Some(list_item) = first_line_as_list_item {
             // The first line is a list item. Make a list with no header and add this first list
             // item. Since we don't have a header to tell us the list type, go with General.
-            let mut list = model::List::new(model::ListType::General, None);
+            let mut list = model::List::new(LIST_TYPE_GENERAL, None);
             list.add_item(list_item);
             list
         } else {
             // The first line is not a list item so it must be the header.
-            let type_ = model::ListType::from_header(first_line);
-            model::List::new(type_, Some(model::TextBlock::new_unresolved(first_line)))
+            let type_ = model::List::header_to_type(first_line);
+            model::List::new(&type_, Some(model::TextBlock::new_unresolved(first_line)))
         };
         // We've dealt with the first line, whether it was a header or the first list item. Now add
         // the remaining lines/list items.

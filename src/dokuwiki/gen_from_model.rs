@@ -3,7 +3,7 @@ use crate::{model, Itertools};
 use crate::dokuwiki as wiki;
 use std::rc::Rc;
 use std::cell::RefCell;
-use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys};
+use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys, GENERATED_LIST_TYPES};
 use std::collections::BTreeMap;
 use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS};
 use std::fs;
@@ -535,7 +535,7 @@ impl <'a> GenFromModel<'a> {
     }
 
     fn add_list(&mut self, page: &mut wiki::WikiGenPage, list: &model::List) {
-        if list.get_type().is_generated() {
+        if GENERATED_LIST_TYPES.contains(&list.get_type()) {
             return;
         }
         if let Some(header) = list.get_header() {

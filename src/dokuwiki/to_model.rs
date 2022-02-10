@@ -57,6 +57,8 @@ impl BuildProcess {
         // Figure out the real nature of each paragraph.
         self.refine_paragraphs(&mut model);
 
+        tools_wiki::project::update_projects_and_libraries(&mut model);
+
         // model.catalog_links();
         check_links(&model, &mut self.errors);
         //bg!(model.get_topics().keys());
@@ -450,7 +452,7 @@ impl BuildProcess {
                 // If the list is one of the generated types like "Subcategories" or "All Topics"
                 // we don't want to parse it and add it to the model. It will be generated later
                 // automatically.
-                if !list.get_type().is_generated() {
+                if !GENERATED_LIST_TYPES.contains(&list.get_type()) {
                     // Resolve links and such within the the header, if any.
                     let resolved_header = if let Some(unresolved_header) = list.get_header() {
                         let resolved_header = self.make_text_block_rc(&unresolved_header.get_unresolved_text(), context)?;

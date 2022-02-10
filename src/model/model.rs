@@ -15,6 +15,8 @@ pub(crate) struct Model {
     subtopic_tree: Option<TopicTree>,
     attribute_list: AttributeList,
     domain_list: DomainList,
+    projects: Option<manage_projects::model::Model>,
+    used_by_map: BTreeMap<TopicKey, Vec<TopicKey>>,
     // links: Vec<LinkRc>,
 }
 
@@ -32,6 +34,8 @@ impl Model {
             subtopic_tree: None,
             attribute_list: AttributeList::new(),
             domain_list: DomainList::new(),
+            projects: None,
+            used_by_map: Default::default(),
             // links: vec![],
         };
         wiki.add_namespace(main_namespace);
@@ -299,10 +303,10 @@ impl Model {
         Topic::check_subtopic_relationships(self)
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn catalog_possible_list_types(&self) -> util::group::Grouper<String> {
-        ListType::catalog_possible_list_types(self)
-    }
+    //#[allow(dead_code)]
+    // pub(crate) fn catalog_possible_list_types(&self) -> util::group::Grouper<String> {
+        //ListType::catalog_possible_list_types(self)
+    // }
 
     pub(crate) fn catalog_attributes(&mut self) -> TopicErrorList {
         // At this point each topic has a list of temp attributes which are simply named sets of
@@ -477,5 +481,16 @@ impl Model {
             entry.push(topic_key);
         }
         map
+    }
+
+    pub(crate) fn set_projects(&mut self, projects: manage_projects::model::Model) {
+        self.projects = Some(projects);
+    }
+
+    pub(crate) fn add_used_by(&mut self, dependency: TopicKey, user: TopicKey) {
+        let entry = self.used_by_map.entry(dependency).or_insert(vec![]);
+        if !entry.contains(&user) {
+            entry.push(user);
+        }
     }
 }

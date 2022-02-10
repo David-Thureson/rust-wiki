@@ -69,23 +69,31 @@ impl TextBlock {
         links
     }
 
-    /*
-    pub(crate) fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
+    pub(crate) fn get_display_text(&self) -> String {
         match self {
-            Self::Resolved { items } => {
-                for text_item in items.iter_mut() {
-                    //bg!(&text_item);
-                    *text_item = text_item.clone().update_internal_link_optional(keys);
-                    //bg!(&text_item);
-                }
-                //bg!(&items);
-            }
-            Self::Unresolved { .. } => {
-                panic!("This shouldn't be called for unresolved text blocks.")
-            },
+            TextBlock::Resolved { items } => items.iter().map(|text_item| text_item.get_display_text()).join(""),
+            TextBlock::Unresolved { text } => text.clone(),
         }
     }
-    */
+
+
+        /*
+        pub(crate) fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
+            match self {
+                Self::Resolved { items } => {
+                    for text_item in items.iter_mut() {
+                        //bg!(&text_item);
+                        *text_item = text_item.clone().update_internal_link_optional(keys);
+                        //bg!(&text_item);
+                    }
+                    //bg!(&items);
+                }
+                Self::Unresolved { .. } => {
+                    panic!("This shouldn't be called for unresolved text blocks.")
+                },
+            }
+        }
+        */
 }
 
 impl TextItem {
@@ -100,6 +108,13 @@ impl TextItem {
     pub(crate) fn new_link(link: Link) -> Self {
         TextItem::Link {
             link: r!(link),
+        }
+    }
+
+    pub(crate) fn get_display_text(&self) -> String {
+        match self {
+            TextItem::Link { link } => b!(link).get_display_text(),
+            TextItem::Text { text } => text.to_string(),
         }
     }
 

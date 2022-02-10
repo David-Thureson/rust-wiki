@@ -242,6 +242,27 @@ impl Topic {
         self.replace_paragraph(paragraph_index,Paragraph::Placeholder)
     }
 
+    pub(crate) fn find_list_paragraph_by_type(&self, type_name: &str) -> Option<usize> {
+        for (index, paragraph) in self.paragraphs.iter().enumerate() {
+            match paragraph {
+                Paragraph::List { list } => {
+                    if list.get_type().eq(type_name) {
+                        return Some(index);
+                    }
+                }
+                _ => {},
+            }
+        }
+        None
+    }
+
+    pub(crate) fn remove_list_paragraph_by_type(&mut self, type_name: &str) -> Option<(usize, Paragraph)> {
+        match self.find_list_paragraph_by_type(type_name) {
+            Some(index) => Some((index, self.paragraphs.remove(index))),
+            None => None,
+        }
+    }
+
     pub(crate) fn add_paragraph(&mut self, paragraph: Paragraph) {
         self.paragraphs.push(paragraph);
     }
@@ -770,6 +791,9 @@ impl TopicKey {
         });
     }
 
+    pub(crate) fn get_display_text(&self) -> String {
+        format!("{}:{}", self.namespace, self.topic_name)
+    }
 }
 
 impl Display for TopicKey {
@@ -825,6 +849,11 @@ impl SectionKey {
     pub(crate) fn get_section_name(&self) -> &str {
         &self.section_name
     }
+
+    pub(crate) fn get_display_text(&self) -> String {
+        format!("{}#{}", self.get_topic_key().get_display_text(), self.section_name)
+    }
+
 }
 
 impl Display for SectionKey {

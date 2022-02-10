@@ -184,6 +184,26 @@ impl Link {
         }
     }
 
+    pub(crate) fn get_display_text(&self) -> String {
+        // This may not exactly match the display text if there's no label, since the actual link
+        // text will be used, and this will vary by Wiki engine. In nearly all cases, though, there
+        // will be a label, so the purpose of most of this function is just to get something
+        // reasonable if there is no label.
+        match &self.label {
+            Some(label) => label.clone(),
+            None => {
+                match &self.type_ {
+                    LinkType::Topic { topic_key } => topic_key.get_display_text(),
+                    LinkType::Section { section_key } => section_key.get_display_text(),
+                    LinkType::External { url } => url.clone(),
+                    LinkType::File { file_ref } => file_ref.clone(),
+                    LinkType::Image { source, .. } => source.get_display_text(),
+                    LinkType::InternalUnresolved { dest } => dest.clone(),
+                }
+            }
+        }
+    }
+
     /*
     pub(crate) fn catalog_links(model: &mut Model) {
         for topic in model.get_topics_mut().values_mut() {
@@ -303,6 +323,13 @@ impl ImageSource {
     pub(crate) fn new_external(url: &str) -> Self {
         Self::External {
             url: url.to_string(),
+        }
+    }
+
+    pub(crate) fn get_display_text(&self) -> String {
+        match self {
+            ImageSource::Internal { namespace, file_name } => format!("{}:{}", namespace, file_name),
+            ImageSource::External { url } => url.clone(),
         }
     }
 }

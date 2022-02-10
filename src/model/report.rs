@@ -106,7 +106,7 @@ impl WikiReport {
             for paragraph in topic.get_paragraphs().iter() {
                 match paragraph {
                     Paragraph::List { list } => {
-                        groups.record_entry(&list.get_type().get_variant_name().to_string())
+                        groups.record_entry(&list.get_type().to_string())
                     },
                     _ => {},
                 }

@@ -1,8 +1,36 @@
 use super::*;
 
+pub(crate) const LIST_TYPE_ALL_TOPICS : &str = "All topics";
+pub(crate) const LIST_TYPE_ARTICLES : &str = "Articles";
+pub(crate) const LIST_TYPE_BOOKS : &str = "Books";
+pub(crate) const LIST_TYPE_CLIENTS : &str = "Clients";
+pub(crate) const LIST_TYPE_CODING_PROJECTS : &str = "Coding projects";
+pub(crate) const LIST_TYPE_COMBINATIONS : &str = "Combinations";
+pub(crate) const LIST_TYPE_COMPONENTS : &str = "Components";
+pub(crate) const LIST_TYPE_COURSES : &str = "Courses";
+pub(crate) const LIST_TYPE_DEPENDENCIES : &str = "Dependencies";
+pub(crate) const LIST_TYPE_GENERAL : &str = "General";
+pub(crate) const LIST_TYPE_IDEAS : &str = "Ideas";
+pub(crate) const LIST_TYPE_PRODUCTS : &str = "Products";
+pub(crate) const LIST_TYPE_PROJECTS : &str = "Projects";
+pub(crate) const LIST_TYPE_RESOURCES : &str = "Resources";
+pub(crate) const LIST_TYPE_SEE_ALSO : &str = "See also";
+pub(crate) const LIST_TYPE_SETTINGS : &str = "Settings";
+pub(crate) const LIST_TYPE_SPECS : &str = "Specs";
+pub(crate) const LIST_TYPE_SUBCATEGORIES : &str = "Subcategories";
+pub(crate) const LIST_TYPE_SUBTOPICS : &str = "Subtopics";
+pub(crate) const LIST_TYPE_TOOLS : &str = "Tools";
+pub(crate) const LIST_TYPE_TOPICS : &str = "Topics";
+pub(crate) const LIST_TYPE_TO_DO : &str = "To do";
+pub(crate) const LIST_TYPE_TO_READ : &str = "To read";
+pub(crate) const LIST_TYPE_TO_TRY : &str = "To try";
+pub(crate) const LIST_TYPE_TUTORIALS : &str = "Tutorials";
+pub(crate) const LIST_TYPE_USED_BY : &str = "Used by";
+
+
 #[derive(Clone, Debug)]
 pub(crate) struct List {
-    type_: ListType,
+    type_: String,
     header: Option<TextBlock>,
     items: Vec<ListItem>,
 }
@@ -14,47 +42,16 @@ pub(crate) struct ListItem {
     text_block: TextBlock,
 }
 
-#[derive(Clone, Debug)]
-pub(crate) enum ListType {
-    AllTopics,
-    Articles,
-    Books,
-    Clients,
-    CodingProjects,
-    Combinations,
-    Components,
-    Courses,
-    Crates,
-    Dependencies,
-    General,
-    Ideas,
-    Libraries,
-    Products,
-    Projects,
-    Resources,
-    SeeAlso,
-    Settings,
-    Specs,
-    Subcategories,
-    Subtopics,
-    Tools,
-    Topics,
-    ToDo,
-    ToRead,
-    ToTry,
-    Tutorials,
-}
-
 impl List {
-    pub(crate) fn new(type_: ListType, header: Option<TextBlock>) -> Self {
+    pub(crate) fn new(type_: &str, header: Option<TextBlock>) -> Self {
         Self {
-            type_,
+            type_: type_.to_string(),
             header,
             items: vec![]
         }
     }
 
-    pub fn get_type(&self) -> &ListType {
+    pub fn get_type(&self) -> &str {
         &self.type_
     }
 
@@ -74,6 +71,10 @@ impl List {
 
     pub fn get_items(&self) -> &Vec<ListItem> {
         &self.items
+    }
+
+    pub(crate) fn is_generated(&self) -> bool {
+        GENERATED_LIST_TYPES.contains(&&*self.type_)
     }
 
     pub(crate) fn get_all_text_blocks_cloned(&self) -> Vec<TextBlock> {
@@ -96,6 +97,24 @@ impl List {
             links.append(&mut item.text_block.get_links());
         }
         links
+    }
+
+    pub(crate) fn sort_items(&mut self) {
+        self.items.sort_by_cached_key(|item| item.get_display_text());
+    }
+
+    pub fn header_to_type(header: &str) -> String {
+        let header = util::parse::before(header, ":").trim();
+        match header {
+            "Crates:" | "Libraries" => LIST_TYPE_DEPENDENCIES.to_string(),
+            _ => {
+                if LIST_TYPES.contains(&header) {
+                    header.to_string()
+                } else {
+                    LIST_TYPE_GENERAL.to_string()
+                }
+            }
+        }
     }
 
 }
@@ -121,112 +140,81 @@ impl ListItem {
     pub(crate) fn get_text_block(&self) -> &TextBlock {
         &self.text_block
     }
+
+    pub(crate) fn get_display_text(&self) -> String {
+        self.text_block.get_display_text()
+    }
 }
 
-impl ListType {
-    pub(crate) fn from_header(header: &str) -> Self {
-        match header {
-            "All Topics:" => Self::AllTopics,
-            "Articles:" => Self::Articles,
-            "Books:" => Self::Books,
-            "Clients:" => Self::Clients,
-            "Coding projects:" => Self::CodingProjects,
-            "Combinations:" => Self::Combinations,
-            "Components:" => Self::Components,
-            "Courses:" => Self::Courses,
-            "Crates:" => Self::Crates,
-            "Dependencies:" => Self::Dependencies,
-            "Ideas:" => Self::Ideas,
-            "Libraries:" => Self::Libraries,
-            "Products:" => Self::Products,
-            "Projects:" => Self::Projects,
-            "Resources:" => Self::Resources,
-            "See also:" => Self::SeeAlso,
-            "Settings:" => Self::Settings,
-            "Specs:" => Self::Specs,
-            "Subcategories:" => Self::Subcategories,
-            "Subtopics:" => Self::Subtopics,
-            "Tools:" => Self::Tools,
-            "Topics:" => Self::Topics,
-            "To do:" => Self::ToDo,
-            "To read:" => Self::ToRead,
-            "To try:" => Self::ToTry,
-            "Tutorials:" => Self::Tutorials,
-            _ => Self::General,
-        }
-    }
+pub fn list_type_to_header(list_type: &str) -> String {
+    format!("{}:", list_type)
+}
 
-    pub(crate) fn get_variant_name(&self) -> &str {
-        match self {
-            Self::AllTopics => "All Topics",
-            Self::Articles => "Articles",
-            Self::Books => "Books",
-            Self::Clients => "Clients",
-            Self::CodingProjects => "CodingProjects",
-            Self::Combinations => "Combinations",
-            Self::Components => "Components",
-            Self::Courses => "Courses",
-            Self::Crates => "Crates",
-            Self::Dependencies => "Dependencies",
-            Self::General => "General",
-            Self::Ideas => "Ideas",
-            Self::Libraries => "Libraries",
-            Self::Products => "Products",
-            Self::Projects => "Projects",
-            Self::Resources => "Resources",
-            Self::SeeAlso => "SeeAlso",
-            Self::Settings => "Settings",
-            Self::Specs => "Specs",
-            Self::Subcategories => "Subcategories",
-            Self::Subtopics => "Subtopics",
-            Self::Tools => "Tools",
-            Self::Topics => "Topics",
-            Self::ToDo => "ToDo",
-            Self::ToRead => "ToRead",
-            Self::ToTry => "ToTry",
-            Self::Tutorials => "Tutorials",
-        }
-    }
+const LIST_TYPES: [&str; 26] = [
+    LIST_TYPE_ALL_TOPICS,
+    LIST_TYPE_ARTICLES,
+    LIST_TYPE_BOOKS,
+    LIST_TYPE_CLIENTS,
+    LIST_TYPE_CODING_PROJECTS,
+    LIST_TYPE_COMBINATIONS,
+    LIST_TYPE_COMPONENTS,
+    LIST_TYPE_COURSES,
+    LIST_TYPE_DEPENDENCIES,
+    LIST_TYPE_GENERAL,
+    LIST_TYPE_IDEAS,
+    LIST_TYPE_PRODUCTS,
+    LIST_TYPE_PROJECTS,
+    LIST_TYPE_RESOURCES,
+    LIST_TYPE_SEE_ALSO,
+    LIST_TYPE_SETTINGS,
+    LIST_TYPE_SPECS,
+    LIST_TYPE_SUBCATEGORIES,
+    LIST_TYPE_SUBTOPICS,
+    LIST_TYPE_TOOLS,
+    LIST_TYPE_TOPICS,
+    LIST_TYPE_TO_DO,
+    LIST_TYPE_TO_READ,
+    LIST_TYPE_TO_TRY,
+    LIST_TYPE_TUTORIALS,
+    LIST_TYPE_USED_BY,
+];
 
-    pub(crate) fn is_generated(&self) -> bool {
-        match self {
-            ListType::AllTopics
-            | ListType::Combinations
-            | ListType::Subcategories
-            | ListType::Subtopics
-            | ListType::Topics => true,
-            _ => false,
-        }
-    }
+pub const GENERATED_LIST_TYPES: [&str; 5] = [
+    LIST_TYPE_ALL_TOPICS,
+    LIST_TYPE_COMBINATIONS,
+    LIST_TYPE_SUBCATEGORIES,
+    LIST_TYPE_SUBTOPICS,
+    LIST_TYPE_TOPICS,
+];
 
-    pub(crate) fn catalog_possible_list_types(model: &Model) -> util::group::Grouper<String> {
-        let mut group = util::group::Grouper::new("Possible List Types");
-        for topic in model.get_topics().values() {
-            for paragraph in topic.get_paragraphs().iter() {
-                match paragraph {
-                    Paragraph::List { list } => {
-                        match list.get_type() {
-                            ListType::General => {
-                                if let Some(header) = list.get_header() {
-                                    let items = header.get_resolved_items();
-                                    if items.len() == 1 {
-                                        match &items[0] {
-                                            TextItem::Text { text } => {
-                                                group.record_entry(text);
-                                            },
-                                            _ => {},
-                                        }
+/*
+pub(crate) fn catalog_possible_list_types(model: &Model) -> util::group::Grouper<String> {
+    let mut group = util::group::Grouper::new("Possible List Types");
+    for topic in model.get_topics().values() {
+        for paragraph in topic.get_paragraphs().iter() {
+            match paragraph {
+                Paragraph::List { list } => {
+                    match list.get_type() {
+                        ListType::General => {
+                            if let Some(header) = list.get_header() {
+                                let items = header.get_resolved_items();
+                                if items.len() == 1 {
+                                    match &items[0] {
+                                        TextItem::Text { text } => {
+                                            group.record_entry(text);
+                                        },
+                                        _ => {},
                                     }
                                 }
-                            },
-                            _ => {},
-                        }
+                            }
+                        },
+                        _ => {},
                     }
-                    _ => {},
                 }
+                _ => {},
             }
         }
-        group
     }
+    group
 }
-
+*/
