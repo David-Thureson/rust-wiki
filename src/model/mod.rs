@@ -62,11 +62,13 @@ const NAMESPACE_ATTRIBUTE: &str = ":attr";
 pub(crate) const CATEGORY_RUST_CRATES: &str = "Rust Crates";
 pub(crate) const CATEGORY_RUST_PROJECTS: &str = "Rust Projects";
 
+/*
 pub(crate) const LIST_LABEL_SUBCATEGORIES: &str = "Subcategories:";
 pub(crate) const LIST_LABEL_CATEGORY_TOPICS: &str = "Topics:";
 pub(crate) const LIST_LABEL_CATEGORY_TOPICS_ALL: &str = "All Topics:";
 pub(crate) const LIST_LABEL_SUBTOPICS: &str = "Subtopics:";
 pub(crate) const LIST_LABEL_COMBINATIONS: &str = "Combinations:";
+*/
 
 pub(crate) const FOLDER_WIKI_GEN_BACKUP: &str = "C:/Wiki Gen Backup";
 pub(crate) const FOLDER_PREFIX_WIKI_GEN_BACKUP: &str = "Wiki Gen";

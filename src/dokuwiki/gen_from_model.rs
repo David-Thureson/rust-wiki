@@ -3,7 +3,7 @@ use crate::{model, Itertools};
 use crate::dokuwiki as wiki;
 use std::rc::Rc;
 use std::cell::RefCell;
-use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys, GENERATED_LIST_TYPES};
+use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys};
 use std::collections::BTreeMap;
 use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS};
 use std::fs;
@@ -424,14 +424,14 @@ impl <'a> GenFromModel<'a> {
             self.add_subcategory_tree(page, topic);
             let direct_topics = topic.direct_topics_in_category();
             let indirect_topics = topic.indirect_topics_in_category();
-            self.add_topic_list(page, &direct_topics, model::LIST_LABEL_CATEGORY_TOPICS);
+            self.add_topic_list(page, &direct_topics, &model::list_type_to_header(model::LIST_TYPE_TOPICS));
             if indirect_topics.len() > direct_topics.len() {
-                self.add_topic_list(page, &indirect_topics, model::LIST_LABEL_CATEGORY_TOPICS_ALL);
+                self.add_topic_list(page, &indirect_topics, &model::list_type_to_header(model::LIST_TYPE_ALL_TOPICS));
             }
         }
         // Self::add_topic_list(page, &topic.subtopics,model::LIST_LABEL_SUBTOPICS);
         self.add_subtopic_tree(page, topic);
-        self.add_topic_list(page,&links_to_topic_keys(topic.get_combo_subtopics()),model::LIST_LABEL_COMBINATIONS);
+        self.add_topic_list(page,&links_to_topic_keys(topic.get_combo_subtopics()),&model::list_type_to_header(model::LIST_TYPE_COMBINATIONS));
     }
 
     fn add_topic_list(&self, page: &mut wiki::WikiGenPage, topic_keys: &Vec<model::TopicKey>, label: &str) {
@@ -468,7 +468,7 @@ impl <'a> GenFromModel<'a> {
             // let max_depth = node.max_depth_for_max_count_filtered(SUBCATEGORY_TREE_MAX_SIZE, &filter_func);
             let nodes = node.unroll_to_depth(None, None);
             //bg!(topic.get_name(), node.description_line(), max_depth, nodes.len());
-            self.gen_partial_topic_tree(page, &nodes, true, Some(model::LIST_LABEL_SUBCATEGORIES));
+            self.gen_partial_topic_tree(page, &nodes, true, Some(&model::list_type_to_header(model::LIST_TYPE_SUBCATEGORIES)));
         }
     }
 
@@ -478,7 +478,7 @@ impl <'a> GenFromModel<'a> {
             if node.height() > 1 {
                 let nodes = node.unroll_to_depth(None, None);
                 //bg!(topic.get_name(), node.description_line(), max_depth, nodes.len());
-                self.gen_partial_topic_tree(page, &nodes, false, Some(model::LIST_LABEL_SUBTOPICS));
+                self.gen_partial_topic_tree(page, &nodes, false, Some(&model::list_type_to_header(model::LIST_TYPE_SUBTOPICS)));
             }
         }
     }
@@ -535,7 +535,7 @@ impl <'a> GenFromModel<'a> {
     }
 
     fn add_list(&mut self, page: &mut wiki::WikiGenPage, list: &model::List) {
-        if GENERATED_LIST_TYPES.contains(&list.get_type()) {
+        if list.is_generated() {
             return;
         }
         if let Some(header) = list.get_header() {

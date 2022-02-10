@@ -73,7 +73,6 @@ impl List {
         &self.items
     }
 
-    #[allow(dead_code)]
     pub(crate) fn is_generated(&self) -> bool {
         GENERATED_LIST_TYPES.contains(&&*self.type_)
     }
@@ -105,15 +104,19 @@ impl List {
     }
 
     pub fn header_to_type(header: &str) -> String {
-        let header = util::parse::before(header, ":").trim();
-        match header {
-            "Crates:" | "Libraries" => LIST_TYPE_DEPENDENCIES.to_string(),
+        let header_trim_lower = util::parse::before(header, ":").trim().to_lowercase();
+        // if header_trim_lower.contains("all topics") { dbg!(&header_trim_lower); }
+        match header_trim_lower.as_str() {
+            "crates" | "libraries" => LIST_TYPE_DEPENDENCIES.to_string(),
             _ => {
-                if LIST_TYPES.contains(&header) {
-                    header.to_string()
-                } else {
-                    LIST_TYPE_GENERAL.to_string()
+                for list_type in LIST_TYPES.iter() {
+                    // bg!(&header_trim_lower, &list_type.to_lowercase());
+                    if header_trim_lower.eq(&list_type.to_lowercase()) {
+                        //bg!(&list_type);
+                        return list_type.to_string();
+                    }
                 }
+                LIST_TYPE_GENERAL.to_string()
             }
         }
     }
