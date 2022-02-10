@@ -625,13 +625,13 @@ impl Topic {
     }
     */
 
-    pub(crate) fn get_links(&self) -> Vec<LinkRc> {
+    pub(crate) fn get_links(&self, include_generated: bool, dependencies_are_generated: bool) -> Vec<LinkRc> {
         let mut links = vec![];
         // for parent in self.parents.iter() {
         //     links.push(parent.clone());
         // }
         for paragraph in self.paragraphs.iter() {
-            links.append(&mut paragraph.get_links());
+            links.append(&mut paragraph.get_links(include_generated, dependencies_are_generated));
         }
         // links.append(&mut self.subtopics.iter().map(|link_rc| link_rc.clone()).collect());
         // links.append(&mut self.combo_subtopics.iter().map(|link_rc| link_rc.clone()).collect());

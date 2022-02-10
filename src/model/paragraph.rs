@@ -129,11 +129,11 @@ impl Paragraph {
         text_blocks
     }
 
-    pub(crate) fn get_links(&self) -> Vec<LinkRc> {
+    pub(crate) fn get_links(&self, include_generated: bool, dependencies_are_generated: bool) -> Vec<LinkRc> {
         let mut links = vec![];
         match self {
             Paragraph::List { list } => {
-                links.append(&mut list.get_links());
+                links.append(&mut list.get_links(include_generated, dependencies_are_generated));
             },
             Paragraph::Table { table } => {
                 links.append(&mut table.get_links());

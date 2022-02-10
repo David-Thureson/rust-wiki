@@ -57,7 +57,8 @@ impl BuildProcess {
         // Figure out the real nature of each paragraph.
         self.refine_paragraphs(&mut model);
 
-        // tools_wiki::project::update_projects_and_libraries(&mut model);
+        tools_wiki::project::add_project_info_to_model(&mut model);
+        tools_wiki::project::update_projects_and_libraries(&mut model);
 
         // model.catalog_links();
         check_links(&model, &mut self.errors);
@@ -453,6 +454,7 @@ impl BuildProcess {
                 // we don't want to parse it and add it to the model. It will be generated later
                 // automatically.
                 // let debug = topic.get_name().eq("Software Projects");
+                // let debug = text.contains("Tool Categories");
                 // if debug { //bg!(&list); }
                 if !list.is_generated() {
                     // Resolve links and such within the the header, if any.
@@ -468,6 +470,7 @@ impl BuildProcess {
                         let resolved_list_item = ListItem::new(list_item.get_depth(), list_item.is_ordered(), resolved_text_block);
                         resolved_list.add_item(resolved_list_item);
                     }
+                    // if debug { //bg!(&resolved_list); }
                     let paragraph = Paragraph::new_list(resolved_list);
                     topic.replace_paragraph(paragraph_index, paragraph);
                 }

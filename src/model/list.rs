@@ -11,6 +11,7 @@ pub(crate) const LIST_TYPE_COURSES : &str = "Courses";
 pub(crate) const LIST_TYPE_DEPENDENCIES : &str = "Dependencies";
 pub(crate) const LIST_TYPE_GENERAL : &str = "General";
 pub(crate) const LIST_TYPE_IDEAS : &str = "Ideas";
+pub(crate) const LIST_TYPE_INBOUND_LINKS : &str = "Inbound links";
 pub(crate) const LIST_TYPE_PRODUCTS : &str = "Products";
 pub(crate) const LIST_TYPE_PROJECTS : &str = "Projects";
 pub(crate) const LIST_TYPE_RESOURCES : &str = "Resources";
@@ -88,8 +89,16 @@ impl List {
         text_blocks
     }
 
-    pub(crate) fn get_links(&self) -> Vec<LinkRc> {
+    pub(crate) fn get_links(&self, include_generated: bool, dependencies_are_generated: bool) -> Vec<LinkRc> {
         let mut links = vec![];
+        if !include_generated {
+            if self.is_generated() {
+                return links;
+            }
+            if dependencies_are_generated && self.type_.eq(LIST_TYPE_DEPENDENCIES) {
+                return links;
+            }
+        }
         if let Some(header) = &self.header {
             links.append(&mut header.get_links())
         }
@@ -100,7 +109,7 @@ impl List {
     }
 
     pub(crate) fn sort_items(&mut self) {
-        self.items.sort_by_cached_key(|item| item.get_display_text());
+        self.items.sort_by_cached_key(|item| item.get_display_text().to_lowercase());
     }
 
     pub fn header_to_type(header: &str) -> String {
@@ -165,7 +174,7 @@ pub fn list_type_to_header(list_type: &str) -> String {
     format!("{}:", list_type)
 }
 
-const LIST_TYPES: [&str; 26] = [
+const LIST_TYPES: [&str; 27] = [
     LIST_TYPE_ALL_TOPICS,
     LIST_TYPE_ARTICLES,
     LIST_TYPE_BOOKS,
@@ -177,6 +186,7 @@ const LIST_TYPES: [&str; 26] = [
     LIST_TYPE_DEPENDENCIES,
     LIST_TYPE_GENERAL,
     LIST_TYPE_IDEAS,
+    LIST_TYPE_INBOUND_LINKS,
     LIST_TYPE_PRODUCTS,
     LIST_TYPE_PROJECTS,
     LIST_TYPE_RESOURCES,
@@ -194,9 +204,10 @@ const LIST_TYPES: [&str; 26] = [
     LIST_TYPE_USED_BY,
 ];
 
-pub const GENERATED_LIST_TYPES: [&str; 5] = [
+pub const GENERATED_LIST_TYPES: [&str; 6] = [
     LIST_TYPE_ALL_TOPICS,
     LIST_TYPE_COMBINATIONS,
+    LIST_TYPE_INBOUND_LINKS,
     LIST_TYPE_SUBCATEGORIES,
     LIST_TYPE_SUBTOPICS,
     LIST_TYPE_TOPICS,

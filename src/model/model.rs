@@ -1,8 +1,10 @@
 use super::*;
+use manage_projects::model::Model as ProjectModel;
 use std::collections::BTreeMap;
 // use crate::connectedtext::NAMESPACE_TOOLS;
 
 pub(crate) type TopicRefs = BTreeMap<String, TopicKey>;
+pub(crate) type NameTopicMap = BTreeMap<String, TopicKey>;
 
 pub(crate) struct Model {
     _name: String,
@@ -15,7 +17,8 @@ pub(crate) struct Model {
     subtopic_tree: Option<TopicTree>,
     attribute_list: AttributeList,
     domain_list: DomainList,
-    // projects: Option<manage_projects::model::Model>,
+    projects: Option<ProjectModel>,
+    projects_name_map: Option<NameTopicMap>,
     // used_by_map: BTreeMap<TopicKey, Vec<TopicKey>>,
     // links: Vec<LinkRc>,
 }
@@ -34,7 +37,8 @@ impl Model {
             subtopic_tree: None,
             attribute_list: AttributeList::new(),
             domain_list: DomainList::new(),
-            // projects: None,
+            projects: None,
+            projects_name_map: None,
             // used_by_map: Default::default(),
             // links: vec![],
         };
@@ -142,7 +146,8 @@ impl Model {
         }
         let mut map = BTreeMap::new();
         for topic in self.topics.values() {
-            for dest_topic_key in topic.get_links().iter()
+            let dependencies_are_generated = topic.get_category().map_or(false, |cat| cat.eq(CATEGORY_RUST_PROJECTS));
+            for dest_topic_key in topic.get_links(false, dependencies_are_generated).iter()
                 .filter_map(|link_rc| b!(link_rc).get_topic_key()) {
                 let entry = map.entry(dest_topic_key).or_insert(vec![]);
                 entry.push(topic.get_topic_key());
@@ -267,7 +272,7 @@ impl Model {
         let mut errors = TopicErrorList::new();
         for topic in self.topics.values() {
             let this_topic_key = topic.get_topic_key();
-            for link_rc in topic.get_links().iter() {
+            for link_rc in topic.get_links(true, false).iter() {
                 let link = b!(link_rc);
                 match &link.get_type() {
                     LinkType::Topic { topic_key } => {
@@ -484,11 +489,21 @@ impl Model {
         map
     }
 
-    /*
-    pub(crate) fn set_projects(&mut self, projects: manage_projects::model::Model) {
-        self.projects = Some(projects);
+    pub(crate) fn get_projects(&self) -> &Option<ProjectModel> {
+        &self.projects
     }
-    */
+
+    pub(crate) fn get_projects_name_map(&self) -> &Option<NameTopicMap> {
+        &self.projects_name_map
+    }
+
+    pub(crate) fn set_projects(&mut self, projects: ProjectModel) {
+        self.projects = Some(projects);
+   }
+
+    pub(crate) fn set_projects_name_map(&mut self, projects_name_map: NameTopicMap) {
+        self.projects_name_map = Some(projects_name_map);
+    }
 
     /*
     #[allow(dead_code)]

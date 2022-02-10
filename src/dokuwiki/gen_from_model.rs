@@ -665,7 +665,7 @@ impl <'a> GenFromModel<'a> {
 
     pub(crate) fn add_inbound_links_optional(&self, page: &mut wiki::WikiGenPage, topic: &Topic) {
         if !topic.get_inbound_topic_keys().is_empty() {
-            page.add_line("Inbound links:");
+            page.add_line(&model::list::list_type_to_header(model::LIST_TYPE_INBOUND_LINKS));
             for topic_key in topic.get_inbound_topic_keys().iter() {
                 let link = self.page_link_simple(&topic_key);
                 page.add_list_item_unordered(1, &link);

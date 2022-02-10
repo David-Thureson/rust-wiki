@@ -1,67 +1,65 @@
 use crate::*;
 use crate::model::*;
 use manage_projects::model::Model as ProjectModel;
+use manage_projects::model::Dependency;
 use util::date_time::{naive_date_to_doc_format, date_time_to_naive_date};
 use std::collections::BTreeMap;
 use util::format::first_cap_phrase;
 
-type NameMap = BTreeMap<String, TopicKey>;
-
-/*
-pub(crate) fn add_project_info_to_model(model: &mut model::Model) {
-    let projects = manage_projects::import::build_model(true);
-    model.set_projects(projects);
+pub(crate) fn add_project_info_to_model(model: &mut Model) {
+    let project_model = manage_projects::import::build_model(true);
+    let name_map = make_name_map(model, &project_model);
+    model.set_projects(project_model);
+    model.set_projects_name_map(name_map);
 }
-*/
 
 pub(crate) fn update_projects_and_libraries(model: &mut Model) {
-    let project_model = manage_projects::import::build_model(true);
-    let mut name_map = make_name_map(model, &project_model);
-    // print_name_map(&name_map, None, "After make_name_map()");
-    let name_map_clone = name_map.clone();
+    add_missing_projects(model);
+    // print_name_map(&name_map, Some(&name_map_clone), "Diff from add_missing_projects()");
+    // let name_map_clone = name_map.clone();
 
-    add_missing_projects(model, &project_model, &mut name_map);
-    print_name_map(&name_map, Some(&name_map_clone), "Diff from add_missing_projects()");
-    let name_map_clone = name_map.clone();
+    add_missing_libraries(model);
+    // print_name_map(&name_map, Some(&name_map_clone), "Diff from add_missing_libraries()");
 
-    add_missing_libraries(model, &project_model, &mut name_map);
-    print_name_map(&name_map, Some(&name_map_clone), "Diff from add_missing_libraries()");
-
-    update_dependency_and_used_by_paragraphs(model, &project_model, &name_map);
+    update_dependency_and_used_by_paragraphs(model);
 }
 
 #[allow(dead_code)]
-fn add_missing_projects(model: &mut Model, project_model: &ProjectModel, name_map: &mut NameMap) {
-    for pc in project_model.pcs.values() {
+fn add_missing_projects(model: &mut Model) {
+    let mut name_map = model.get_projects_name_map().as_ref().unwrap().clone();
+    let projects = model.get_projects().as_ref().unwrap().clone();
+    for pc in projects.pcs.values() {
         for project in pc.projects.values()
-            .filter(|project| !ignore_project(&project.name)) {
-                if !name_map.contains_key(&project.name.to_lowercase()) {
-                    let topic_name = name_project(&project.name);
-                    let first_date = naive_date_to_doc_format(&date_time_to_naive_date(&project.first_time()));
-                    let last_date = naive_date_to_doc_format(&date_time_to_naive_date(&project.last_time()));
-                    let mut topic = Topic::new(model.get_main_namespace(), &topic_name);
-                    topic.set_category(CATEGORY_RUST_PROJECTS);
-                    topic.add_temp_attribute_values(ATTRIBUTE_NAME_LANGUAGE.to_string(), vec!["Rust".to_string()]);
-                    topic.add_temp_attribute_values(ATTRIBUTE_NAME_PC_NAME.to_string(), vec![pc.name.clone()]);
-                    topic.add_temp_attribute_values(ATTRIBUTE_NAME_FOLDER.to_string(), vec![project.path.clone()]);
-                    topic.add_temp_attribute_values(ATTRIBUTE_NAME_PLATFORM.to_string(), vec!["Windows".to_string()]);
-                    topic.add_temp_attribute_values(ATTRIBUTE_NAME_IDE.to_string(), vec!["IntelliJ IDEA".to_string()]);
-                    topic.add_temp_attribute_values(ATTRIBUTE_NAME_STARTED.to_string(), vec![first_date.clone()]);
-                    if first_date != last_date {
-                        topic.add_temp_attribute_values(ATTRIBUTE_NAME_UPDATED.to_string(), vec![last_date]);
-                    }
-                    topic.add_temp_attribute_values(ATTRIBUTE_NAME_ADDED.to_string(), vec![first_date]);
-                    //bg!(&topic.get_temp_attributes()); panic!();
-                    name_map.insert(project.name.to_lowercase(), topic.get_topic_key());
-                    model.add_topic(topic);
+                .filter(|project| !ignore_project(&project.name)) {
+            if !name_map.contains_key(&project.name.to_lowercase()) {
+                let topic_name = name_project(&project.name);
+                let first_date = naive_date_to_doc_format(&date_time_to_naive_date(&project.first_time()));
+                let last_date = naive_date_to_doc_format(&date_time_to_naive_date(&project.last_time()));
+                let mut topic = Topic::new(model.get_main_namespace(), &topic_name);
+                topic.set_category(CATEGORY_RUST_PROJECTS);
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_LANGUAGE.to_string(), vec!["Rust".to_string()]);
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_PC_NAME.to_string(), vec![pc.name.clone()]);
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_FOLDER.to_string(), vec![project.path.clone()]);
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_PLATFORM.to_string(), vec!["Windows".to_string()]);
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_IDE.to_string(), vec!["IntelliJ IDEA".to_string()]);
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_STARTED.to_string(), vec![first_date.clone()]);
+                if first_date != last_date {
+                    topic.add_temp_attribute_values(ATTRIBUTE_NAME_UPDATED.to_string(), vec![last_date]);
+                }
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_ADDED.to_string(), vec![first_date]);
+                //bg!(&topic.get_temp_attributes()); panic!();
+                name_map.insert(project.name.to_lowercase(), topic.get_topic_key());
+                model.add_topic(topic);
             }
         }
     }
+    model.set_projects_name_map(name_map);
 }
 
 #[allow(dead_code)]
-fn add_missing_libraries(model: &mut Model, project_model: &ProjectModel, name_map: &mut NameMap) {
-    let dep_proj_map = get_dependency_project_map(project_model);
+fn add_missing_libraries(model: &mut Model) {
+    let dep_proj_map = get_dependency_project_map(&model.get_projects().as_ref().unwrap());
+    let mut name_map = model.get_projects_name_map().as_ref().unwrap().clone();
     for (crate_name, (dep, _project_names)) in dep_proj_map.iter() {
         if !name_map.contains_key(&crate_name.to_lowercase()) {
             let topic_name = name_crate(dep);
@@ -79,14 +77,18 @@ fn add_missing_libraries(model: &mut Model, project_model: &ProjectModel, name_m
             }
         }
     }
+    model.set_projects_name_map(name_map);
 }
 
-fn update_dependency_and_used_by_paragraphs(model: &mut Model, project_model: &ProjectModel, name_map: &NameMap) {
+fn update_dependency_and_used_by_paragraphs(model: &mut Model) {
     //bg!(&project_model);
     //bg!(&name_map);
     // If a project doesn't show up in the project_model returned from the manage-projects app, we
     // leave it alone.
-    for pc in project_model.pcs.values() {
+    let name_map = model.get_projects_name_map().as_ref().unwrap().clone();
+    let projects = model.get_projects().as_ref().unwrap().clone();
+
+    for pc in projects.pcs.values() {
         for project in pc.projects.values() {
             let topic_key = name_map.get(&project.name.to_lowercase());
             if let Some(topic_key) = topic_key {
@@ -120,15 +122,17 @@ fn update_dependency_and_used_by_paragraphs(model: &mut Model, project_model: &P
                         }
                     }
                 }
-                list.sort_items();
-                let dep_paragraph_index = topic.get_paragraph_index_end_of_first_section();
-                topic.insert_paragraph(dep_paragraph_index, dep_paragraph);
+                if !list.get_items().is_empty() {
+                    list.sort_items();
+                    let dep_paragraph_index = topic.get_paragraph_index_end_of_first_section();
+                    topic.insert_paragraph(dep_paragraph_index, dep_paragraph);
+                }
             }
         }
     }
 }
 
-fn make_name_map(model: &Model, project_model: &ProjectModel) -> NameMap {
+fn make_name_map(model: &Model, project_model: &ProjectModel) -> NameTopicMap {
     let mut topic_names = BTreeMap::new();
     for topic_key in model.get_topics().keys() {
         topic_names.insert(topic_key.get_topic_name().to_lowercase(), topic_key.clone());
@@ -139,7 +143,7 @@ fn make_name_map(model: &Model, project_model: &ProjectModel) -> NameMap {
         //bg!(&pc.projects.keys());
         for project in pc.projects.values()
                 .filter(|project| !ignore_project(&project.name)) {
-            if project.name.to_lowercase().contains("rayon") { dbg!(&project.name); }
+            // if project.name.to_lowercase().contains("rayon") { dbg!(&project.name); }
             for possible_name in project_potential_topic_names_lower(&project.name).iter() {
                 if let Some(topic_key) = topic_names.get(possible_name) {
                     // if name_map.contains_key(possible_name) { dbg!(&project.name, possible_name, topic_key); }
@@ -166,7 +170,7 @@ fn make_name_map(model: &Model, project_model: &ProjectModel) -> NameMap {
 }
 
 #[allow(dead_code)]
-fn get_project_dependency_map(project_model: &ProjectModel) -> BTreeMap<String, BTreeMap<String, manage_projects::model::Dependency>> {
+fn get_project_dependency_map(project_model: &ProjectModel) -> BTreeMap<String, BTreeMap<String, Dependency>> {
     // This assumes that we won't find the same project name on two PCs, and that within a given
     // logical project that contains multiple Rust projects, we don't care which dependencies are
     // in which Rust project.
@@ -190,9 +194,9 @@ fn get_project_dependency_map(project_model: &ProjectModel) -> BTreeMap<String, 
 }
 
 #[allow(dead_code)]
-fn get_dependency_project_map(project_model: &ProjectModel) -> BTreeMap<String, (manage_projects::model::Dependency, Vec<String>)> {
+fn get_dependency_project_map(project_model: &ProjectModel) -> BTreeMap<String, (Dependency, Vec<String>)> {
     let proj_dep_map = get_project_dependency_map(project_model);
-    let mut map: BTreeMap<String, (manage_projects::model::Dependency, Vec<String>)> = BTreeMap::new();
+    let mut map: BTreeMap<String, (Dependency, Vec<String>)> = BTreeMap::new();
     for (project_name, dependencies) in proj_dep_map.iter() {
         if !ignore_project(project_name) {
             for dep in dependencies.values() {
@@ -208,7 +212,8 @@ fn get_dependency_project_map(project_model: &ProjectModel) -> BTreeMap<String, 
     map
 }
 
-fn print_name_map(name_map: &NameMap, subtract_map: Option<&NameMap>, label: &str) {
+#[allow(dead_code)]
+fn print_name_map(name_map: &NameTopicMap, subtract_map: Option<&NameTopicMap>, label: &str) {
     println!("\n{}:", label);
     for (name, topic_key) in name_map.iter() {
         if subtract_map.map_or(true, |subtract_map| !subtract_map.contains_key(name)) {
@@ -289,28 +294,32 @@ fn add_missing_crates(model: &mut model::Model, project_model: &manage_projects:
 fn project_potential_topic_names_lower(project_name: &str) -> Vec<String> {
     let name_1 = project_name.trim().to_lowercase();
     let name_2 = name_1.replace("-", " ").replace("_", " ");
+    // Go from most specific to least specific, so we don't end up, for instance, thinking that
+    // "Algorithms" is a rust project topic when we also have "Algorithms (Rust project)".
     vec![
-        name_1.clone(),
-        format!("{} (coding project)", name_1),
-        format!("{} (rust project)", name_1),
-        name_2.clone(),
-        format!("{} (coding project)", name_2),
         format!("{} (rust project)", name_2),
+        format!("{} (rust project)", name_1),
+        format!("{} (coding project)", name_2),
+        format!("{} (coding project)", name_1),
+        name_2.clone(),
+        name_1.clone(),
     ]
 }
 
 fn project_potential_crate_names_lower(crate_name: &str) -> Vec<String> {
     let name_1 = crate_name.trim().to_lowercase();
     let name_2 = name_1.replace("-", " ").replace("_", " ");
+    // Go from most specific to least specific, so we don't end up, for instance, thinking that
+    // "Graphics" is a rust crate topic when we also have "Graphics (Rust crate)".
     vec![
-        name_1.clone(),
-        format!("{} (crate)", name_1),
+        format!("{} (rust crate)", name_2),
         format!("{} (rust crate)", name_1),
+        format!("{} (crate)", name_2),
+        format!("{} (crate)", name_1),
+        format!("{} (rust project)", name_2),
         format!("{} (rust project)", name_1),
         name_2.clone(),
-        format!("{} (crate)", name_2),
-        format!("{} (rust crate)", name_2),
-        format!("{} (rust project)", name_2),
+        name_1.clone(),
     ]
 }
 
@@ -397,7 +406,7 @@ fn name_project(folder_name: &str) -> String {
 }
 
 #[allow(dead_code)]
-fn name_crate(dep: &manage_projects::model::Dependency) -> String {
+fn name_crate(dep: &Dependency) -> String {
     let mut name = util::format::first_cap_phrase(&dep.crate_name);
     name = name.replace("-", " ").replace("_", " ");
     // if dep.is_local {
