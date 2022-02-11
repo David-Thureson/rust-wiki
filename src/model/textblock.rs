@@ -37,6 +37,17 @@ impl TextBlock {
         }
     }
 
+    pub(crate) fn new_resolved_text(text: &str) -> Self {
+        let items = vec![TextItem::new_text(text)];
+        Self::Resolved {
+            items,
+        }
+    }
+
+    pub(crate) fn new_topic_link(topic_key: &TopicKey) -> Self {
+        Self::new_resolved(vec![TextItem::new_topic_link(topic_key)])
+    }
+
     pub(crate) fn get_unresolved_text(&self) -> String {
         match self {
             Self::Resolved { .. } => panic!("Expected an unresolved text block."),
@@ -116,6 +127,11 @@ impl TextItem {
         TextItem::Link {
             link: r!(link),
         }
+    }
+
+    pub(crate) fn new_topic_link(topic_key: &TopicKey) -> Self {
+        let link = Link::new_topic_from_key(None, topic_key);
+        Self::new_link(link)
     }
 
     pub(crate) fn get_display_text(&self) -> String {

@@ -29,7 +29,7 @@ pub(crate) fn parse_link_optional(topic_refs: &TopicRefs, text: &str) -> Result<
             if let Some(section_name) = section_name {
                 model::Link::new_section(label, topic_key.get_namespace(), topic_key.get_topic_name(), section_name)
             } else {
-                model::Link::new_topic(label, topic_key.get_namespace(), topic_key.get_topic_name())
+                model::Link::new_topic_from_key(label, &topic_key)
             }
         };
         //bg!(&link);

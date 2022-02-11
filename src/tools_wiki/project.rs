@@ -21,7 +21,8 @@ pub(crate) fn update_projects_and_libraries(model: &mut Model) {
     add_missing_libraries(model);
     // print_name_map(&name_map, Some(&name_map_clone), "Diff from add_missing_libraries()");
 
-    update_dependency_and_used_by_paragraphs(model);
+    update_dependency_paragraphs(model);
+    update_used_by_paragraphs(model);
 }
 
 #[allow(dead_code)]
@@ -80,41 +81,34 @@ fn add_missing_libraries(model: &mut Model) {
     model.set_projects_name_map(name_map);
 }
 
-fn update_dependency_and_used_by_paragraphs(model: &mut Model) {
+fn update_dependency_paragraphs(model: &mut Model) {
     //bg!(&project_model);
     //bg!(&name_map);
     // If a project doesn't show up in the project_model returned from the manage-projects app, we
     // leave it alone.
     let name_map = model.get_projects_name_map().as_ref().unwrap().clone();
     let projects = model.get_projects().as_ref().unwrap().clone();
+    let list_type = LIST_TYPE_DEPENDENCIES;
 
     for pc in projects.pcs.values() {
         for project in pc.projects.values() {
             let topic_key = name_map.get(&project.name.to_lowercase());
             if let Some(topic_key) = topic_key {
                 let topic = model.get_topics_mut().get_mut(topic_key).unwrap();
-                let mut dep_paragraph = match topic.remove_list_paragraph_by_type(LIST_TYPE_DEPENDENCIES) {
+                let mut dep_paragraph = match topic.remove_list_paragraph_by_type(list_type) {
                     Some((_index, paragraph)) => paragraph,
-                    None => {
-                        let header = list_type_to_header(LIST_TYPE_DEPENDENCIES);
-                        let text_block = TextBlock::new_resolved(vec![TextItem::new_text(&header)]);
-                        let list = List::new(LIST_TYPE_DEPENDENCIES, Some(text_block));
-                        Paragraph::new_list(list)
-                    },
+                    None => Paragraph::new_list_of_type(list_type),
                 };
                 let list = dep_paragraph.get_list_mut();
+                list.set_type_and_header(list_type);
+                list.set_is_ordered(false);
                 for rust_project in project.rust_projects.values() {
                     for dep in rust_project.dependencies.values() {
                         // let dep_topic_name = name_crate(dep);
                         // let dep_topic_key = TopicKey::new(&namespace_root, &dep_topic_name);
                         match name_map.get(&dep.crate_name.to_lowercase()) {
                             Some(dep_topic_key) => {
-                                if !list.contains_topic_link(&dep_topic_key) {
-                                    // Add a list item with a link to the topic for this dependency.
-                                    let link = Link::new_topic(None, dep_topic_key.get_namespace(), dep_topic_key.get_topic_name());
-                                    let text_block = TextBlock::new_resolved(vec![TextItem::new_link(link)]);
-                                    list.add_item(ListItem::new(1, true, text_block));
-                                }
+                                list.add_item_topic_link_if_missing(1, false, dep_topic_key);
                             },
                             None => {
                                 println!("In topic \"{}\", dependency \"{}\" not found.", &topic.get_name(), &dep.crate_name);
@@ -127,6 +121,40 @@ fn update_dependency_and_used_by_paragraphs(model: &mut Model) {
                     let dep_paragraph_index = topic.get_paragraph_index_end_of_first_section();
                     topic.insert_paragraph(dep_paragraph_index, dep_paragraph);
                 }
+            }
+        }
+    }
+}
+
+fn update_used_by_paragraphs(model: &mut Model) {
+    let name_map = model.get_projects_name_map().as_ref().unwrap().clone();
+    let list_type = LIST_TYPE_USED_BY;
+    for (dep, using_project_names) in get_dependency_project_map(&model.get_projects().as_ref().unwrap()).values() {
+        let topic_key = name_map.get(&dep.crate_name.to_lowercase());
+        // assert!(topic_key.is_some());
+        if let Some(topic_key) = topic_key {
+            let topic = model.get_topics_mut().get_mut(topic_key).unwrap();
+            let mut used_by_paragraph = match topic.remove_list_paragraph_by_type(list_type) {
+                Some((_index, paragraph)) => paragraph,
+                None => Paragraph::new_list_of_type(list_type),
+            };
+            let list = used_by_paragraph.get_list_mut();
+            list.set_type_and_header(list_type);
+            list.set_is_ordered(false);
+            for using_project_name in using_project_names.iter() {
+                match name_map.get(&*using_project_name.to_lowercase()) {
+                    Some(using_topic_key) => {
+                        list.add_item_topic_link_if_missing(1, false, &using_topic_key);
+                    },
+                    None => {
+                        println!("In topic \"{}\", used by topic \"{}\" not found.", &topic.get_name(), using_project_name);
+                    }
+                }
+            }
+            if !list.get_items().is_empty() {
+                list.sort_items();
+                let used_by_paragraph_index = topic.get_paragraph_index_end_of_first_section();
+                topic.insert_paragraph(used_by_paragraph_index, used_by_paragraph);
             }
         }
     }

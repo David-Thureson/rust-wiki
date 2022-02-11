@@ -148,6 +148,7 @@ impl BuildProcess {
                 // }
             }
             topic.assert_all_text_blocks_resolved();
+            //bg!(topic.get_name());
             self.topic_parse_state.check_end_of_topic();
         }
     }
@@ -286,7 +287,7 @@ impl BuildProcess {
             Ok(Some(parent_topic_keys)) => {
                 //bg!(&parent_topic_keys);
                 let parent_links = parent_topic_keys.iter()
-                    .map(|topic_key| r!(Link::new_topic(None, topic_key.get_namespace(), topic_key.get_topic_name())))
+                    .map(|topic_key| r!(Link::new_topic_from_key(None, topic_key)))
                     .collect::<Vec<_>>();
                 topic.set_parents(parent_links);
                 Ok(true)

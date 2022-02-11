@@ -154,6 +154,10 @@ impl Link {
         Self::new(label, type_)
     }
 
+    pub(crate) fn new_topic_from_key(label: Option<&str>, topic_key: &TopicKey) -> Self {
+        Self::new_topic(label, topic_key.get_namespace(), topic_key.get_topic_name())
+    }
+
     #[allow(dead_code)]
     pub(crate) fn new_topic_string_label(label: Option<String>, namespace_name: &str, topic_name: &str) -> Self {
         TopicKey::assert_legal_namespace(namespace_name);

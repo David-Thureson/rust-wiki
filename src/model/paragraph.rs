@@ -55,6 +55,13 @@ impl Paragraph {
         }
     }
 
+    pub(crate) fn new_list_of_type(list_type: &str) -> Self {
+        let header = list_type_to_header(list_type);
+        let text_block = TextBlock::new_resolved(vec![TextItem::new_text(&header)]);
+        let list = List::new(list_type, Some(text_block));
+        Paragraph::new_list(list)
+    }
+
     pub(crate) fn new_marker(text: &str) -> Self {
         Self::Marker {
             text: text.to_string(),

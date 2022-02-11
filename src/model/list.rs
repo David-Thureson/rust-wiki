@@ -56,8 +56,24 @@ impl List {
         &self.type_
     }
 
+    #[allow(dead_code)]
+    pub fn set_type(&mut self, type_: &str) {
+        self.type_ = type_.to_string();
+    }
+
+    pub fn set_type_and_header(&mut self, type_: &str) {
+        self.type_ = type_.to_string();
+        self.header = Some(TextBlock::new_resolved_text(&list_type_to_header(type_)));
+    }
+
     pub fn get_header(&self) -> &Option<TextBlock> {
         &self.header
+    }
+
+    pub fn set_is_ordered(&mut self, is_ordered: bool) {
+        for item in self.items.iter_mut() {
+            item.is_ordered = is_ordered;
+        }
     }
 
     /*
@@ -68,6 +84,16 @@ impl List {
 
     pub fn add_item(&mut self, item: ListItem) {
         self.items.push(item);
+    }
+
+    pub fn add_item_topic_link(&mut self, depth: usize, is_ordered: bool, topic_key: &TopicKey) {
+        self.add_item(ListItem::new(depth, is_ordered, TextBlock::new_topic_link(topic_key)));
+    }
+
+    pub fn add_item_topic_link_if_missing(&mut self, depth: usize, is_ordered: bool, topic_key: &TopicKey) {
+        if !self.contains_topic_link(topic_key) {
+            self.add_item_topic_link(depth, is_ordered, topic_key);
+        }
     }
 
     pub fn get_items(&self) -> &Vec<ListItem> {
@@ -95,7 +121,7 @@ impl List {
             if self.is_generated() {
                 return links;
             }
-            if dependencies_are_generated && self.type_.eq(LIST_TYPE_DEPENDENCIES) {
+            if dependencies_are_generated && (self.type_.eq(LIST_TYPE_DEPENDENCIES) || self.type_.eq(LIST_TYPE_USED_BY)) {
                 return links;
             }
         }
@@ -117,6 +143,7 @@ impl List {
         // if header_trim_lower.contains("all topics") { dbg!(&header_trim_lower); }
         match header_trim_lower.as_str() {
             "crates" | "libraries" => LIST_TYPE_DEPENDENCIES.to_string(),
+            "projects" => LIST_TYPE_USED_BY.to_string(),
             _ => {
                 for list_type in LIST_TYPES.iter() {
                     // bg!(&header_trim_lower, &list_type.to_lowercase());

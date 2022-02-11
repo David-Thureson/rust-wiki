@@ -528,11 +528,11 @@ impl Topic {
         }
         for (parent_topic_key, child_topic_key) in parent_child_pairs.iter() {
             // let parent_topic_key= b!(parent_link_rc).get_topic_key().unwrap();
-            let link_rc = r!(Link::new_topic(None, child_topic_key.get_namespace(), child_topic_key.get_topic_name()));
+            let link_rc = r!(Link::new_topic_from_key(None, child_topic_key));
             model.get_topics_mut().get_mut(&parent_topic_key).unwrap().subtopics.push(link_rc);
         }
         for (parent_topic_key, combo_topic_key) in parent_combo_pairs.iter() {
-            let link_rc = r!(Link::new_topic(None, combo_topic_key.get_namespace(), combo_topic_key.get_topic_name()));
+            let link_rc = r!(Link::new_topic_from_key(None, combo_topic_key));
             model.get_topics_mut().get_mut(&parent_topic_key).unwrap().combo_subtopics.push(link_rc);
         }
         let mut tree = util::tree::Tree::create(parent_child_pairs, true);
