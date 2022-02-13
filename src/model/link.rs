@@ -309,9 +309,18 @@ impl Link {
     }
     */
 
-    pub fn is_external_ref(reference: &str) -> bool {
+    pub(crate) fn is_external_ref(reference: &str) -> bool {
         let reference = reference.to_lowercase().trim().to_string();
         reference.starts_with(PREFIX_HTTP) || reference.starts_with(PREFIX_HTTPS) || reference.starts_with(PREFIX_SFTP)
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn print_link_ref_list(list: &Vec<LinkRc>, label: &str) {
+        let mut list = list.iter().map(|link_rc| b!(link_rc).get_display_text()).collect::<Vec<_>>();
+        list.sort();
+        println!("\n{}:", label);
+        list.iter().for_each(|item| println!("\t{}", item));
+        println!();
     }
 }
 

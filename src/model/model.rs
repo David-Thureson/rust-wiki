@@ -146,13 +146,15 @@ impl Model {
         }
         let mut map = BTreeMap::new();
         for topic in self.topics.values() {
-            let dependencies_are_generated = topic.get_category().map_or(false, |cat| cat.eq(CATEGORY_RUST_PROJECTS));
+            let dependencies_are_generated = topic.get_category().map_or(false, |cat| cat.eq(CATEGORY_RUST_PROJECTS) || cat.eq(CATEGORY_RUST_CRATES));
             for dest_topic_key in topic.get_links(false, dependencies_are_generated).iter()
                 .filter_map(|link_rc| b!(link_rc).get_topic_key()) {
                 let entry = map.entry(dest_topic_key).or_insert(vec![]);
                 entry.push(topic.get_topic_key());
             }
         }
+        // let dbg_key = map.keys().filter(|topic_key| topic_key.get_topic_name().eq("Algorithms (Rust project)")).take(1).collect::<Vec<_>>()[0].clone();
+        //bg!(map.get(&dbg_key).unwrap());
         for (topic_key, inbound_topic_keys) in map.drain_filter(|_, _| true) {
             let topic = self.topics.get_mut(&topic_key).unwrap();
             topic.set_inbound_topic_keys(inbound_topic_keys);

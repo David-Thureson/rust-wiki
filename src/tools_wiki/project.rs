@@ -182,12 +182,16 @@ fn make_name_map(model: &Model, project_model: &ProjectModel) -> NameTopicMap {
             }
             for rust_project in project.rust_projects.values() {
                 for dependency in rust_project.dependencies.values() {
-                    for possible_name in project_potential_crate_names_lower(&dependency.crate_name).iter() {
-                        let debug = possible_name.eq("sim");
-                        if let Some(topic_key) = topic_names.get(possible_name) {
-                            if debug { dbg!(&topic_key); }
-                            name_map.insert(dependency.crate_name.to_lowercase(), topic_key.clone());
-                            break;
+                    if dependency.crate_name.eq("geo") {
+                        name_map.insert("geo".to_string(), TopicKey::new("tools", "Geo (Rust crate)"));
+                    } else {
+                        for possible_name in project_potential_crate_names_lower(&dependency.crate_name).iter() {
+                            // let debug = possible_name.eq("sim");
+                            if let Some(topic_key) = topic_names.get(possible_name) {
+                                // if debug { //bg!(&topic_key); }
+                                name_map.insert(dependency.crate_name.to_lowercase(), topic_key.clone());
+                                break;
+                            }
                         }
                     }
                 }
@@ -337,6 +341,10 @@ fn project_potential_topic_names_lower(project_name: &str) -> Vec<String> {
 fn project_potential_crate_names_lower(crate_name: &str) -> Vec<String> {
     let name_1 = crate_name.trim().to_lowercase();
     let name_2 = name_1.replace("-", " ").replace("_", " ");
+    if name_1.eq("geo") {
+        // There's an unrelated topic called "Geo".
+        return vec!["Geo (Rust crate)".to_string()];
+    }
     // Go from most specific to least specific, so we don't end up, for instance, thinking that
     // "Graphics" is a rust crate topic when we also have "Graphics (Rust crate)".
     vec![

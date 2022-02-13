@@ -328,6 +328,8 @@ impl Topic {
     */
 
     pub(crate) fn set_inbound_topic_keys(&mut self, topic_keys: Vec<TopicKey>) {
+        // let debug = self.name.eq("Algorithms (Rust project)");
+        // if debug { //bg!(&topic_keys); }
         self.inbound_topic_keys = topic_keys;
     }
 
@@ -626,6 +628,7 @@ impl Topic {
     */
 
     pub(crate) fn get_links(&self, include_generated: bool, dependencies_are_generated: bool) -> Vec<LinkRc> {
+        // let debug = self.name.eq("Criterion (Rust crate)");
         let mut links = vec![];
         // for parent in self.parents.iter() {
         //     links.push(parent.clone());
@@ -635,6 +638,7 @@ impl Topic {
         }
         // links.append(&mut self.subtopics.iter().map(|link_rc| link_rc.clone()).collect());
         // links.append(&mut self.combo_subtopics.iter().map(|link_rc| link_rc.clone()).collect());
+        // if debug { Link::print_link_ref_list(&links, self.get_name()); //bg!(include_generated, dependencies_are_generated); }
         links
     }
 
@@ -812,6 +816,7 @@ impl TopicKey {
     pub(crate) fn get_display_text(&self) -> String {
         format!("{}:{}", self.namespace, self.topic_name)
     }
+
 }
 
 impl Display for TopicKey {
