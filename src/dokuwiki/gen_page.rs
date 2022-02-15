@@ -3,6 +3,7 @@ use std::fs;
 use super::*;
 use crate::Itertools;
 use crate::model::TopicKey;
+use std::collections::BTreeMap;
 
 pub(crate) struct WikiGenPage {
     pub(crate) namespace: String,
@@ -160,7 +161,30 @@ impl WikiGenPage {
         self.content.push_str(&markup);
     }
 
+    #[allow(dead_code)]
     pub(crate) fn write(&self, path_pages: &str) {
+        let (full_file_name, content) = self.prep_for_write(path_pages);
+        fs::write(full_file_name, content).unwrap();
+    }
+
+    pub(crate) fn write_if_changed(&self, path_pages: &str, original_pages: &BTreeMap<String, String>) {
+        let (full_file_name, content) = self.prep_for_write(path_pages);
+        match original_pages.get(&full_file_name) {
+            Some(original_content) => {
+                if !content.eq(original_content) {
+                    println!("gen_page::write_if_changed(), original_pages: {}", &full_file_name);
+                    fs::write(&full_file_name, content).unwrap();
+                }
+            },
+            None => {
+                if util::file::write_if_changed_r(&full_file_name, &content).unwrap() {
+                    println!("gen_page::write_if_changed(), direct file read: {}", &full_file_name);
+                }
+            }
+        }
+    }
+
+    fn prep_for_write(&self, path_pages: &str) -> (String, String) {
         let mut content = util::parse::trim_linefeeds(&self.content);
         while content.contains("\n\n\n") {
             content = content.replace("\n\n\n", "\n\n");
@@ -179,7 +203,7 @@ impl WikiGenPage {
         if full_file_name.contains("//") {
             panic!("File name has double slashes: \"{}\".", &full_file_name);
         }
-        //bg!(&full_file_name);
-        fs::write(full_file_name, content).unwrap();
+        let full_file_name = util::file::canonical_path_name(&full_file_name);
+        (full_file_name, content)
     }
 }

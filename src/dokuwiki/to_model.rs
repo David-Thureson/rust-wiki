@@ -102,7 +102,9 @@ impl BuildProcess {
             let dir_entry = dir_entry_result.as_ref().unwrap();
             let file_name = util::file::dir_entry_to_file_name(dir_entry);
             if file_name.ends_with(".txt") {
+                let path_name = util::file::path_name(dir_entry.path());
                 let content = fs::read_to_string(&dir_entry.path()).unwrap();
+                model.add_original_page(&path_name, content.clone());
                 assert_no_extra_lines(&file_name, &content);
                 let mut paragraphs = content.split(DELIM_PARAGRAPH).collect::<Vec<_>>();
                 // The first paragraph should have the topic name as a page header, like:

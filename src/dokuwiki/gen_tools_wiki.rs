@@ -92,6 +92,7 @@ fn path_media_project() -> String {
     format!("{}/{}", PATH_MEDIA, PROJECT_NAME.to_lowercase())
 }
 
+#[allow(dead_code)]
 fn clean_up_tools_dokuwiki_files(include_images: bool) {
     let path_pages_project = path_pages_project(PATH_PAGES);
     if util::file::path_exists(&path_pages_project) {
@@ -137,7 +138,7 @@ fn gen_tools_project_from_model(model: &model::Model, path_pages: &str, compare_
     let namespace_main = PROJECT_NAME.to_lowercase();
 
     if !compare_only {
-        clean_up_tools_dokuwiki_files(copy_image_files_to_local_wiki);
+        // clean_up_tools_dokuwiki_files(copy_image_files_to_local_wiki);
         util::file::path_create_if_necessary_r(path_media_project()).unwrap();
     }
     create_tools_wiki_folders(path_pages);
@@ -168,14 +169,14 @@ fn gen_sidebar_page(model: &model::Model, gen: &mut GenFromModel) {
     let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_ROOT), wiki::PAGE_NAME_SIDEBAR, None);
     add_main_page_links(&mut page, model,false, true);
     gen.gen_topic_first_letter_links(&mut page, 6);
-    page.write(gen.get_path_pages());
+    page.write_if_changed(gen.get_path_pages(), model.get_original_pages());
 }
 
 fn gen_start_page(model: &model::Model, gen: &GenFromModel) {
     let mut page = wiki::WikiGenPage::new(&model.qualify_namespace(model::NAMESPACE_ROOT), wiki::PAGE_NAME_START, Some(PROJECT_NAME));
     page.add_headline("Main Pages",2);
     add_main_page_links(&mut page, model, true, false);
-    page.write(gen.get_path_pages());
+    page.write_if_changed(gen.get_path_pages(), model.get_original_pages());
 }
 
 /*

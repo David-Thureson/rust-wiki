@@ -19,6 +19,7 @@ pub(crate) struct Model {
     domain_list: DomainList,
     projects: Option<ProjectModel>,
     projects_name_map: Option<NameTopicMap>,
+    original_pages: BTreeMap<String, String>,
     // used_by_map: BTreeMap<TopicKey, Vec<TopicKey>>,
     // links: Vec<LinkRc>,
 }
@@ -39,6 +40,7 @@ impl Model {
             domain_list: DomainList::new(),
             projects: None,
             projects_name_map: None,
+            original_pages: Default::default(),
             // used_by_map: Default::default(),
             // links: vec![],
         };
@@ -239,6 +241,17 @@ impl Model {
 
     pub(crate) fn get_domain(&self, name: &str) -> Option<&Domain> {
         self.domain_list.get_domain(name)
+    }
+
+    pub(crate) fn get_original_pages(&self) -> &BTreeMap<String, String> {
+        &self.original_pages
+    }
+
+    pub(crate) fn add_original_page(&mut self, path_name: &str, content: String) {
+        let path_name = util::file::canonical_path_name(path_name);
+        //rintln!("model::add_original_page(): {}", path_name);
+        assert!(!self.original_pages.contains_key(&path_name));
+        self.original_pages.insert(path_name, content);
     }
 
     /*

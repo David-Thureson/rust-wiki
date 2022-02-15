@@ -45,7 +45,7 @@ impl <'a> GenFromModel<'a> {
                 page.add_line_with_break(&link);
             }
         }
-        page.write(&self.path_pages);
+        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
     }
 
     pub(crate) fn gen_topic_first_letter_links(&mut self, page: &mut WikiGenPage, column_count: usize) {
@@ -83,14 +83,14 @@ impl <'a> GenFromModel<'a> {
         // }
 
         self.gen_partial_topic_tree(&mut page, &nodes, true, None);
-        page.write(&self.path_pages);
+        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
     }
 
     pub(crate) fn gen_subtopics_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_SUBTOPICS,None);
         let nodes = self.model.subtopic_tree().unroll_to_depth(None);
         self.gen_partial_topic_tree(&mut page, &nodes, false, None);
-        page.write(&self.path_pages);
+        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
     }
 
     pub(crate) fn gen_attr_page(&self) {
@@ -116,7 +116,7 @@ impl <'a> GenFromModel<'a> {
                 page.add_linefeed();
             }
         }
-        page.write(&self.path_pages);
+        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
     }
 
     pub(crate) fn gen_attr_value_page(&self) {
@@ -147,7 +147,7 @@ impl <'a> GenFromModel<'a> {
             }
             page.add_linefeed();
         }
-        page.write(&self.path_pages);
+        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
     }
 
     fn add_related_domains_optional(&self, page: &mut wiki::WikiGenPage, attribute_value_name: &str, on_attribute_value_page: bool) {
@@ -175,7 +175,7 @@ impl <'a> GenFromModel<'a> {
             }
             page.add_linefeed();
         }
-        page.write(&self.path_pages);
+        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
     }
 
     pub(crate) fn gen_attr_date_page(&self) {
@@ -199,7 +199,7 @@ impl <'a> GenFromModel<'a> {
                 }
             }
         }
-        page.write(&self.path_pages);
+        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
     }
 
     fn page_link_if_exists(&self, topic_name: &str) -> Option<String> {
@@ -230,7 +230,7 @@ impl <'a> GenFromModel<'a> {
                 }
             }
         }
-        page.write();
+        page.write_if_changed();
     }
     */
 
@@ -244,7 +244,7 @@ impl <'a> GenFromModel<'a> {
             self.add_attributes_optional(&mut page, &topic);
             self.add_paragraphs(&mut page, &topic);
             self.add_inbound_links_section_optional(&mut page,  &topic);
-            page.write(&self.path_pages);
+            page.write_if_changed(&self.path_pages, self.model.get_original_pages());
         }
         self.errors.print(Some("GenFromModel::gen()"));
     }
@@ -431,6 +431,7 @@ impl <'a> GenFromModel<'a> {
         }
         // Self::add_topic_list(page, &topic.subtopics,model::LIST_LABEL_SUBTOPICS);
         self.add_subtopic_tree(page, topic);
+        // Combination topics.
         self.add_topic_list(page,&links_to_topic_keys(topic.get_combo_subtopics()),&model::list_type_to_header(model::LIST_TYPE_COMBINATIONS));
     }
 
