@@ -4,7 +4,8 @@ use crate::connectedtext::to_model::build_model;
 use crate::model::{FOLDER_PREFIX_WIKI_GEN_BACKUP, FOLDER_WIKI_GEN_BACKUP, FOLDER_WIKI_COMPARE_OLD, FOLDER_WIKI_COMPARE_NEW};
 use crate::dokuwiki::gen_from_model::GenFromModel;
 use crate::connectedtext::PATH_CT_EXPORT_IMAGES;
-use crate::dokuwiki::{PATH_MEDIA, PATH_PAGES};
+use crate::dokuwiki::{PATH_MEDIA, PATH_PAGES, FILE_MONITOR_PROJECT_NAME_DOKUWIKI, FILE_MONITOR_SCAN_MINUTES};
+use file_monitor::model::Marker as FileMonitorMarker;
 
 pub(crate) const PROJECT_NAME: &str = "Tools";
 
@@ -69,6 +70,16 @@ pub(crate) fn complete_round_trip(mut model: model::Model, compare_only: bool) {
     // Create DokuWiki pages from this new model.
     let gen_path_pages = if compare_only { FOLDER_WIKI_COMPARE_NEW } else { PATH_PAGES };
     let copy_image_files_to_local_wiki = false;
+
+    let file_monitor_project = if compare_only {
+        None
+    } else {
+        let project = file_monitor::model::set_up_project(FILE_MONITOR_PROJECT_NAME_DOKUWIKI, FILE_MONITOR_SCAN_MINUTES);
+        project.set_marker(&FileMonitorMarker::Pause);
+        project.set_marker(&FileMonitorMarker::Gen);
+        Some(project)
+    };
+
     gen_tools_project_from_model(&model, gen_path_pages, compare_only, copy_image_files_to_local_wiki);
 
     if !compare_only {
@@ -79,6 +90,8 @@ pub(crate) fn complete_round_trip(mut model: model::Model, compare_only: bool) {
         // Back up the DokuWiki pages created with a round trip from DokuWiki.
         // Copy these pages to the "new" comparison folder.
         util::file::copy_folder_recursive_overwrite_r(PATH_PAGES, FOLDER_WIKI_COMPARE_NEW).unwrap();
+
+        file_monitor_project.unwrap().clear_marker(&FileMonitorMarker::Pause);
     }
 
     println!("\ndokuwiki::gen_tools_wiki::complete_round_trip(): Done.");

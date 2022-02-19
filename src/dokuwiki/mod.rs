@@ -19,6 +19,9 @@ pub mod to_model;
 pub(crate) const PATH_PAGES: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/pages";
 pub(crate) const PATH_MEDIA: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/media";
 
+pub(crate) const FILE_MONITOR_PROJECT_NAME_DOKUWIKI: &str = "DokuWiki";
+pub(crate) const FILE_MONITOR_SCAN_MINUTES: f32 = 1.0;
+
 pub(crate) const PAGE_NAME_SIDEBAR: &str = "Sidebar";
 pub(crate) const PAGE_NAME_MAIN: &str = "Main";
 pub(crate) const PAGE_NAME_START:   &str = "Start";
