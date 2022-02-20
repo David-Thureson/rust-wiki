@@ -203,10 +203,11 @@ impl AttributeType {
         Ok(canonical_value)
     }
 
+    /*
     pub(crate) fn add_date_value(&mut self, value: &NaiveDate, topic_key: &TopicKey) -> Result<String, String> {
         self.add_value_for_topic(&Self::date_to_canonical_value(value), topic_key)
     }
-
+    */
     /*
     pub(crate) fn get_canonical_value(&self, value: &str) -> Result<String, String> {
         Self::value_to_canonical_form(&self.value_type, value)
@@ -366,6 +367,12 @@ impl AttributeInstance {
             sequence,
             values,
         }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn new_date(attribute_type_name: &str, sequence: usize, values: Vec<&NaiveDate>) -> Self {
+        let values = values.iter().map(|value| AttributeType::date_to_canonical_value(value)).collect::<Vec<_>>();
+        Self::new(attribute_type_name, sequence, values)
     }
 
     pub(crate) fn get_attribute_type_name(&self) -> &str {

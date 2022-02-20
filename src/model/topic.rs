@@ -5,6 +5,7 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 use std::cell::{RefCell, Ref};
 use chrono::NaiveDate;
+use crate::dokuwiki::legal_file_name;
 
 pub(crate) struct Topic {
     parents: Vec<LinkRc>,
@@ -109,6 +110,15 @@ impl Topic {
         &self.temp_attributes
     }
 
+    pub(crate) fn has_temp_attribute(&self, attr_name: &str) -> bool {
+        self.temp_attributes.contains_key(attr_name)
+    }
+
+    pub(crate) fn set_temp_attribute_date(&mut self, attr_type_name: &str, value: &NaiveDate) {
+        self.temp_attributes.remove(attr_type_name);
+        self.temp_attributes.insert(attr_type_name.to_string(), vec![AttributeType::date_to_canonical_value(value)]);
+    }
+
     pub(crate) fn catalog_attributes(&mut self, errors: &mut TopicErrorList, attribute_types: &mut BTreeMap<String, AttributeType>, attribute_values: &mut BTreeMap<String, Vec<(TopicKey, String)>>, attribute_orders: &BTreeMap<String, usize>) {
         // At this point we may have a mixture of temp attributes and resolved attributes in this
         // topic. Any temp attributes will end up replacing resolved attributes with the same name.
@@ -196,6 +206,12 @@ impl Topic {
     }
      */
 
+    /*
+    pub(crate) fn has_attribute(&mut self, name: &str) -> bool {
+        self.attributes.contains_key(name)
+    }
+     */
+
     pub(crate) fn add_attribute(&mut self, attr_instance: AttributeInstance) {
         let key = attr_instance.get_attribute_type_name();
         assert!(!self.attributes.contains_key(key));
@@ -208,6 +224,16 @@ impl Topic {
         self.add_attribute(attr_instance);
     }
 
+    /*
+    pub(crate) fn set_attribute_date(&mut self, attr_type_name: &str, sequence: usize, value: &NaiveDate) {
+        AttributeType::assert_legal_attribute_type_name(attr_type_name);
+        self.attributes.remove(attr_type_name);
+        let mut attr_type = AttributeType::new(attr_type_name, &AttributeValueType::Date, sequence);
+        attr_type.add_date_value(value, &self.get_topic_key()).unwrap();
+        let attr_instance = AttributeInstance::new_date(attr_type_name, sequence, vec![value]);
+        self.add_attribute(attr_instance);
+    }
+    */
     /*
     pub(crate) fn clear_attributes(&mut self) {
         self.attributes.clear()
@@ -642,14 +668,6 @@ impl Topic {
         links
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn set_attribute_date(&mut self, attr_type_name: &str, sequence: usize, value: &NaiveDate) {
-        AttributeType::assert_legal_attribute_type_name(attr_type_name);
-        self.attributes.remove(attr_type_name);
-        let mut attr_type = AttributeType::new(attr_type_name, &AttributeValueType::Date, sequence);
-        attr_type.add_date_value(value, &self.get_topic_key()).unwrap();
-    }
-
     /*
     pub(crate) fn check_links(model: &Model) -> TopicErrorList {
         //bg!(model.get_topics().keys());
@@ -739,6 +757,14 @@ impl Topic {
             text_blocks.append(&mut paragraph.get_all_text_blocks_cloned());
         }
         text_blocks
+    }
+
+    pub(crate) fn get_file_monitor_file<'a>(&self, summary: &'a file_monitor::summary::Summary) -> Option<&'a file_monitor::summary::MonitoredFile> {
+        let path = self.namespace.replace(":", "/");
+        let file_name = format!("{}.txt", legal_file_name(self.get_name()));
+        let key = format!("{}/{}", path, file_name);
+        if self.name.eq("Yew (crate)") { dbg!(&key, summary.files.contains_key(&key)); }
+        summary.files.get(&key)
     }
 }
 

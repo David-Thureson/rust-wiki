@@ -6,7 +6,7 @@ use super::*;
 pub fn main() {
     let topic_limit = None;
     // let topic_limit = Some(20);
-    build_model(gen_tools_wiki::PROJECT_NAME, &gen_tools_wiki::PROJECT_NAME.to_lowercase(), topic_limit);
+    build_model(gen_tools_wiki::PROJECT_NAME, &gen_tools_wiki::PROJECT_NAME.to_lowercase(), topic_limit, None);
 }
 
 struct BuildProcess {
@@ -41,8 +41,13 @@ impl BuildProcess {
         }
     }
 
-    pub(crate) fn build(&mut self) -> Model {
+    pub(crate) fn build(&mut self, project: Option<file_monitor::model::Project>) -> Model {
         let mut model = Model::new(&self.wiki_name, &self.namespace_main);
+
+        if let Some(project) = project {
+            model.set_file_monitor_project(project);
+        }
+
         let namespace_main = self.namespace_main.clone();
         let namespace_book = model.namespace_book();
         model.add_namespace(&namespace_book);
@@ -81,6 +86,7 @@ impl BuildProcess {
         // Call the make tree functions after the last call to model.catalog_links().
         model.make_category_tree();
         model.make_subtopic_tree();
+        model.update_attributes_from_file_monitor();
         //bg!(&model.attributes);
         let attr_errors = model.catalog_attributes();
         attr_errors.print(Some("model.catalog_attributes()"));
@@ -567,9 +573,9 @@ impl BuildProcess {
      */
 }
 
-pub(crate) fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>) -> Model {
+pub(crate) fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>, project: Option<file_monitor::model::Project>) -> Model {
     let mut bp = BuildProcess::new(name, namespace_main,PATH_PAGES, topic_limit);
-    let model = bp.build();
+    let model = bp.build(project);
     model
 }
 

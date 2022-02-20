@@ -92,6 +92,7 @@ pub(crate) const ATTRIBUTE_NAME_COURSE: &str = "Course";
 pub(crate) const ATTRIBUTE_NAME_CREATED: &str = "Created";
 pub(crate) const ATTRIBUTE_NAME_DOMAIN: &str = "Domain";
 pub(crate) const ATTRIBUTE_NAME_DOWNLOADED: &str = "Downloaded";
+pub(crate) const ATTRIBUTE_NAME_EDITED: &str = "Edited";
 pub(crate) const ATTRIBUTE_NAME_EMAIL: &str = "Email";
 pub(crate) const ATTRIBUTE_NAME_FACEBOOK: &str = "Facebook";
 pub(crate) const ATTRIBUTE_NAME_FOLDER: &str = "Folder";
@@ -134,7 +135,7 @@ pub(crate) const ATTRIBUTE_NAME_USED_LOCALLY: &str = "Used Locally";
 pub(crate) const ATTRIBUTE_NAME_USED_ONLINE: &str = "Used Online";
 pub(crate) const ATTRIBUTE_NAME_YEAR: &str = "Year";
 
-pub(crate) const ATTRIBUTE_ORDER: [&str; 54] = [
+pub(crate) const ATTRIBUTE_ORDER: [&str; 55] = [
     ATTRIBUTE_NAME_SCHOOL,
     ATTRIBUTE_NAME_TITLE,
     ATTRIBUTE_NAME_SERIES,
@@ -189,6 +190,7 @@ pub(crate) const ATTRIBUTE_ORDER: [&str; 54] = [
     ATTRIBUTE_NAME_PRESENTED,
     ATTRIBUTE_NAME_CREATED,
     ATTRIBUTE_NAME_ADDED,
+    ATTRIBUTE_NAME_EDITED,
 ];
 
 pub(crate) const INDEXED_ATTRIBUTES: [&str; 22] = [

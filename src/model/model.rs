@@ -1,6 +1,7 @@
 use super::*;
 use manage_projects::model::Model as ProjectModel;
 use std::collections::BTreeMap;
+use crate::model::date::update_date_attributes_from_file_monitor;
 // use crate::connectedtext::NAMESPACE_TOOLS;
 
 pub(crate) type TopicRefs = BTreeMap<String, TopicKey>;
@@ -20,6 +21,7 @@ pub(crate) struct Model {
     projects: Option<ProjectModel>,
     projects_name_map: Option<NameTopicMap>,
     original_pages: BTreeMap<String, String>,
+    file_monitor_project: Option<file_monitor::model::Project>,
     // used_by_map: BTreeMap<TopicKey, Vec<TopicKey>>,
     // links: Vec<LinkRc>,
 }
@@ -41,6 +43,7 @@ impl Model {
             projects: None,
             projects_name_map: None,
             original_pages: Default::default(),
+            file_monitor_project: None,
             // used_by_map: Default::default(),
             // links: vec![],
         };
@@ -385,6 +388,11 @@ impl Model {
     }
     */
 
+    pub(crate) fn update_attributes_from_file_monitor(&mut self) {
+        AttributeType::fill_attribute_orders(self);
+        update_date_attributes_from_file_monitor(self);
+    }
+
     pub(crate) fn has_topic(&self, topic_key: &TopicKey) -> bool {
         self.topics.contains_key(topic_key)
     }
@@ -518,6 +526,14 @@ impl Model {
 
     pub(crate) fn set_projects_name_map(&mut self, projects_name_map: NameTopicMap) {
         self.projects_name_map = Some(projects_name_map);
+    }
+
+    pub(crate) fn set_file_monitor_project(&mut self, file_monitor_project: file_monitor::model::Project) {
+        self.file_monitor_project = Some(file_monitor_project);
+    }
+
+    pub(crate) fn get_file_monitor_project(&self) -> &Option<file_monitor::model::Project> {
+        &self.file_monitor_project
     }
 
     /*
