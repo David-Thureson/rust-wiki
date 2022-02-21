@@ -8,7 +8,7 @@ pub(crate) fn update_date_attributes_from_file_monitor(model: &mut Model) {
         let summary = file_monitor::summary::Summary::read_or_create(project);
         for topic in model.get_topics_mut().values_mut() {
             // let debug = topic.get_name().eq("Yew (crate)");
-            if !topic.has_temp_attribute(ATTRIBUTE_NAME_ADDED) || !topic.has_temp_attribute(ATTRIBUTE_NAME_EDITED) {
+            if !topic.has_temp_attribute(ATTRIBUTE_NAME_ADDED) {
                 if let Some(file) = topic.get_file_monitor_file(&summary) {
                     if !topic.has_temp_attribute(ATTRIBUTE_NAME_ADDED) {
                         if let Some(time_added) = file.time_added {
@@ -16,12 +16,12 @@ pub(crate) fn update_date_attributes_from_file_monitor(model: &mut Model) {
                             topic.set_temp_attribute_date(ATTRIBUTE_NAME_ADDED, &time_added.date());
                         }
                     }
-                    if !topic.has_temp_attribute(ATTRIBUTE_NAME_EDITED) {
-                        if let Some(time_edited) = file.time_latest_edit {
-                            dbg!(&topic.get_name(), "Edited", &time_edited);
-                            topic.set_temp_attribute_date(ATTRIBUTE_NAME_EDITED, &time_edited.date());
-                        }
-                    }
+                }
+            }
+            if let Some(file) = topic.get_file_monitor_file(&summary) {
+                if let Some(time_edited) = file.time_latest_edit {
+                    dbg!(&topic.get_name(), "Edited", &time_edited);
+                    topic.set_temp_attribute_date(ATTRIBUTE_NAME_EDITED, &time_edited.date());
                 }
             }
         }
