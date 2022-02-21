@@ -112,12 +112,16 @@ impl BuildProcess {
                 let content = fs::read_to_string(&dir_entry.path()).unwrap();
                 model.add_original_page(&path_name, content.clone());
                 assert_no_extra_lines(&file_name, &content);
+
+                // One-time fix:
+                let content = content.replace(crate::connectedtext::to_model::CT_TEMP_DELIM_QUOTE_START, &format!("\n{}", MARKER_QUOTE_START));
+
                 let mut paragraphs = content.split(DELIM_PARAGRAPH).collect::<Vec<_>>();
                 // The first paragraph should have the topic name as a page header, like:
                 //   ======A Mind for Numbers======
                 let mut topic_name = paragraphs.remove(0).to_string();
-                assert!(topic_name.starts_with(DELIM_HEADER));
-                assert!(topic_name.ends_with(DELIM_HEADER));
+                assert!(topic_name.starts_with(DELIM_HEADER), "Topic name \"{}\" should start with \"{}\".", &topic_name, DELIM_HEADER);
+                assert!(topic_name.ends_with(DELIM_HEADER), "Topic name \"{}\" should end with \"{}\".", &topic_name, DELIM_HEADER);
                 topic_name = topic_name.replace(DELIM_HEADER, "").trim().to_string();
                 //bg!(&topic_name);
                 let mut topic = Topic::new(namespace_name, &topic_name);

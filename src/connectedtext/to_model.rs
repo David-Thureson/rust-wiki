@@ -47,7 +47,7 @@ const CT_IMAGE_SIZE_LARGE: &str = "(($IMG_SIZE_LARGE))";
 const CT_IMAGE_SIZE_100_PCT: &str = "100%";
 const CT_DELIM_CODE_START: &str = "{{{";
 const CT_DELIM_CODE_END: &str = "}}}";
-const CT_TEMP_DELIM_QUOTE_START: &str = "{TEMP QUOTE START}";
+pub(crate) const CT_TEMP_DELIM_QUOTE_START: &str = "{TEMP QUOTE START}";
 const CT_TEMP_DELIM_QUOTE_END: &str = "{TEMP QUOTE END}";
 
 // const CT_CODING_LANGUAGES: [&str; 6] = ["JavaScript", "Java", "Kotlin", "Python", "Scala", "Rust"];
