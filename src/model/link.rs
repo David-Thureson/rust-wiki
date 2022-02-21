@@ -26,8 +26,11 @@ pub(crate) enum LinkType {
     },
     Image {
         source: ImageSource,
+        #[allow(dead_code)]
         alignment: ImageAlignment,
+        #[allow(dead_code)]
         size: ImageSize,
+        #[allow(dead_code)]
         type_: ImageLinkType,
     },
     InternalUnresolved {

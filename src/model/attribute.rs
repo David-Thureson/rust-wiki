@@ -35,6 +35,7 @@ pub(crate) enum AttributeValueType {
     Date,
     Number,
     String,
+    #[allow(dead_code)]
     Unknown,
     Year,
 }
