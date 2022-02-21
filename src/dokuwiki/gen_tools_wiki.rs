@@ -165,6 +165,7 @@ fn gen_tools_project_from_model(model: &model::Model, path_pages: &str, compare_
     let mut gen = GenFromModel::new(model, path_pages);
     gen_sidebar_page(model, &mut gen);
     gen_start_page(model, &gen);
+    gen.gen_recent_topics_page();
     gen.gen_all_topics_page();
     gen.gen_categories_page();
     gen.gen_subtopics_page();

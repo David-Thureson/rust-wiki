@@ -3,9 +3,9 @@ use crate::{model, Itertools};
 use crate::dokuwiki as wiki;
 use std::rc::Rc;
 use std::cell::RefCell;
-use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys};
+use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys, ATTRIBUTE_NAME_EDITED, ATTRIBUTE_NAME_ADDED};
 use std::collections::BTreeMap;
-use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS};
+use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD};
 use std::fs;
 
 //const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
@@ -30,6 +30,37 @@ impl <'a> GenFromModel<'a> {
 
     pub(crate) fn get_path_pages(&self) -> &str {
         &self.path_pages
+    }
+
+    pub(crate) fn gen_recent_topics_page(&self) {
+        let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_RECENT_TOPICS, None);
+        let date_today = util::date_time::naive_date_now();
+        let mut date_map = BTreeMap::new();
+        for (topic_key, date) in self.model.get_topics().values()
+            .filter_map(|topic| {
+                topic.get_attribute_date(ATTRIBUTE_NAME_EDITED).or(topic.get_attribute_date(ATTRIBUTE_NAME_ADDED))
+                    .map(|date| ((topic.get_topic_key(), date)))
+            }) {
+            // We want the ordering in the map to put the most recent dates first.
+            let key = date_today - date;
+            let entry = date_map.entry(key).or_insert((date, vec![]));
+            entry.1.push(topic_key);
+        }
+        let mut topic_count = 0;
+        for (_key, (date, mut topic_keys)) in date_map.drain_filter(|_k, _v| true) {
+            let date_display_value = model::AttributeType::date_to_display_string(&date);
+            page.add_headline(&date_display_value, 1);
+            TopicKey::sort_topic_keys_by_name(&mut topic_keys);
+            for topic_key in topic_keys.iter() {
+                let link = Self::page_link(topic_key);
+                page.add_line_with_break(&link);
+            }
+            topic_count += topic_keys.len();
+            if topic_count >= RECENT_TOPICS_THRESHOLD {
+                break;
+            }
+        }
+        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
     }
 
     pub(crate) fn gen_all_topics_page(&mut self) {

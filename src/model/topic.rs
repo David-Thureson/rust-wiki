@@ -200,6 +200,13 @@ impl Topic {
         &self.attributes
     }
 
+    pub(crate) fn get_attribute_date(&self, attr_type_name: &str) -> Option<NaiveDate> {
+        self.attributes.get(attr_type_name).map(|attr_instance| {
+            assert_eq!(1, attr_instance.get_values().len());
+            AttributeType::value_to_date(&attr_instance.get_values()[0])
+        })
+    }
+
     /*
     pub(crate) fn get_attribute(&self, attr_type_name: &str) -> &Option<&AttributeInstance> {
         &self.attributes.get(attr_type_name)
