@@ -51,6 +51,8 @@ pub(crate) use model::*;
 pub(crate) type TopicTree = util::tree::Tree<TopicKey>;
 pub(crate) type TopicTreeNode = util::tree::TreeNode<TopicKey>;
 
+pub(crate) const PANIC_ON_MODEL_ERROR: bool = true;
+
 pub(crate) const NAMESPACE_ROOT: &str = "";
 // pub(crate) const NAMESPACE_UNDECIDED: &str = "{undecided}";
 const NAMESPACE_BOOK: &str = ":book";

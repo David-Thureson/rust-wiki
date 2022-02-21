@@ -83,8 +83,7 @@ impl BuildProcess {
         // wiki.catalog_links();
         self.check_links(&wiki);
         self.check_subtopic_relationships(&mut wiki);
-        self.errors.print(Some("First pass"));
-        self.errors.list_missing_topics();
+        self.errors.print_and_list_missing_topics(Some("First pass"));
 
         // WikiReport::new().categories().paragraphs().attributes().lists().go(&wiki);
         // report_category_tree(&wiki);

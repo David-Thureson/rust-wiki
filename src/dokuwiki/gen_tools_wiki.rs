@@ -37,6 +37,15 @@ fn round_trip(compare_only: bool, start_from_connectedtext: bool) {
 pub(crate) fn prep_round_trip(compare_only: bool, start_from_connectedtext: bool) -> model::Model {
     println!("\ndokuwiki::gen_tools_wiki::prep_round_trip(): Start.");
 
+    let project = file_monitor::model::set_up_project(FILE_MONITOR_PROJECT_NAME_DOKUWIKI, FILE_MONITOR_SCAN_MINUTES);
+    if !compare_only {
+        project.set_marker(&FileMonitorMarker::Pause);
+        project.set_marker(&FileMonitorMarker::Gen);
+    }
+
+    // Create a model from the DokuWiki pages.
+    let model = super::to_model::build_model(PROJECT_NAME, &PROJECT_NAME.to_lowercase(), None, Some(project));
+
     if start_from_connectedtext {
         // Back up the existing DokuWiki pages.
         let backup_folder_start = util::file::back_up_folder_next_number_r(PATH_PAGES, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
@@ -52,15 +61,6 @@ pub(crate) fn prep_round_trip(compare_only: bool, start_from_connectedtext: bool
     println!("backup_folder_old = \"{}\".", util::file::path_name(&backup_folder_old));
     // Copy these pages to the "old" comparison folder.
     util::file::copy_folder_recursive_overwrite_r(PATH_PAGES, FOLDER_WIKI_COMPARE_OLD).unwrap();
-
-    let project = file_monitor::model::set_up_project(FILE_MONITOR_PROJECT_NAME_DOKUWIKI, FILE_MONITOR_SCAN_MINUTES);
-    if !compare_only {
-        project.set_marker(&FileMonitorMarker::Pause);
-        project.set_marker(&FileMonitorMarker::Gen);
-    }
-
-    // Create a model from the DokuWiki pages.
-    let model = super::to_model::build_model(PROJECT_NAME, &PROJECT_NAME.to_lowercase(), None, Some(project));
 
     println!("\ndokuwiki::gen_tools_wiki::prep_round_trip(): Done.");
 

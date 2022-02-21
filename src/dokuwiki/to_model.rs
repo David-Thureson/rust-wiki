@@ -71,8 +71,7 @@ impl BuildProcess {
         // It's not necessary to check whether parents link to subtopics, since those links will be
         // generated.
         // self.check_subtopic_relationships(&mut model);
-        self.errors.print(Some("First pass"));
-        self.errors.list_missing_topics();
+        self.errors.print_and_list_missing_topics(Some("First pass"));
 
         // modelReport::new().categories().paragraphs().attributes().lists().go(&model);
         // report_category_tree(&model);

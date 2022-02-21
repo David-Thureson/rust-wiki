@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use crate::model::TopicKey;
+use crate::model::{TopicKey, PANIC_ON_MODEL_ERROR};
 use crate::Itertools;
 
 pub(crate) struct TopicErrorList {
@@ -38,7 +38,29 @@ impl TopicErrorList {
         self.errors.is_empty()
     }
 
+    pub(crate) fn print_and_list_missing_topics(&self, context: Option<&str>) {
+        self.print_internal(context);
+        self.list_missing_topics_internal();
+        if PANIC_ON_MODEL_ERROR && !self.is_empty() {
+            panic!()
+        }
+    }
+
     pub(crate) fn print(&self, context: Option<&str>) {
+        self.print_internal(context);
+        if PANIC_ON_MODEL_ERROR && !self.is_empty() {
+            panic!()
+        }
+    }
+
+    pub(crate) fn list_missing_topics(&self) {
+        self.list_missing_topics_internal();
+        if PANIC_ON_MODEL_ERROR && !self.is_empty() {
+            panic!()
+        }
+    }
+
+    fn print_internal(&self, context: Option<&str>) {
         let context = context.map_or("".to_string(), |context| format!(" for context = \"{}\"", context));
         if self.errors.is_empty() {
             println!("No errors{}:", context);
@@ -54,7 +76,7 @@ impl TopicErrorList {
         }
     }
 
-    pub(crate) fn list_missing_topics(&self) {
+    fn list_missing_topics_internal(&self) {
         let before = "Topic link [";
         let after = "] not found.";
         let mut map = BTreeMap::new();
