@@ -373,6 +373,12 @@ pub(crate) fn legal_file_name(name: &str) -> String {
     page_name
 }
 
+pub(crate) fn internal_link_name(name: &str) -> String {
+    let name = name.replace(".", "_");
+    let name = legal_file_name(&name);
+    name
+}
+
 pub(crate) fn namespace_to_path(namespace: &str) -> String {
     TopicKey::assert_legal_namespace(namespace);
     namespace.replace(":", "/")

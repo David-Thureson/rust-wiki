@@ -1,4 +1,5 @@
 use super::*;
+use crate::dokuwiki::internal_link_name;
 
 pub(crate) const PARAGRAPH_VARIANT_NAME_ATTRIBUTES: &str = "Attributes";
 pub(crate) const PARAGRAPH_VARIANT_NAME_BREADCRUMBS: &str = "Breadcrumbs";
@@ -32,6 +33,7 @@ pub(crate) enum Paragraph {
     SectionHeader {
         name: String,
         depth: usize,
+        link_name: String,
     },
     Table {
         table: Table,
@@ -71,7 +73,8 @@ impl Paragraph {
     pub(crate) fn new_section_header(name: &str, depth: usize) -> Self {
         Self::SectionHeader {
             name: name.to_string(),
-            depth
+            depth,
+            link_name: internal_link_name(name),
         }
     }
 

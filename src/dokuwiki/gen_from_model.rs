@@ -418,7 +418,7 @@ impl <'a> GenFromModel<'a> {
                     // dealt with that in some way that meant we no longer needed the paragraph.
                     // self.add_error(&msg_func_unexpected("Placeholder"));
                 },
-                model::Paragraph::SectionHeader { name, depth } => {
+                model::Paragraph::SectionHeader { name, depth, .. } => {
                     page.add_headline(name, *depth);
                 }
                 model::Paragraph::Table { table} => {

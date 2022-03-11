@@ -307,7 +307,7 @@ impl Topic {
     pub(crate) fn get_paragraph_index_end_of_first_section(&self) -> usize {
         for (index, paragraph) in self.paragraphs.iter().enumerate() {
             match paragraph {
-                Paragraph::SectionHeader { name: _, depth } => {
+                Paragraph::SectionHeader { name: _, depth, .. } => {
                     if *depth == 1 {
                         return index;
                     }
@@ -474,9 +474,9 @@ impl Topic {
         // if debug { //bg!(&self.name, &section_name); }
         for paragraph in self.paragraphs.iter() {
             match paragraph {
-                Paragraph::SectionHeader { name, .. } => {
+                Paragraph::SectionHeader { name, depth: _, link_name } => {
                     // if debug { //bg!(&name); }
-                    if name.to_lowercase() == section_name {
+                    if name.to_lowercase().eq(&section_name) || link_name.eq(&section_name) {
                         // if debug { //bg!("found section"); }
                         return true;
                     }
@@ -486,6 +486,19 @@ impl Topic {
         }
         // if debug { //bg!("didn't find section"); }
         false
+    }
+
+    pub(crate) fn print_sections(&self) {
+        println!("\nSections in {}", self.get_topic_key());
+        for paragraph in self.paragraphs.iter() {
+            match paragraph {
+                Paragraph::SectionHeader { name, depth, link_name } => {
+                    println!("\t\"{}\": depth = {}, link = \"{}\"", name, depth, link_name)
+                },
+                _ => {},
+            }
+        }
+        println!();
     }
 
     pub(crate) fn sort_topic_tree(tree: &mut TopicTree) {
@@ -564,11 +577,28 @@ impl Topic {
         for (parent_topic_key, child_topic_key) in parent_child_pairs.iter() {
             // let parent_topic_key= b!(parent_link_rc).get_topic_key().unwrap();
             let link_rc = r!(Link::new_topic_from_key(None, child_topic_key));
-            model.get_topics_mut().get_mut(&parent_topic_key).unwrap().subtopics.push(link_rc);
+            let parent_topic = model.get_topics_mut().get_mut(&parent_topic_key);
+            match parent_topic {
+                Some(parent_topic) => {
+                    parent_topic.subtopics.push(link_rc);
+                }
+                None => {
+                    panic!("In topic {}, subtopic {} not found.", parent_topic_key.get_key(), child_topic_key.get_key());
+                }
+            }
         }
         for (parent_topic_key, combo_topic_key) in parent_combo_pairs.iter() {
             let link_rc = r!(Link::new_topic_from_key(None, combo_topic_key));
-            model.get_topics_mut().get_mut(&parent_topic_key).unwrap().combo_subtopics.push(link_rc);
+            let parent_topic = model.get_topics_mut().get_mut(&parent_topic_key);
+            match parent_topic {
+                Some(parent_topic) => {
+                    parent_topic.combo_subtopics.push(link_rc);
+                }
+                None => {
+                    panic!("In combo topic {}, parent topic {} not found.", combo_topic_key.get_key(), parent_topic_key.get_key());
+                }
+            }
+            // model.get_topics_mut().get_mut(&parent_topic_key).unwrap().combo_subtopics.push(link_rc);
         }
         let mut tree = util::tree::Tree::create(parent_child_pairs, true);
         Topic::sort_topic_tree(&mut tree);

@@ -110,6 +110,10 @@ impl BuildProcess {
                 let path_name = util::file::path_name(dir_entry.path());
                 let content = fs::read_to_string(&dir_entry.path()).unwrap();
                 model.add_original_page(&path_name, content.clone());
+
+                // Double linefeeds are fine since they count as paragraph breaks, but any
+                // linefeeds after that should be removed.
+                let content = util::format::remove_repeated_n(&content, "\n", 2);
                 assert_no_extra_lines(&file_name, &content);
 
                 // One-time fix:

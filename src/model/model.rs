@@ -298,6 +298,7 @@ impl Model {
                     },
                     LinkType::Section { section_key } => {
                         if !self.has_section(section_key) {
+                            self.print_sections(section_key.get_topic_key());
                             errors.add(&topic.get_topic_key(), &format!("wiki::check_links(): Section link {} not found.", section_key));
                         }
                     },
@@ -447,6 +448,13 @@ impl Model {
             return false;
         }
         self.topics[&section_key.get_topic_key()].has_section(&section_key.get_section_name())
+    }
+
+    pub(crate) fn print_sections(&self, topic_key: &TopicKey) {
+        if !self.has_topic(topic_key) {
+            panic!("Can't find topic {} to print its sections.", topic_key);
+        }
+        self.topics[topic_key].print_sections();
     }
 
     pub(crate) fn add_missing_category_topics(&mut self) {
