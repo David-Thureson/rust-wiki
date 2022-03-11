@@ -86,6 +86,7 @@ impl BuildProcess {
         model.make_category_tree();
         model.make_subtopic_tree();
         model.update_attributes_from_file_monitor();
+        // model.add_visibility_attributes();
         //bg!(&model.attributes);
         let attr_errors = model.catalog_attributes();
         attr_errors.print(Some("model.catalog_attributes()"));
@@ -164,7 +165,7 @@ impl BuildProcess {
             }
             topic.assert_all_text_blocks_resolved();
             //bg!(topic.get_name());
-            self.topic_parse_state.check_end_of_topic();
+            self.topic_parse_state.check_end_of_topic(topic);
         }
     }
 
@@ -598,10 +599,10 @@ impl TopicParseState {
         }
     }
 
-    fn check_end_of_topic(&self) {
-        assert!(!self.is_in_code);
-        assert!(!self.is_in_non_code_marker);
-        assert!(self.marker_exit_string.is_none());
+    fn check_end_of_topic(&self, topic: &Topic) {
+        assert!(!self.is_in_code, "is_in_code in {}", topic.get_topic_key());
+        assert!(!self.is_in_non_code_marker, "is_in_non_code_marker in {}", topic.get_topic_key());
+        assert!(self.marker_exit_string.is_none(), "marker_exit_string = \"{}\" in {}", self.marker_exit_string.as_ref().unwrap(), topic.get_topic_key());
     }
 }
 

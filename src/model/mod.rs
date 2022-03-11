@@ -81,6 +81,11 @@ pub(crate) const PREFIX_HTTP: &str = "http://";
 pub(crate) const PREFIX_HTTPS: &str = "https://";
 pub(crate) const PREFIX_SFTP: &str = "sftp://";
 
+#[allow(dead_code)]
+pub(crate) const ATTRIBUTE_VALUE_PRIVATE: &str = "Private";
+#[allow(dead_code)]
+pub(crate) const ATTRIBUTE_VALUE_PUBLIC: &str = "Public";
+
 pub(crate) const ATTRIBUTE_NAME_ABANDONED: &str = "Abandoned";
 pub(crate) const ATTRIBUTE_NAME_ACQUIRED: &str = "Acquired";
 pub(crate) const ATTRIBUTE_NAME_ADDED: &str = "Added";
@@ -135,9 +140,10 @@ pub(crate) const ATTRIBUTE_NAME_TWITTER: &str = "Twitter";
 pub(crate) const ATTRIBUTE_NAME_UPDATED: &str = "Updated";
 pub(crate) const ATTRIBUTE_NAME_USED_LOCALLY: &str = "Used Locally";
 pub(crate) const ATTRIBUTE_NAME_USED_ONLINE: &str = "Used Online";
+pub(crate) const ATTRIBUTE_NAME_VISIBILITY: &str = "Visibility";
 pub(crate) const ATTRIBUTE_NAME_YEAR: &str = "Year";
 
-pub(crate) const ATTRIBUTE_ORDER: [&str; 55] = [
+pub(crate) const ATTRIBUTE_ORDER: [&str; 56] = [
     ATTRIBUTE_NAME_SCHOOL,
     ATTRIBUTE_NAME_TITLE,
     ATTRIBUTE_NAME_SERIES,
@@ -193,6 +199,7 @@ pub(crate) const ATTRIBUTE_ORDER: [&str; 55] = [
     ATTRIBUTE_NAME_CREATED,
     ATTRIBUTE_NAME_ADDED,
     ATTRIBUTE_NAME_EDITED,
+    ATTRIBUTE_NAME_VISIBILITY,
 ];
 
 pub(crate) const INDEXED_ATTRIBUTES: [&str; 22] = [

@@ -394,6 +394,14 @@ impl Model {
         update_date_attributes_from_file_monitor(self);
     }
 
+    /*
+    pub(crate) fn add_visibility_attributes(&mut self) {
+        for topic in self.get_topics_mut().values_mut() {
+            topic.add_temp_attribute_values(ATTRIBUTE_NAME_VISIBILITY.to_string(), vec![ATTRIBUTE_VALUE_PUBLIC.to_string()]);
+        }
+    }
+     */
+
     pub(crate) fn has_topic(&self, topic_key: &TopicKey) -> bool {
         self.topics.contains_key(topic_key)
     }
