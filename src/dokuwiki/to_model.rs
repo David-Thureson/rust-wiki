@@ -3,12 +3,6 @@ use crate::model::*;
 use std::fs;
 use super::*;
 
-pub fn main() {
-    let topic_limit = None;
-    // let topic_limit = Some(20);
-    build_model(gen_tools_wiki::PROJECT_NAME, &gen_tools_wiki::PROJECT_NAME.to_lowercase(), topic_limit, None);
-}
-
 struct BuildProcess {
     wiki_name: String,
     namespace_main: String,
@@ -41,8 +35,8 @@ impl BuildProcess {
         }
     }
 
-    pub(crate) fn build(&mut self, project: Option<file_monitor::model::Project>) -> Model {
-        let mut model = Model::new(&self.wiki_name, &self.namespace_main);
+    pub(crate) fn build(&mut self, project: Option<file_monitor::model::Project>, is_public: bool) -> Model {
+        let mut model = Model::new(&self.wiki_name, &self.namespace_main, is_public);
 
         if let Some(project) = project {
             model.set_file_monitor_project(project);
@@ -86,6 +80,10 @@ impl BuildProcess {
         model.make_category_tree();
         model.make_subtopic_tree();
         model.update_attributes_from_file_monitor();
+
+        // One-time fix.
+        remove_edited_attribute_from_private_topics(&mut model);
+
         // model.add_visibility_attributes();
         //bg!(&model.attributes);
         let attr_errors = model.catalog_attributes();
@@ -118,7 +116,7 @@ impl BuildProcess {
                 assert_no_extra_lines(&file_name, &content);
 
                 // One-time fix:
-                let content = content.replace(crate::connectedtext::to_model::CT_TEMP_DELIM_QUOTE_START, &format!("\n{}", MARKER_QUOTE_START));
+                // let content = content.replace(crate::connectedtext::to_model::CT_TEMP_DELIM_QUOTE_START, &format!("\n{}", MARKER_QUOTE_START));
 
                 let mut paragraphs = content.split(DELIM_PARAGRAPH).collect::<Vec<_>>();
                 // The first paragraph should have the topic name as a page header, like:
@@ -581,9 +579,9 @@ impl BuildProcess {
      */
 }
 
-pub(crate) fn build_model(name: &str, namespace_main: &str, topic_limit: Option<usize>, project: Option<file_monitor::model::Project>) -> Model {
+pub(crate) fn build_model(name: &str, namespace_main: &str, is_public: bool, topic_limit: Option<usize>, project: Option<file_monitor::model::Project>) -> Model {
     let mut bp = BuildProcess::new(name, namespace_main,PATH_PAGES, topic_limit);
-    let model = bp.build(project);
+    let model = bp.build(project, is_public);
     model
 }
 
@@ -651,5 +649,13 @@ fn check_links(model: &Model, errors: &mut TopicErrorList) {
     errors.append(&mut model.check_links());
 }
 
-
+fn remove_edited_attribute_from_private_topics(model: &mut Model) {
+    // This is a one-time fix. A few hundred topics were manually set to Visibility = Private,
+    // so they have a recent Edited attribute and they show up on the Recent Topics page. Get rid
+    // of those Edited attributes.
+    for topic in model.get_topics_mut().values_mut()
+        .filter(|topic| !topic.is_public()) {
+        topic.remove_temp_attribute(ATTRIBUTE_NAME_EDITED);
+    }
+}
 

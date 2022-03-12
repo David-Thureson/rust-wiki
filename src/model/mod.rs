@@ -57,7 +57,7 @@ pub(crate) const NAMESPACE_ROOT: &str = "";
 // pub(crate) const NAMESPACE_UNDECIDED: &str = "{undecided}";
 const NAMESPACE_BOOK: &str = ":book";
 const NAMESPACE_NAVIGATION: &str = ":nav";
-const NAMESPACE_ATTRIBUTE: &str = ":attr";
+// const NAMESPACE_ATTRIBUTE: &str = ":attr";
 
 // pub(crate) const ATTRIBUTE_VALUE_MISSING: &str = "{missing}";
 

@@ -2,7 +2,7 @@
 #![feature(cell_leak)]
 #![feature(btree_drain_filter)]
 
-pub(crate) mod connectedtext;
+// pub(crate) mod connectedtext;
 pub mod dokuwiki;
 pub mod model;
 pub mod tools_wiki;

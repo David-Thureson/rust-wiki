@@ -22,7 +22,7 @@ pub(crate) const PATH_MEDIA: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/media";
 pub(crate) const FILE_MONITOR_PROJECT_NAME_DOKUWIKI: &str = "DokuWiki";
 pub(crate) const FILE_MONITOR_SCAN_MINUTES: f32 = 1.0;
 
-pub(crate) const RECENT_TOPICS_THRESHOLD: usize = 50;
+pub(crate) const RECENT_TOPICS_THRESHOLD: usize = 100;
 
 pub(crate) const PAGE_NAME_SIDEBAR: &str = "Sidebar";
 pub(crate) const PAGE_NAME_MAIN: &str = "Main";
@@ -65,9 +65,9 @@ pub(crate) const DELIM_LIST_ITEM_DEPTH: &str = "  ";
 pub(crate) const MARKER_LINE_START: &str = "<";
 pub(crate) const MARKER_LINE_START_CLOSE: &str = "</";
 pub(crate) const MARKER_LINE_END: &str = ">";
-pub(crate) const MARKER_QUOTE_START: &str = "<WRAP round box>";
+// pub(crate) const MARKER_QUOTE_START: &str = "<WRAP round box>";
 pub(crate) const MARKER_QUOTE_START_PREFIX: &str = "<WRAP";
-pub(crate) const MARKER_QUOTE_END: &str = "</WRAP>";
+// pub(crate) const MARKER_QUOTE_END: &str = "</WRAP>";
 pub(crate) const MARKER_CODE_START_PREFIX: &str = "<code";
 pub(crate) const MARKER_CODE_END: &str = "</code>";
 

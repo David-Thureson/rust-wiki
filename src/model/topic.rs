@@ -64,10 +64,12 @@ impl Topic {
         TopicKey::new(&self.namespace, &self.name)
     }
 
+    /*
     pub(crate) fn add_parent(&mut self, link: LinkRc) {
         assert!(self.parents.len() < 2);
         self.parents.push(link);
     }
+    */
 
     pub(crate) fn set_parents(&mut self, parents: Vec<LinkRc>) {
         assert!(self.parents.is_empty());
@@ -183,8 +185,14 @@ impl Topic {
         entry.append(&mut values);
     }
 
+    /*
     pub(crate) fn add_or_find_temp_attribute(&mut self, name: &str) -> &mut Vec<String> {
         self.temp_attributes.entry(name.to_string()).or_insert(vec![])
+    }
+    */
+
+    pub(crate) fn remove_temp_attribute(&mut self, attr_type_name: &str) {
+        self.temp_attributes.remove(attr_type_name);
     }
 
     pub(crate) fn get_attribute_count(&self) -> usize {
@@ -516,6 +524,7 @@ impl Topic {
         tree.sort_recursive(&|node: &Rc<RefCell<TopicTreeNode>>| b!(node).item.topic_name.clone());
     }
 
+    /*
     pub(crate) fn check_subtopic_relationships(model: &Model) -> TopicErrorList {
         let mut errors = TopicErrorList::new();
         let err_msg_func = |msg: &str| format!("Topic::check_subtopic_relationships: {}", msg);
@@ -554,6 +563,7 @@ impl Topic {
         }
         errors
     }
+    */
 
     pub(crate) fn make_subtopic_tree(model: &mut Model) -> TopicTree {
         for topic in model.get_topics_mut().values_mut() {

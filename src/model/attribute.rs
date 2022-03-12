@@ -168,6 +168,7 @@ impl AttributeType {
         });
     }
 
+    /*
     pub(crate) fn is_legal_attribute_value(value: &str) -> bool {
         if value != value.trim() {
             return false;
@@ -179,6 +180,7 @@ impl AttributeType {
         }
         true
     }
+    */
 
     pub(crate) fn assert_legal_attribute_value(value: &str) {
         if value != value.trim() {

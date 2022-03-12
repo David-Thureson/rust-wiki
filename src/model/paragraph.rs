@@ -90,11 +90,13 @@ impl Paragraph {
         }
     }
 
+    /*
     pub(crate) fn new_text_unresolved(text: &str) -> Self {
         Self::TextUnresolved {
             text: text.to_string()
         }
     }
+    */
 
     pub(crate) fn new_unknown(text: &str) -> Self {
         Self::Unknown {

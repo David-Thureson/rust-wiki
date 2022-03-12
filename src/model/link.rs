@@ -21,6 +21,7 @@ pub(crate) enum LinkType {
     External {
         url: String,
     },
+    #[allow(dead_code)]
     File {
         file_ref: String,
     },
@@ -111,12 +112,14 @@ impl Link {
         Self::new(label, type_)
     }
 
+    /*
     pub(crate) fn new_file(label: Option<&str>, file_ref: &str) -> Self {
         let type_ = LinkType::File {
             file_ref: file_ref.to_string(),
         };
         Self::new(label, type_)
     }
+    */
 
     #[allow(dead_code)]
     pub(crate) fn new_internal_unresolved(label: Option<&str>, dest: &str) -> Self {
@@ -372,6 +375,8 @@ pub(crate) fn links_to_topic_keys(links: &Vec<LinkRc>) -> Vec<TopicKey> {
     topic_keys
 }
 
+/*
 pub(crate) fn link_list_contains_topic_key(links: &Vec<LinkRc>, topic_key: &TopicKey) -> bool {
     links.iter().any(|link_rc| b!(link_rc).get_topic_key().map_or(false, |link_topic_key| link_topic_key.eq(topic_key)))
 }
+*/

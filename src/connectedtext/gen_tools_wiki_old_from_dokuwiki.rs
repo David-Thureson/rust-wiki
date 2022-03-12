@@ -7,16 +7,32 @@ use file_monitor::model::Marker as FileMonitorMarker;
 
 pub(crate) const PROJECT_NAME: &str = "Tools";
 
-pub fn dokuwiki_round_trip(compare_only: bool, is_public: bool) {
+pub fn main() {
+    let copy_image_files = false;
+    let topic_limit = None;
+    gen_from_connectedtext(copy_image_files, topic_limit);
+}
+
+pub fn gen_from_connectedtext_round_trip(compare_only: bool) {
+    let start_from_connectedtext = true;
+    round_trip(compare_only, start_from_connectedtext);
+}
+
+pub fn dokuwiki_round_trip(compare_only: bool) {
+    let start_from_connectedtext = false;
+    round_trip(compare_only, start_from_connectedtext);
+}
+
+fn round_trip(compare_only: bool, start_from_connectedtext: bool) {
     println!("\nDokuWiki round trip test: Start.");
 
-    let model = prep_round_trip(compare_only, is_public);
+    let model = prep_round_trip(compare_only, start_from_connectedtext);
     complete_round_trip(model, compare_only);
 
     println!("\nDokuWiki round trip test: Done.");
 }
 
-pub(crate) fn prep_round_trip(compare_only: bool, is_public: bool) -> model::Model {
+pub(crate) fn prep_round_trip(compare_only: bool, start_from_connectedtext: bool) -> model::Model {
     println!("\ndokuwiki::gen_tools_wiki::prep_round_trip(): Start.");
 
     let project = file_monitor::model::set_up_project(FILE_MONITOR_PROJECT_NAME_DOKUWIKI, FILE_MONITOR_SCAN_MINUTES);
@@ -26,7 +42,17 @@ pub(crate) fn prep_round_trip(compare_only: bool, is_public: bool) -> model::Mod
     }
 
     // Create a model from the DokuWiki pages.
-    let model = super::to_model::build_model(PROJECT_NAME, &PROJECT_NAME.to_lowercase(), is_public, None, Some(project));
+    let model = super::to_model::build_model(PROJECT_NAME, &PROJECT_NAME.to_lowercase(), None, Some(project));
+
+    if start_from_connectedtext {
+        // Back up the existing DokuWiki pages.
+        let backup_folder_start = util::file::back_up_folder_next_number_r(PATH_PAGES, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
+        println!("backup_folder_start = \"{}\".", util::file::path_name(&backup_folder_start));
+
+        gen_from_connectedtext(false, None);
+        // let path_pages_project = path_pages_project(PATH_PAGES);
+        // assert!(util::file::path_exists(&path_pages_project));
+    }
 
     // Back up the DokuWiki pages.
     let backup_folder_old = util::file::back_up_folder_next_number_r(PATH_PAGES, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
@@ -47,8 +73,9 @@ pub(crate) fn complete_round_trip(mut model: model::Model, compare_only: bool) {
 
     // Create DokuWiki pages from this new model.
     let gen_path_pages = if compare_only { FOLDER_WIKI_COMPARE_NEW } else { PATH_PAGES };
+    let copy_image_files_to_local_wiki = false;
 
-    gen_tools_project_from_model(&model, gen_path_pages, compare_only);
+    gen_tools_project_from_model(&model, gen_path_pages, compare_only, copy_image_files_to_local_wiki);
 
     if !compare_only {
         // let path_pages_project = path_pages_project(PATH_PAGES);
@@ -106,14 +133,32 @@ fn create_tools_wiki_folders(path_pages: &str) {
     }
 }
 
-fn gen_tools_project_from_model(model: &model::Model, path_pages: &str, compare_only: bool) {
+fn gen_from_connectedtext(copy_image_files_to_local_wiki: bool, topic_limit: Option<usize>) {
+    println!("\nGenerating wiki from ConnectedText: Start.");
+    let namespace_main = PROJECT_NAME.to_lowercase();
+    let model = build_model(PROJECT_NAME, &namespace_main, topic_limit);
+    let compare_only = false;
+    gen_tools_project_from_model(&model, PATH_PAGES, compare_only, copy_image_files_to_local_wiki);
+    println!("\nGenerating wiki from ConnectedText: Done.");
+}
+
+fn gen_tools_project_from_model(model: &model::Model, path_pages: &str, compare_only: bool, copy_image_files_to_local_wiki: bool) {
     println!("\nGenerating wiki from model: Start.");
+
+    let namespace_main = PROJECT_NAME.to_lowercase();
 
     if !compare_only {
         // clean_up_tools_dokuwiki_files(copy_image_files_to_local_wiki);
         util::file::path_create_if_necessary_r(path_media_project()).unwrap();
     }
     create_tools_wiki_folders(path_pages);
+
+    if copy_image_files_to_local_wiki {
+        let path_to = format!("{}/{}", PATH_MEDIA, namespace_main);
+        GenFromModel::copy_image_files(PATH_CT_EXPORT_IMAGES, &path_to, true);
+    }
+
+    // gen_recent_topics_page();
 
     let mut gen = GenFromModel::new(model, path_pages);
     gen_sidebar_page(model, &mut gen);

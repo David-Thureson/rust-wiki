@@ -6,7 +6,6 @@ use std::cell::{RefCell, Ref};
 use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys, ATTRIBUTE_NAME_EDITED, ATTRIBUTE_NAME_ADDED, TopicTreeNode};
 use std::collections::BTreeMap;
 use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD};
-use std::fs;
 use crate::tree::TreeNode;
 
 //const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
@@ -56,6 +55,7 @@ impl <'a> GenFromModel<'a> {
                 let link = Self::page_link(topic_key);
                 page.add_line_with_break(&link);
             }
+            page.add_linefeed();
             topic_count += topic_keys.len();
             if topic_count >= RECENT_TOPICS_THRESHOLD {
                 break;
@@ -785,6 +785,7 @@ impl <'a> GenFromModel<'a> {
         link
     }
 
+    /*
     pub(crate) fn copy_image_files(path_from: &str, path_to: &str, print: bool) {
         dbg!(&path_from, &path_to);
         for path in fs::read_dir(path_from).unwrap() {
@@ -796,5 +797,6 @@ impl <'a> GenFromModel<'a> {
             std::fs::copy(&full_file_name_from, full_file_name_to).unwrap();
         }
     }
+     */
 
 }

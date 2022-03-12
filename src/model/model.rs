@@ -10,6 +10,7 @@ pub(crate) type NameTopicMap = BTreeMap<String, TopicKey>;
 pub(crate) struct Model {
     _name: String,
     main_namespace: String,
+    is_public: bool,
     namespaces: BTreeMap<String, String>,
     topics: BTreeMap<TopicKey, Topic>,
     topic_refs: TopicRefs,
@@ -27,11 +28,12 @@ pub(crate) struct Model {
 }
 
 impl Model {
-    pub(crate) fn new(name: &str, main_namespace: &str) -> Self {
+    pub(crate) fn new(name: &str, main_namespace: &str, is_public: bool) -> Self {
         TopicKey::assert_legal_namespace(main_namespace);
         let mut wiki = Self {
             _name: name.to_string(),
             main_namespace: main_namespace.to_string(),
+            is_public,
             namespaces: Default::default(),
             topics: Default::default(),
             topic_refs: Default::default(),
@@ -75,9 +77,11 @@ impl Model {
         }
     }
 
+    /*
     pub(crate) fn namespace_attribute(&self) -> String {
         self.qualify_namespace(NAMESPACE_ATTRIBUTE)
     }
+    */
 
     pub(crate) fn namespace_book(&self) -> String {
         self.qualify_namespace(NAMESPACE_BOOK)
@@ -323,9 +327,11 @@ impl Model {
     }
     */
 
+    /*
     pub(crate) fn check_subtopic_relationships(&self) -> TopicErrorList {
         Topic::check_subtopic_relationships(self)
     }
+    */
 
     //#[allow(dead_code)]
     // pub(crate) fn catalog_possible_list_types(&self) -> util::group::Grouper<String> {
