@@ -28,6 +28,7 @@ pub(crate) const PAGE_NAME_SIDEBAR: &str = "Sidebar";
 pub(crate) const PAGE_NAME_MAIN: &str = "Main";
 pub(crate) const PAGE_NAME_START:   &str = "Start";
 pub(crate) const PAGE_NAME_RECENT_TOPICS: &str = "Recent Topics";
+pub(crate) const PAGE_NAME_REPORTS: &str = "Reports";
 pub(crate) const PAGE_NAME_ALL_TOPICS: &str = "All Topics";
 pub(crate) const PAGE_NAME_CATEGORIES: &str = "Categories";
 pub(crate) const PAGE_NAME_SUBTOPICS: &str = "Subtopics";

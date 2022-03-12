@@ -2,11 +2,12 @@ use crate::*;
 use crate::{model, Itertools};
 use crate::dokuwiki as wiki;
 use std::rc::Rc;
-use std::cell::RefCell;
-use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys, ATTRIBUTE_NAME_EDITED, ATTRIBUTE_NAME_ADDED};
+use std::cell::{RefCell, Ref};
+use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys, ATTRIBUTE_NAME_EDITED, ATTRIBUTE_NAME_ADDED, TopicTreeNode};
 use std::collections::BTreeMap;
 use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD};
 use std::fs;
+use crate::tree::TreeNode;
 
 //const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
 
@@ -154,7 +155,7 @@ impl <'a> GenFromModel<'a> {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR_VALUE,None);
         let mut map = BTreeMap::new();
         for attribute_type in self.model.get_attribute_types().values()
-                .filter(|attribute_type| self.model.is_attribute_indexed(attribute_type.get_name())) {
+            .filter(|attribute_type| self.model.is_attribute_indexed(attribute_type.get_name())) {
             for (value, topic_keys) in attribute_type.get_values().iter() {
                 let entry = map.entry(value).or_insert(vec![]);
                 for topic_key in topic_keys.iter() {
@@ -179,6 +180,45 @@ impl <'a> GenFromModel<'a> {
             page.add_linefeed();
         }
         page.write_if_changed(&self.path_pages, self.model.get_original_pages());
+    }
+
+    pub(crate) fn gen_reports_page(&self) {
+        let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_REPORTS,None);
+        self.gen_reports_page_public_topics_by_category(&mut page);
+        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
+    }
+
+    fn gen_reports_page_public_topics_by_category(&self, page: &mut WikiGenPage) {
+        let mut map = BTreeMap::new();
+        for topic in self.model.get_topics().values()
+                .filter(|topic| topic.is_public() && topic.get_category().is_none()) {
+            let entry = map.entry("".to_string()).or_insert(vec![]);
+            entry.push(topic.get_topic_key());
+        }
+        for node_rc in self.model.get_category_tree().top_nodes.iter() {
+            self.add_public_topics_by_category(&mut map, node_rc, "".to_string());
+        }
+        for (category_label, topic_keys) in map.iter() {
+            page.add_line(category_label);
+            for topic_key in topic_keys.iter() {
+                let link = wiki::page_link(&self.model.qualify_namespace(topic_key.get_namespace()), topic_key.get_topic_name(), None);
+                page.add_list_item_unordered(1, &link);
+            }
+        }
+    }
+
+    fn add_public_topics_by_category(&self, map: &mut BTreeMap<String, Vec<TopicKey>>, node_rc: &Rc<RefCell<TopicTreeNode>>, category_label: String) {
+        let node: Ref<TreeNode<TopicKey>> = RefCell::borrow(node_rc);
+        let category_name = node.item.get_topic_name();
+        let category_label = if category_label.is_empty() { category_name.to_string() } else { format!("{} - {}", category_label, category_name) };
+        for topic in self.model.get_topics().values()
+                .filter(|topic| topic.is_public() && topic.get_category().map_or(false, |cat| cat.eq(category_name))) {
+            let entry = map.entry(category_label.clone()).or_insert(vec![]);
+            entry.push(topic.get_topic_key());
+        }
+        for node_rc in node.child_nodes.iter() {
+            self.add_public_topics_by_category(map, node_rc, category_label.clone());
+        }
     }
 
     fn add_related_domains_optional(&self, page: &mut wiki::WikiGenPage, attribute_value_name: &str, on_attribute_value_page: bool) {

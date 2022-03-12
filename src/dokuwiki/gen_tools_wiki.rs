@@ -173,6 +173,7 @@ fn gen_tools_project_from_model(model: &model::Model, path_pages: &str, compare_
     gen.gen_attr_date_page();
     gen.gen_attr_page();
     gen.gen_attr_value_page();
+    gen.gen_reports_page();
     // gen_terms_page();
     gen.gen();
     println!("\nGenerating wiki from model: Done.");
@@ -222,6 +223,7 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Model, use_l
         wiki::page_link(&namespace_nav, wiki::PAGE_NAME_ATTR_VALUE,None),
         wiki::page_link(&namespace_nav, wiki::PAGE_NAME_ATTR_YEAR,None),
         wiki::page_link(&namespace_nav, wiki::PAGE_NAME_ATTR_DATE,None),
+        wiki::page_link(&namespace_nav, wiki::PAGE_NAME_REPORTS, None),
         wiki::page_link(&namespace_main, wiki::PAGE_NAME_TERMS, None),
     ]);
     if use_list {

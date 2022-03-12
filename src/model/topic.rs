@@ -231,6 +231,17 @@ impl Topic {
         self.add_attribute(attr_instance);
     }
 
+    pub(crate) fn has_attribute_value(&self, attr_type_name: &str, attr_value: &str) -> bool {
+        match self.attributes.get(attr_type_name) {
+            Some(attr_instance) => attr_instance.get_values().contains(&attr_value.to_string()),
+            None => false,
+        }
+    }
+
+    pub(crate) fn is_public(&self) -> bool {
+        self.has_attribute_value(ATTRIBUTE_NAME_VISIBILITY, ATTRIBUTE_VALUE_PUBLIC)
+    }
+
     /*
     pub(crate) fn set_attribute_date(&mut self, attr_type_name: &str, sequence: usize, value: &NaiveDate) {
         AttributeType::assert_legal_attribute_type_name(attr_type_name);
