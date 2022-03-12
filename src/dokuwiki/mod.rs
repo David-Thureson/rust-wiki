@@ -70,6 +70,7 @@ pub(crate) const MARKER_QUOTE_START_PREFIX: &str = "<WRAP";
 // pub(crate) const MARKER_QUOTE_END: &str = "</WRAP>";
 pub(crate) const MARKER_CODE_START_PREFIX: &str = "<code";
 pub(crate) const MARKER_CODE_END: &str = "</code>";
+pub(crate) const MARKER_RETRACTION: &str = "%%*****%%";
 
 pub(crate) const TEMP_DELIM_IMG_START: &str = "[[{{";
 pub(crate) const TEMP_DELIM_IMG_END: &str = "}}]]";

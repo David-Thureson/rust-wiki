@@ -726,6 +726,19 @@ impl Topic {
         links
     }
 
+    pub(crate) fn get_referenced_topic_keys(&self, include_generated: bool, dependencies_are_generated: bool) -> Vec<TopicKey> {
+        let mut topic_keys = vec![];
+        for link_rc in self.get_links(include_generated, dependencies_are_generated) {
+            if let Some(topic_key) = b!(&link_rc).get_topic_key() {
+                if !topic_keys.contains(&topic_key) {
+                    topic_keys.push(topic_key);
+                }
+            }
+        }
+        TopicKey::sort_topic_keys_by_name(&mut topic_keys);
+        topic_keys
+    }
+
     /*
     pub(crate) fn check_links(model: &Model) -> TopicErrorList {
         //bg!(model.get_topics().keys());

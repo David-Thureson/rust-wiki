@@ -1,6 +1,7 @@
 #![macro_use]
 #![feature(cell_leak)]
 #![feature(btree_drain_filter)]
+#![feature(drain_filter)]
 
 // pub(crate) mod connectedtext;
 pub mod dokuwiki;

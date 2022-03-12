@@ -182,12 +182,15 @@ impl <'a> GenFromModel<'a> {
         page.write_if_changed(&self.path_pages, self.model.get_original_pages());
     }
 
+    #[allow(dead_code)]
     pub(crate) fn gen_reports_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_REPORTS,None);
-        self.gen_reports_page_public_topics_by_category(&mut page);
+        // self.gen_reports_page_public_topics_by_category(&mut page);
+        self.gen_reports_page_public_ref_to_private(&mut page);
         page.write_if_changed(&self.path_pages, self.model.get_original_pages());
     }
 
+    #[allow(dead_code)]
     fn gen_reports_page_public_topics_by_category(&self, page: &mut WikiGenPage) {
         let mut map = BTreeMap::new();
         for topic in self.model.get_topics().values()
@@ -201,12 +204,34 @@ impl <'a> GenFromModel<'a> {
         for (category_label, topic_keys) in map.iter() {
             page.add_line(category_label);
             for topic_key in topic_keys.iter() {
-                let link = wiki::page_link(&self.model.qualify_namespace(topic_key.get_namespace()), topic_key.get_topic_name(), None);
+                let link = self.page_link_qualified(topic_key);
                 page.add_list_item_unordered(1, &link);
             }
         }
     }
 
+    #[allow(dead_code)]
+    fn gen_reports_page_public_ref_to_private(&self, page: &mut WikiGenPage) {
+        let mut map = BTreeMap::new();
+        for topic in self.model.get_topics().values()
+                .filter(|topic| topic.is_public()) {
+            for ref_topic_key in topic.get_referenced_topic_keys(true, false).drain_filter(|_x| true)
+                    .filter(|ref_topic_key| !self.model.get_topics().get(ref_topic_key).unwrap().is_public()) {
+                let entry = map.entry(topic.get_topic_key()).or_insert(vec![]);
+                entry.push(ref_topic_key);
+            }
+        }
+        for (topic_key, ref_topic_keys) in map.iter() {
+            let link = self.page_link_qualified(topic_key);
+            page.add_line(&link);
+            for ref_topic_key in ref_topic_keys.iter() {
+                let link = self.page_link_qualified(ref_topic_key);
+                page.add_list_item_unordered(1, &link);
+            }
+        }
+    }
+
+    #[allow(dead_code)]
     fn add_public_topics_by_category(&self, map: &mut BTreeMap<String, Vec<TopicKey>>, node_rc: &Rc<RefCell<TopicTreeNode>>, category_label: String) {
         let node: Ref<TreeNode<TopicKey>> = RefCell::borrow(node_rc);
         let category_name = node.item.get_topic_name();
@@ -772,6 +797,10 @@ impl <'a> GenFromModel<'a> {
         } else {
             wiki::section_link(&self.model.namespace_navigation(), PAGE_NAME_ATTR_VALUE, domain_name, Some(domain_name))
         }
+    }
+
+    pub(crate) fn page_link_qualified(&self, topic_key: &model::TopicKey) -> String {
+        wiki::page_link(&self.model.qualify_namespace(topic_key.get_namespace()), topic_key.get_topic_name(), None)
     }
 
     pub(crate) fn page_link(topic_key: &model::TopicKey) -> String {
