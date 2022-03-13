@@ -97,8 +97,6 @@ impl BuildProcess {
             tools_wiki::project::update_projects_and_libraries(&mut model);
         }
 
-        panic!();
-
         // if !model.is_public() {
         //     model.remove_non_public_parent_topic_refs();
         // }
@@ -113,9 +111,9 @@ impl BuildProcess {
         // It's not necessary to check whether parents link to subtopics, since those links will be
         // generated.
         // self.check_subtopic_relationships(&mut model);
-        if !model.is_public() {
+        // if !model.is_public() {
             self.errors.print_and_list_missing_topics(Some("First pass"));
-        }
+        // }
 
         // modelReport::new().categories().paragraphs().attributes().lists().go(&model);
         // report_category_tree(&model);
@@ -136,7 +134,7 @@ impl BuildProcess {
         }
 
         // One-time fix.
-        remove_edited_attribute_from_private_topics(&mut model);
+        // remove_edited_attribute_from_private_topics(&mut model);
 
         if !self.is_public {
             model.add_visibility_attributes();
@@ -176,7 +174,9 @@ impl BuildProcess {
                     // This is a private topic.
                     model.add_redacted_phrase(topic_name.clone());
                     let file_name_no_extension = util::parse::before(&file_name, ".txt").to_string();
+                    let topic_ref = format!("{}:{}", namespace_name, file_name_no_extension);
                     model.add_redacted_phrase(file_name_no_extension);
+                    model.add_redacted_phrase(topic_ref);
                 } else {
                     let topic_source_file = TopicSourceFile::new(namespace_name, &file_name, &topic_name, content);
                     self.topic_source_files.push(topic_source_file);
@@ -488,6 +488,10 @@ impl BuildProcess {
         // and the date might be "2018-Jul-24", "2018-07-24", or some other supported format.
         // A regular table will look similar. The Terms page has a large example of a regular
         // table.
+        // let debug = topic.get_name().eq("Terms");
+        let debug = false;
+        if debug { dbg!(&text); }
+
         if self.topic_parse_state.is_in_code || self.topic_parse_state.is_in_non_code_marker {
             return Ok(false);
         }
@@ -497,8 +501,10 @@ impl BuildProcess {
             Ok(Some(temp_table)) => {
                 // if text.contains("tools:nav:dates|Added") { dbg!(text, &temp_table, temp_table.has_header, temp_table.get_column_count(), self.topic_parse_state.is_past_attributes, self.topic_parse_state.is_past_first_header); }
                 //bg!(&table);
+                if debug { dbg!(&temp_table); }
                 if !self.topic_parse_state.is_past_attributes && !self.topic_parse_state.is_past_first_header && !temp_table.has_header() && temp_table.get_column_count() == 2 {
                     // For now assume this is a table of attributes.
+                    if debug { println!("This is a table of attributes."); }
                     for row in temp_table.get_rows().iter() {
                         let text = row[0].get_text_block().get_unresolved_text();
                         let attr_type_name = text_or_topic_link_label(&text)?;
@@ -508,11 +514,11 @@ impl BuildProcess {
                         // that don't go into a public build, like Visibility and contact
                         // information.
                         let mut use_this_attribute = true;
-                        if !self.is_public {
+                        if self.is_public {
                             let is_attr_public = PUBLIC_ATTRIBUTES.contains(&&*attr_type_name);
-                            dbg!(&attr_type_name, is_attr_public);
+                            //bg!(&attr_type_name, is_attr_public);
                             if !is_attr_public {
-                                println!("{}: Ignoring \"{}\" attribute because it's not in the public list.", context, attr_type_name);
+                                //rintln!("{}: Ignoring \"{}\" attribute because it's not in the public list.", context, attr_type_name);
                                 use_this_attribute = false;
                             }
                             if attr_type_name.contains(MARKER_REDACTION) {
@@ -556,6 +562,7 @@ impl BuildProcess {
                     self.topic_parse_state.is_past_attributes = true;
                 } else {
                     // Assume this is a normal (non-attribute) table.
+                    if debug { println!("This is a regular table."); }
                     let mut table = Table::new(temp_table.assume_has_header());
                     for temp_row in temp_table.get_rows().iter() {
                         let mut cells = vec![];
@@ -568,6 +575,7 @@ impl BuildProcess {
                         table.add_row(cells);
                     }
                     if text.contains("tools:nav:dates|Added") { dbg!(&table); panic!() }
+                    if debug { dbg!(&table); }
                     let paragraph = Paragraph::new_table(table);
                     //bg!(&paragraph);
                     topic.replace_paragraph(paragraph_index, paragraph);
@@ -811,6 +819,7 @@ fn check_links(model: &Model, errors: &mut TopicErrorList) {
     errors.append(&mut model.check_links());
 }
 
+/*
 fn remove_edited_attribute_from_private_topics(model: &mut Model) {
     // This is a one-time fix. A few hundred topics were manually set to Visibility = Private,
     // so they have a recent Edited attribute and they show up on the Recent Topics page. Get rid
@@ -820,4 +829,4 @@ fn remove_edited_attribute_from_private_topics(model: &mut Model) {
         topic.remove_temp_attribute(ATTRIBUTE_NAME_EDITED);
     }
 }
-
+*/

@@ -620,9 +620,9 @@ impl Topic {
                     parent_topic.subtopics.push(link_rc);
                 }
                 None => {
-                    if !model.is_public() {
+                    // if !model.is_public() {
                         panic!("In topic {}, subtopic {} not found.", parent_topic_key.get_key(), child_topic_key.get_key());
-                    }
+                    // }
                 }
             }
         }

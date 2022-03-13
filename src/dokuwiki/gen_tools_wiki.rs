@@ -56,14 +56,17 @@ pub(crate) fn complete_round_trip(mut model: model::Model, compare_only: bool) {
 
     // Create DokuWiki pages from this new model.
     let gen_path_pages = if compare_only { FOLDER_WIKI_COMPARE_NEW } else { PATH_PAGES };
-    // clean_up_tools_dokuwiki_files(gen_path_pages, false);
+    if compare_only || model.is_public() {
+        clean_up_tools_dokuwiki_files(gen_path_pages, false);
+    }
 
     /*
     Have this generate the new files in memory, then delete files from the gen path if they're no
     longer in the model, overwrite the files that have changed, and leave the unaffected files in
     place with their old timestamps.
-    gen_tools_project_from_model(&model, gen_path_pages, compare_only);
     */
+    gen_tools_project_from_model(&model, gen_path_pages, compare_only);
+
     if !compare_only {
         // let path_pages_project = path_pages_project(PATH_PAGES);
         let backup_folder_new = util::file::back_up_folder_next_number_r(PATH_PAGES, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();

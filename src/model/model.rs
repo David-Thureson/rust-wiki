@@ -2,7 +2,6 @@ use super::*;
 use manage_projects::model::Model as ProjectModel;
 use std::collections::BTreeMap;
 use crate::model::date::update_date_attributes_from_file_monitor;
-use crate::model::redaction::RedactionRecord;
 // use crate::connectedtext::NAMESPACE_TOOLS;
 
 pub(crate) type TopicRefs = BTreeMap<String, TopicKey>;
@@ -25,9 +24,6 @@ pub(crate) struct Model {
     original_pages: BTreeMap<String, String>,
     file_monitor_project: Option<file_monitor::model::Project>,
     redacted_phrases: Vec<String>,
-    pub redaction_record: Option<RedactionRecord>,
-    // used_by_map: BTreeMap<TopicKey, Vec<TopicKey>>,
-    // links: Vec<LinkRc>,
 }
 
 impl Model {
@@ -50,7 +46,6 @@ impl Model {
             original_pages: Default::default(),
             file_monitor_project: None,
             redacted_phrases: vec![],
-            redaction_record: None,
         };
         wiki.add_namespace(main_namespace);
         wiki
@@ -578,11 +573,6 @@ impl Model {
 
     pub(crate) fn topic_is_public(&self, topic_key: &TopicKey) -> bool {
         self.topics.get(topic_key).unwrap().is_public()
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn get_redaction_record(&self) -> Option<&RedactionRecord> {
-        self.redaction_record.as_ref()
     }
 
     pub(crate) fn add_redacted_phrase(&mut self, phrase: String) {

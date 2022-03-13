@@ -351,6 +351,9 @@ impl <'a> GenFromModel<'a> {
 
     pub(crate) fn gen(&mut self) {
         for topic in self.model.get_topics().values() {
+            // let debug = topic.get_name().eq("Terms");
+            let debug = false;
+            if debug { dbg!(topic.get_paragraphs().len()); }
             self.current_topic_key = Some(topic.get_topic_key());
             //bg!(&self.current_topic_key);
             let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(topic.get_namespace()), topic.get_name(), None);
@@ -360,6 +363,7 @@ impl <'a> GenFromModel<'a> {
             self.add_paragraphs(&mut page, &topic);
             self.add_inbound_links_section_optional(&mut page,  &topic);
             page.write_if_changed(&self.path_pages, self.model.get_original_pages());
+            if debug { dbg!(&page); panic!(); }
         }
         self.errors.print(Some("GenFromModel::gen()"));
     }
@@ -466,12 +470,15 @@ impl <'a> GenFromModel<'a> {
     }
 
     fn add_paragraphs(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
+        //let debug = topic.get_name().eq("Terms");
+        let debug = false;
         let msg_func_unexpected = |variant_name: &str| format!("In dokuwiki::gen_from_model::add_paragraphs(), unexpected Paragraph variant = \"{}\"", variant_name);
         // let add_error_unexpected = |paragraph_variant: &str| self.add_error(&msg_func_unexpected(paragraph_variant));
         let mut generated_navigation_paragraphs_added = false;
         for paragraph in topic.get_paragraphs().iter() {
             // First see if it's necessary to add generated navigation paragraphs like subtopics
             // and subcategories.
+            if debug { dbg!(paragraph.get_variant_name()); }
             match paragraph {
                 // model::Paragraph::List { .. } | model::Paragraph::SectionHeader { .. } => {
                 model::Paragraph::SectionHeader { .. } => {
@@ -507,6 +514,7 @@ impl <'a> GenFromModel<'a> {
                 }
                 model::Paragraph::Table { table} => {
                     //bg!(topic.get_name());
+                    if debug { dbg!(table); }
                     self.add_table(page, table);
                 }
                 model::Paragraph::Text { text_block} => {

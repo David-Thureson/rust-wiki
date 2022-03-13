@@ -5,6 +5,7 @@ use crate::Itertools;
 use crate::model::TopicKey;
 use std::collections::BTreeMap;
 
+#[derive(Debug)]
 pub(crate) struct WikiGenPage {
     pub(crate) namespace: String,
     pub(crate) topic_name: String,
@@ -168,7 +169,11 @@ impl WikiGenPage {
     }
 
     pub(crate) fn write_if_changed(&self, path_pages: &str, original_pages: &BTreeMap<String, String>) {
+        // Temporary fix:
         let (full_file_name, content) = self.prep_for_write(path_pages);
+        fs::write(&full_file_name, content).unwrap();
+
+        /*
         match original_pages.get(&full_file_name) {
             Some(original_content) => {
                 if !content.eq(original_content) {
@@ -182,6 +187,8 @@ impl WikiGenPage {
                 }
             }
         }
+
+         */
     }
 
     fn prep_for_write(&self, path_pages: &str) -> (String, String) {
@@ -189,6 +196,7 @@ impl WikiGenPage {
         while content.contains("\n\n\n") {
             content = content.replace("\n\n\n", "\n\n");
         }
+        content = content.replace(MARKER_REDACTION, MARKER_REDACTION_FINAL);
 
         let mut namespace_path= namespace_to_path(&self.namespace);
         //bg!(&namespace_path);
