@@ -1,3 +1,23 @@
+Put the redaction up front, right after reading in the file.
+Firt record the names and file names of the private topics, along with the original file text
+of the public topics.
+
+Then compile the full list of phrases, using the blacklist and whitelist, etc. right after that
+first pass.
+
+Then for each of the public topics, redact the file contents as a single string. Then while
+refining the paragraphs for the first time, deal with the redact marker. For instance, remove list
+items that are nothing but a redaction. Any link (topic, section, or URL) that contains a redaction
+marker should be completely replaced with a text block that is only a redaction marker.
+
+Also, any public topic that has a redacted phrase in its title should be removed as if it's private.
+This will cover some combination topics and other cases. This is probably too complicated. Instead
+throw an error in this case and manually change this topic to Private.
+
+While refining paragraphs for a public build, ignore the Added and Visibility attributes, and
+don't call the later code that might add them (from file-monitor in the case of Added).
+
+
 use std::collections::BTreeMap;
 use crate::model::{TopicKey, Model, FILE_NAME_REDACT, Paragraph, TextBlock, TextItem, List};
 use crate::dokuwiki::MARKER_REDACTION;

@@ -75,7 +75,11 @@ pub(crate) fn complete_round_trip(mut model: model::Model, compare_only: bool) {
         util::file::copy_folder_recursive_overwrite_r(PATH_PAGES, FOLDER_WIKI_COMPARE_NEW).unwrap();
 
         if let Some(file_monitor_project) = model.get_file_monitor_project() {
-            file_monitor_project.clear_marker(&FileMonitorMarker::Pause);
+            // If we're doing the public build, leave the file monitor paused since we don't want
+            // to count any changes until the next private build.
+            if !model.is_public() {
+                file_monitor_project.clear_marker(&FileMonitorMarker::Pause);
+            }
         }
     }
 
