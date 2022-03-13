@@ -287,6 +287,7 @@ impl Topic {
         &self.paragraphs
     }
 
+    #[allow(dead_code)]
     pub(crate) fn get_paragraphs_mut(&mut self) -> &mut Vec<Paragraph> {
         &mut self.paragraphs
     }

@@ -38,6 +38,7 @@ impl Table {
         &self.rows
     }
 
+    #[allow(dead_code)]
     pub(crate) fn get_rows_mut(&mut self) -> &mut Vec<Vec<TableCell>> {
         &mut self.rows
     }
@@ -136,6 +137,7 @@ impl TableCell {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn set_text_block(&mut self, text_block: TextBlock) {
         self.text_block = text_block;
     }

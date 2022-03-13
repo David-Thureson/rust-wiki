@@ -234,7 +234,7 @@ impl <'a> GenFromModel<'a> {
     }
 
     #[allow(dead_code)]
-    fn gen_reports_page_redactions(&self, page: &mut WikiGenPage) {
+    fn gen_reports_page_redactions(&self, _page: &mut WikiGenPage) {
         // While redactions should be used only for public renders, the report of redactions is
         // private. So in this case we did the redactions just to get the report.
         assert!(!self.model.is_public());
@@ -495,7 +495,7 @@ impl <'a> GenFromModel<'a> {
                 },
                 model::Paragraph::Marker { text } => {
                     page.add_paragraph(text);
-                }
+                },
                 model::Paragraph::Placeholder => {
                     // This is OK. It means while creating the model we came across a raw paragraph
                     // that turned out to be something like bookmarks or an attribute table. We

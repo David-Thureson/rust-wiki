@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
-use crate::model::{TopicKey, Model, FILE_NAME_REDACT, Paragraph, TextBlock, TextItem};
+use crate::model::{TopicKey, Model, FILE_NAME_REDACT, Paragraph, TextBlock, TextItem, List};
 use crate::dokuwiki::MARKER_REDACTION;
-use std::ops::Range;
 use crate::*;
 
 #[derive(Debug)]
@@ -20,9 +19,10 @@ pub(crate) struct Redaction {
 }
 
 impl RedactionRecord {
-    pub fn redact(model: &mut Model, preview_only: bool) -> Self {
+    pub fn redact(model: &mut Model, compare_only: bool, redaction_preview_only: bool) -> Self {
+        assert!(compare_only || model.is_public() || redaction_preview_only);
         let mut record = Self {
-            preview_only,
+            preview_only: redaction_preview_only,
             phrases: vec![],
             private_topic_keys: vec![],
             redactions: Default::default(),
@@ -55,7 +55,22 @@ impl RedactionRecord {
                             }
                         }
                         if is_changed {
-                            let new_paragraph = Paragraph::new_list(new_list);
+                            let mut new_list_clean = List::new(new_list.get_type(), new_list.get_header().clone());
+                            for item in new_list.get_items().iter() {
+                                // Leave off list items that contain redactions.
+                                if !item.get_text_block().get_display_text().contains(MARKER_REDACTION) {
+                                    new_list_clean.add_item(item.clone());
+                                } else {
+                                    println!("{}: Skipping list item.", topic_key.get_display_text());
+                                }
+                            }
+                            let new_paragraph = if new_list_clean.get_items().is_empty() {
+                                // All of the items contained redactions and were removed, so there's no point keeping the list.
+                                println!("{}: Skipping all list items.", topic_key.get_display_text());
+                                Paragraph::Placeholder
+                            } else {
+                                Paragraph::new_list(new_list_clean)
+                            };
                             paragraph_replacements.insert(paragraph_index, new_paragraph);
                         }
                     },
@@ -64,8 +79,10 @@ impl RedactionRecord {
                         let mut is_changed = false;
                         for (row_index, row) in table.get_rows().iter().enumerate() {
                             for (col_index, cell) in row.iter().enumerate() {
-                                if let Some(new_text_block) = self.redact_one_text_block(&topic_key, cell.get_text_block()) {
-                                    new_table.set_cell_text_block(row_index, col_index, new_text_block);
+                                if let Some(_new_text_block) = self.redact_one_text_block(&topic_key, cell.get_text_block()) {
+                                    // Instead of putting the redaction marker in a table cell, use an empty string.
+                                    println!("{}: Emptying table cell.", topic_key.get_display_text());
+                                    new_table.set_cell_text_block(row_index, col_index, TextBlock::new_resolved(vec![TextItem::new_text("")]));
                                     is_changed = true;
                                 }
                             }
@@ -93,12 +110,12 @@ impl RedactionRecord {
         }
         //bg!(&self.redactions); panic!();
         // self.print_phrase_map_counts(); panic!();
-        self.print_phrase_map(); panic!();
+        self.print_phrase_map(); // panic!();
+        // panic!();
         // self.print_potential_whitelist(); panic!();
     }
 
     fn redact_one_text_block(&mut self, topic_key: &TopicKey, text_block: &TextBlock) -> Option<TextBlock> {
-        let topic_key_string = topic_key.get_display_text();
         match text_block {
             TextBlock::Resolved { items } => {
                 let mut replacement_items = BTreeMap::new();
@@ -108,9 +125,10 @@ impl RedactionRecord {
                             let link_topic_key = b!(link).get_topic_key();
                             if let Some(link_topic_key) = link_topic_key {
                                 if self.private_topic_keys.contains(&link_topic_key) {
+                                    //rintln!("{} has {}", topic_key_string, link_topic_key.get_display_text());
                                     replacement_items.insert(index, Self::redacted_text_item());
                                     let entry = self.redactions.entry(topic_key.clone()).or_insert(vec![]);
-                                    //entry.push(Redaction::new(vec![topic_key_string.clone()], topic_key_string.clone(), MARKER_REDACTION.to_string()));
+                                    entry.push(Redaction::new(vec![link_topic_key.get_display_text()], link_topic_key.get_display_text(), MARKER_REDACTION.to_string()));
                                 }
                             }
                         },
@@ -204,6 +222,7 @@ impl RedactionRecord {
         map
     }
 
+    #[allow(dead_code)]
     pub(crate) fn print_phrase_map(&self) {
         for (phrase, items) in self.get_phrase_map().iter() {
             println!("\"{}\"", phrase);
@@ -215,12 +234,14 @@ impl RedactionRecord {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn print_phrase_map_counts(&self) {
         for (phrase, items) in self.get_phrase_map().iter() {
             println!("{} - \"{}\"", util::format::format_count(items.len()), phrase);
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn print_potential_whitelist(&self) {
         let line = self.get_phrase_map().keys()
             .map(|phrase| format!("\"{}\"", phrase))

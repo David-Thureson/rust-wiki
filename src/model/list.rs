@@ -100,6 +100,7 @@ impl List {
         &self.items
     }
 
+    #[allow(dead_code)]
     pub fn get_items_mut(&mut self) -> &mut Vec<ListItem> {
         &mut self.items
     }
@@ -200,6 +201,7 @@ impl ListItem {
         &self.text_block
     }
 
+    #[allow(dead_code)]
     pub(crate) fn set_text_block(&mut self, text_block: TextBlock) {
         self.text_block = text_block;
     }

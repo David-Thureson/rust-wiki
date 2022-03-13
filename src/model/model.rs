@@ -2,8 +2,6 @@ use super::*;
 use manage_projects::model::Model as ProjectModel;
 use std::collections::BTreeMap;
 use crate::model::date::update_date_attributes_from_file_monitor;
-use itertools::rev;
-use std::cmp::Reverse;
 use crate::model::redaction::RedactionRecord;
 // use crate::connectedtext::NAMESPACE_TOOLS;
 
@@ -580,11 +578,12 @@ impl Model {
         self.topics.get(topic_key).unwrap().is_public()
     }
 
+    #[allow(dead_code)]
     pub(crate) fn get_redaction_record(&self) -> Option<&RedactionRecord> {
         self.redaction_record.as_ref()
     }
 
-    pub(crate) fn redact(&mut self, preview_only: bool) {
-        self.redaction_record = Some(redaction::RedactionRecord::redact(self, preview_only));
+    pub(crate) fn redact(&mut self, compare_only: bool, redaction_preview_only: bool) {
+        self.redaction_record = Some(redaction::RedactionRecord::redact(self, compare_only, redaction_preview_only));
     }
 }
