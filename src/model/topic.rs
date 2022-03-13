@@ -107,6 +107,10 @@ impl Topic {
         self.category = Some(category.to_string());
     }
 
+    pub(crate) fn clear_category(&mut self) {
+        self.category = None;
+    }
+
     #[allow(dead_code)]
     pub(crate) fn get_temp_attributes(&self) -> &BTreeMap<String, Vec<String>> {
         &self.temp_attributes
@@ -616,7 +620,9 @@ impl Topic {
                     parent_topic.subtopics.push(link_rc);
                 }
                 None => {
-                    panic!("In topic {}, subtopic {} not found.", parent_topic_key.get_key(), child_topic_key.get_key());
+                    if !model.is_public() {
+                        panic!("In topic {}, subtopic {} not found.", parent_topic_key.get_key(), child_topic_key.get_key());
+                    }
                 }
             }
         }
@@ -628,7 +634,9 @@ impl Topic {
                     parent_topic.combo_subtopics.push(link_rc);
                 }
                 None => {
-                    panic!("In combo topic {}, parent topic {} not found.", combo_topic_key.get_key(), parent_topic_key.get_key());
+                    // if !model.is_public() {
+                        panic!("In combo topic {}, parent topic {} not found.", combo_topic_key.get_key(), parent_topic_key.get_key());
+                    // }
                 }
             }
             // model.get_topics_mut().get_mut(&parent_topic_key).unwrap().combo_subtopics.push(link_rc);

@@ -59,19 +59,31 @@ impl BuildProcess {
         tools_wiki::project::add_project_info_to_model(&mut model);
         tools_wiki::project::update_projects_and_libraries(&mut model);
 
+        // if !model.is_public() {
+        //     model.remove_non_public_parent_topic_refs();
+        // }
+
+        // if model.is_public() {
+        //     model.remove_non_public_topics();
+        // }
+
         // model.catalog_links();
         check_links(&model, &mut self.errors);
         //bg!(model.get_topics().keys());
         // It's not necessary to check whether parents link to subtopics, since those links will be
         // generated.
         // self.check_subtopic_relationships(&mut model);
-        self.errors.print_and_list_missing_topics(Some("First pass"));
+        if !model.is_public() {
+            self.errors.print_and_list_missing_topics(Some("First pass"));
+        }
 
         // modelReport::new().categories().paragraphs().attributes().lists().go(&model);
         // report_category_tree(&model);
         // model.catalog_possible_list_types().print_by_count(0, None);
 
-        model.add_missing_category_topics();
+        if !model.is_public() {
+            model.add_missing_category_topics();
+        }
         // model.catalog_links();
         self.errors.clear();
         check_links(&model, &mut self.errors);
@@ -108,7 +120,8 @@ impl BuildProcess {
             if file_name.ends_with(".txt") {
                 let path_name = util::file::path_name(dir_entry.path());
                 let content = fs::read_to_string(&dir_entry.path()).unwrap();
-                model.add_original_page(&path_name, content.clone());
+                //rintln!("{}: is_public = {}; marker_found = {}", &file_name, model.is_public(), content.contains(MARKER_PUBLIC_IN_TEXT_FILE));
+                let original_content = content.clone();
 
                 // Double linefeeds are fine since they count as paragraph breaks, but any
                 // linefeeds after that should be removed.
@@ -126,27 +139,42 @@ impl BuildProcess {
                 assert!(topic_name.ends_with(DELIM_HEADER), "Topic name \"{}\" should end with \"{}\".", &topic_name, DELIM_HEADER);
                 topic_name = topic_name.replace(DELIM_HEADER, "").trim().to_string();
                 //bg!(&topic_name);
-                let mut topic = Topic::new(namespace_name, &topic_name);
-                for paragraph in paragraphs.iter() {
-                    topic.add_paragraph(Paragraph::new_unknown(paragraph));
-                }
-                model.add_topic(topic);
-                topic_count += 1;
-                if topic_limit.map_or(false, |topic_limit| topic_count >= topic_limit) {
-                    break;
+
+                // If we're doing a public-only build we don't even want to read the file unless
+                // it's explicitly tagged as a public topic.
+                if model.is_public() && !content.contains(MARKER_PUBLIC_IN_TEXT_FILE) {
+                    // This is a private topic.
+                    model.add_private_topic_name(topic_name.clone());
+                } else {
+                    model.add_original_page(&path_name, original_content);
+
+                    let mut topic = Topic::new(namespace_name, &topic_name);
+                    for paragraph in paragraphs.iter() {
+                        topic.add_paragraph(Paragraph::new_unknown(paragraph));
+                    }
+                    model.add_topic(topic);
+                    topic_count += 1;
+                    if topic_limit.map_or(false, |topic_limit| topic_count >= topic_limit) {
+                        break;
+                    }
                 }
             }
         }
     }
 
     fn refine_paragraphs(&mut self, model: &mut Model) {
+        let all_topic_keys = if model.is_public() {
+            model.get_topics().keys().map(|topic_key| topic_key.clone()).collect()
+        } else {
+            vec![]
+        };
         for topic in model.get_topics_mut().values_mut() {
             let context = format!("Refining paragraphs for \"{}\".", topic.get_name());
             self.topic_parse_state = TopicParseState::new();
             //rintln!("\n==================================================================\n\n{}\n", context);
             let paragraph_count = topic.get_paragraph_count();
             for paragraph_index in 0..paragraph_count {
-                match self.refine_one_paragraph_rc(topic, paragraph_index, &context) {
+                match self.refine_one_paragraph_rc(topic, paragraph_index, &context, &all_topic_keys) {
                     Err(msg) => {
                         let topic_key = TopicKey::new(&self.namespace_main, topic.get_name());
                         self.errors.add(&topic_key, &msg);
@@ -167,7 +195,7 @@ impl BuildProcess {
         }
     }
 
-    fn refine_one_paragraph_rc(&mut self, topic: &mut Topic, paragraph_index: usize, context: &str) -> Result<(), String> {
+    fn refine_one_paragraph_rc(&mut self, topic: &mut Topic, paragraph_index: usize, context: &str, all_topic_keys: &Vec<TopicKey>) -> Result<(), String> {
         let source_paragraph = topic.replace_paragraph_with_placeholder(paragraph_index);
         // Check whether we've finished with the more or less hand-written part of the page and are
         // now in the fully generated sections like "Inbound Links". We don't want to parse these
@@ -179,7 +207,7 @@ impl BuildProcess {
                     let text = util::parse::trim_linefeeds(&text);
                     if !(self.paragraph_as_category_rc(topic, &text, context)?
                         || self.paragraph_as_section_header_rc(topic, &text, paragraph_index, context)?
-                        || self.paragraph_as_breadcrumb_rc(topic, &text, context)?
+                        || self.paragraph_as_breadcrumb_rc(topic, &text, context, all_topic_keys)?
                         || self.paragraph_as_marker_start_or_end_rc(topic, &text, paragraph_index, context)?
                         || self.paragraph_as_table_rc(topic, &text, paragraph_index, context)?
                         || self.paragraph_as_list_rc(topic, &text, paragraph_index, context)?
@@ -281,7 +309,7 @@ impl BuildProcess {
         }
     }
 
-    fn paragraph_as_breadcrumb_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<bool, String> {
+    fn paragraph_as_breadcrumb_rc(&mut self, topic: &mut Topic, text: &str, context: &str, all_topic_keys: &Vec<TopicKey>) -> Result<bool, String> {
         // A breadcrumb paragraph showing the parent and grandparent topic will look like this with
         // the links worked out:
         //   **[[tools:android|Android]] => [[tools:android_development|Android Development]] => Android Sensors**
@@ -301,9 +329,14 @@ impl BuildProcess {
             Ok(Some(parent_topic_keys)) => {
                 //bg!(&parent_topic_keys);
                 let parent_links = parent_topic_keys.iter()
+                    // If all_topic_keys is filled, we're doing a public build, so we need to ignore
+                    // any parent references to topics that we left off because they're private.
+                    .filter(|topic_key| all_topic_keys.is_empty() || all_topic_keys.contains(topic_key))
                     .map(|topic_key| r!(Link::new_topic_from_key(None, topic_key)))
                     .collect::<Vec<_>>();
-                topic.set_parents(parent_links);
+                if !parent_links.is_empty() {
+                    topic.set_parents(parent_links);
+                }
                 Ok(true)
             },
             Ok(None) => {

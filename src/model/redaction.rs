@@ -36,6 +36,14 @@ impl RedactionRecord {
         for topic in model.get_topics_mut().values_mut()
                 .filter(|topic| topic.is_public()) {
             let topic_key = topic.get_topic_key();
+            if let Some(category) = topic.get_category().clone() {
+                if self.phrases.contains(&category.to_lowercase()) {
+                    // This is a public topic whose category is a private topic, so remove the
+                    // category reference.
+                    // println!("{}: removing category {}", topic_key.get_display_text(), category); panic!();
+                    topic.clear_category();
+                }
+            }
             let mut paragraph_replacements = BTreeMap::new();
             for (paragraph_index, paragraph) in topic.get_paragraphs().iter().enumerate() {
                 match paragraph {
@@ -74,6 +82,12 @@ impl RedactionRecord {
                             paragraph_replacements.insert(paragraph_index, new_paragraph);
                         }
                     },
+                    Paragraph::SectionHeader { name, depth, .. } => {
+                        if let Some((new_name, phrases)) = self.redact_text(name) {
+                            let new_paragraph = Paragraph::new_section_header(&new_name, *depth);
+                            paragraph_replacements.insert(paragraph_index, new_paragraph);
+                        }
+                    },
                     Paragraph::Table { table } => {
                         let mut new_table = table.clone();
                         let mut is_changed = false;
@@ -98,7 +112,7 @@ impl RedactionRecord {
                         }
                     },
                     Paragraph::Attributes | Paragraph::Breadcrumbs | Paragraph::Category | Paragraph::GenStart
-                    | Paragraph::GenEnd | Paragraph::Marker { .. } | Paragraph::Placeholder | Paragraph::SectionHeader { .. }
+                    | Paragraph::GenEnd | Paragraph::Marker { .. } | Paragraph::Placeholder
                     | Paragraph::TextUnresolved { .. } | Paragraph::Unknown { .. } => {},
                 };
             }
@@ -133,24 +147,10 @@ impl RedactionRecord {
                             }
                         },
                         TextItem::Text { text } => {
-                            let mut working_text = text.clone();
-                            let mut phrases = vec![];
-                            loop {
-                                match self.find_match(&working_text) {
-                                    Some((start_index, end_index, phrase)) => {
-                                        //let before = if start_index == 0 { "" } else { &working_text[0..start_index] };
-                                        working_text = format!("{}{}{}", &working_text[0..start_index], MARKER_REDACTION, &working_text[end_index..working_text.len()]);
-                                        phrases.push(phrase);
-                                    },
-                                    None => {
-                                        break;
-                                    }
-                                }
-                            }
-                            if working_text.ne(text) {
-                                replacement_items.insert(index, TextItem::new_text(&working_text));
+                            if let Some((new_text, phrases)) = self.redact_text(text) {
+                                replacement_items.insert(index, TextItem::new_text(&new_text));
                                 let entry = self.redactions.entry(topic_key.clone()).or_insert(vec![]);
-                                entry.push(Redaction::new(phrases, text.clone(), working_text));
+                                entry.push(Redaction::new(phrases, text.clone(), new_text));
                             }
                         },
                     }
@@ -168,6 +168,28 @@ impl RedactionRecord {
             TextBlock::Unresolved { .. } => {
                 panic!("Found an unresolved text block in {}: {:?}.", topic_key, text_block)
             },
+        }
+    }
+
+    fn redact_text(&self, text: &str) -> Option<(String, Vec<String>)> {
+        let mut working_text = text.to_string();
+        let mut phrases = vec![];
+        loop {
+            match self.find_match(&working_text) {
+                Some((start_index, end_index, phrase)) => {
+                    //let before = if start_index == 0 { "" } else { &working_text[0..start_index] };
+                    working_text = format!("{}{}{}", &working_text[0..start_index], MARKER_REDACTION, &working_text[end_index..working_text.len()]);
+                    phrases.push(phrase);
+                },
+                None => {
+                    break;
+                }
+            }
+        }
+        if working_text.ne(text) {
+            Some((working_text, phrases))
+        } else {
+            None
         }
     }
 
@@ -191,11 +213,14 @@ impl RedactionRecord {
         //     println!("{}: public = {}", topic_key.get_display_text(), model.topic_is_public(topic_key));
         // }
         // panic!();
+        /*
         for topic_key in model.get_topics().keys()
                 .filter(|topic_key| !model.topic_is_public(topic_key)) {
             self.private_topic_keys.push(topic_key.clone());
             self.phrases.push(topic_key.get_topic_name().to_string());
         }
+         */
+        self.phrases.append(&mut model.get_private_topic_names().clone());
         //bg!(&self.private_topic_keys); panic!();
         // Lowercase and get rid of any blank phrases and whitespace.
         self.phrases = self.phrases.iter()

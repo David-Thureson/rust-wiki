@@ -24,6 +24,7 @@ pub(crate) struct Model {
     projects_name_map: Option<NameTopicMap>,
     original_pages: BTreeMap<String, String>,
     file_monitor_project: Option<file_monitor::model::Project>,
+    private_topic_names: Vec<String>,
     pub redaction_record: Option<RedactionRecord>,
     // used_by_map: BTreeMap<TopicKey, Vec<TopicKey>>,
     // links: Vec<LinkRc>,
@@ -48,6 +49,7 @@ impl Model {
             projects_name_map: None,
             original_pages: Default::default(),
             file_monitor_project: None,
+            private_topic_names: vec![],
             redaction_record: None,
         };
         wiki.add_namespace(main_namespace);
@@ -583,7 +585,39 @@ impl Model {
         self.redaction_record.as_ref()
     }
 
+    pub(crate) fn add_private_topic_name(&mut self, topic_name: String) {
+        self.private_topic_names.push(topic_name);
+    }
+
+    pub(crate) fn get_private_topic_names(&self) -> &Vec<String> {
+        &self.private_topic_names
+    }
+
     pub(crate) fn redact(&mut self, compare_only: bool, redaction_preview_only: bool) {
         self.redaction_record = Some(redaction::RedactionRecord::redact(self, compare_only, redaction_preview_only));
     }
+
+    /*
+    pub(crate) fn remove_non_public_parent_topic_refs(&mut self) {
+        assert!(self.is_public);
+        let mut delete_topic_keys = vec![];
+        for topic in self.topics.values_mut() {
+            let parent_count = topic.get_parent_count();
+            match get_parent_count {
+                0 => {},
+                1 => {
+                    if
+                },
+                2 => {
+                    // Combo category.
+                    if topic.get_
+                },
+                _ => {
+                    panic!("In {}, unexpected number of parents = {}", topic.get_topic_key(), parent_count)
+                }
+            }
+        }
+    }
+
+     */
 }

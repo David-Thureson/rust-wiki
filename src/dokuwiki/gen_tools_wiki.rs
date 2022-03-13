@@ -4,6 +4,7 @@ use crate::model::{FOLDER_PREFIX_WIKI_GEN_BACKUP, FOLDER_WIKI_GEN_BACKUP, FOLDER
 use crate::dokuwiki::gen_from_model::GenFromModel;
 use crate::dokuwiki::{PATH_MEDIA, PATH_PAGES, FILE_MONITOR_PROJECT_NAME_DOKUWIKI, FILE_MONITOR_SCAN_MINUTES};
 use file_monitor::model::Marker as FileMonitorMarker;
+use std::intrinsics::nontemporal_store;
 
 pub(crate) const PROJECT_NAME: &str = "Tools";
 
@@ -56,7 +57,12 @@ pub(crate) fn complete_round_trip(mut model: model::Model, compare_only: bool) {
 
     // Create DokuWiki pages from this new model.
     let gen_path_pages = if compare_only { FOLDER_WIKI_COMPARE_NEW } else { PATH_PAGES };
+    // clean_up_tools_dokuwiki_files(gen_path_pages, false);
 
+
+    Have this generate the new files in memory, then delete files from the gen path if they're no
+    longer in the model, overwrite the files that have changed, and leave the unaffected files in
+    place with their old timestamps.
     gen_tools_project_from_model(&model, gen_path_pages, compare_only);
 
     if !compare_only {
@@ -85,14 +91,14 @@ fn path_media_project() -> String {
 }
 
 #[allow(dead_code)]
-fn clean_up_tools_dokuwiki_files(include_images: bool) {
-    let path_pages_project = path_pages_project(PATH_PAGES);
+fn clean_up_tools_dokuwiki_files(path_pages: &str, include_images: bool) {
+    let path_pages_project = path_pages_project(path_pages);
     if util::file::path_exists(&path_pages_project) {
         std::fs::remove_dir_all(&path_pages_project).unwrap();
     }
 
     // Delete the text files in the main DokuWiki pages folder such as start.txt and sidebar.txt.
-    for result_dir_entry in std::fs::read_dir(PATH_PAGES).unwrap() {
+    for result_dir_entry in std::fs::read_dir(path_pages).unwrap() {
         let dir_entry = result_dir_entry.unwrap();
         if util::file::dir_entry_to_file_name(&dir_entry).to_lowercase().ends_with(".txt") {
             std::fs::remove_file(dir_entry.path()).unwrap();

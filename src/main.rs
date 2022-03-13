@@ -3,7 +3,7 @@ use wiki::*;
 pub(crate) fn main() {
 
     let compare_only = true;
-    let is_public = false;
+    let is_public = true;
 
     // connectedtext::to_dokuwiki::main();
     // connectedtext::to_model::main();
