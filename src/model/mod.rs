@@ -31,6 +31,8 @@ pub(crate) mod parse;
 // pub(crate) mod section;
 // pub(crate) use section::*;
 
+pub(crate) mod redaction;
+
 pub(crate) mod report;
 
 pub(crate) mod table;
@@ -52,6 +54,8 @@ pub(crate) type TopicTree = util::tree::Tree<TopicKey>;
 pub(crate) type TopicTreeNode = util::tree::TreeNode<TopicKey>;
 
 pub(crate) const PANIC_ON_MODEL_ERROR: bool = true;
+
+pub(crate) const FILE_NAME_REDACT: &str = "C:/Projects/Rust/utility/wiki/redact.txt";
 
 pub(crate) const NAMESPACE_ROOT: &str = "";
 // pub(crate) const NAMESPACE_UNDECIDED: &str = "{undecided}";
@@ -85,6 +89,8 @@ pub(crate) const PREFIX_SFTP: &str = "sftp://";
 pub(crate) const ATTRIBUTE_VALUE_PRIVATE: &str = "Private";
 #[allow(dead_code)]
 pub(crate) const ATTRIBUTE_VALUE_PUBLIC: &str = "Public";
+#[allow(dead_code)]
+pub(crate) const ATTRIBUTE_VALUE_UNKNOWN: &str = "Unknown";
 
 pub(crate) const ATTRIBUTE_NAME_ABANDONED: &str = "Abandoned";
 pub(crate) const ATTRIBUTE_NAME_ACQUIRED: &str = "Acquired";

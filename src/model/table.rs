@@ -38,6 +38,10 @@ impl Table {
         &self.rows
     }
 
+    pub(crate) fn get_rows_mut(&mut self) -> &mut Vec<Vec<TableCell>> {
+        &mut self.rows
+    }
+
     pub(crate) fn has_header(&self) -> bool {
         self.has_header
     }
@@ -109,6 +113,10 @@ impl Table {
         links
     }
 
+    pub(crate) fn set_cell_text_block(&mut self, row_index: usize, col_index: usize, text_block: TextBlock) {
+        self.rows[row_index][col_index].text_block = text_block;
+    }
+
 }
 
 impl TableCell {
@@ -126,6 +134,10 @@ impl TableCell {
             is_bold,
             horizontal: horizontal.clone(),
         }
+    }
+
+    pub(crate) fn set_text_block(&mut self, text_block: TextBlock) {
+        self.text_block = text_block;
     }
 
     pub(crate) fn is_bold(&self) -> bool {

@@ -84,7 +84,7 @@ impl BuildProcess {
         // One-time fix.
         remove_edited_attribute_from_private_topics(&mut model);
 
-        // model.add_visibility_attributes();
+        model.add_visibility_attributes();
         //bg!(&model.attributes);
         let attr_errors = model.catalog_attributes();
         attr_errors.print(Some("model.catalog_attributes()"));

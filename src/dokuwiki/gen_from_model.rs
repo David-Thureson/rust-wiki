@@ -3,7 +3,7 @@ use crate::{model, Itertools};
 use crate::dokuwiki as wiki;
 use std::rc::Rc;
 use std::cell::{RefCell, Ref};
-use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys, ATTRIBUTE_NAME_EDITED, ATTRIBUTE_NAME_ADDED, TopicTreeNode};
+use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys, ATTRIBUTE_NAME_EDITED, ATTRIBUTE_NAME_ADDED, TopicTreeNode, ATTRIBUTE_VALUE_UNKNOWN, ATTRIBUTE_NAME_VISIBILITY};
 use std::collections::BTreeMap;
 use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD};
 use crate::tree::TreeNode;
@@ -186,7 +186,9 @@ impl <'a> GenFromModel<'a> {
     pub(crate) fn gen_reports_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_REPORTS,None);
         // self.gen_reports_page_public_topics_by_category(&mut page);
-        self.gen_reports_page_public_ref_to_private(&mut page);
+        // self.gen_reports_page_public_ref_to_private(&mut page);
+        // self.gen_reports_page_redactions(&mut page);
+        self.gen_reports_page_privacy_unknown(&mut page);
         page.write_if_changed(&self.path_pages, self.model.get_original_pages());
     }
 
@@ -214,9 +216,9 @@ impl <'a> GenFromModel<'a> {
     fn gen_reports_page_public_ref_to_private(&self, page: &mut WikiGenPage) {
         let mut map = BTreeMap::new();
         for topic in self.model.get_topics().values()
-                .filter(|topic| topic.is_public()) {
+            .filter(|topic| topic.is_public()) {
             for ref_topic_key in topic.get_referenced_topic_keys(true, false).drain_filter(|_x| true)
-                    .filter(|ref_topic_key| !self.model.get_topics().get(ref_topic_key).unwrap().is_public()) {
+                .filter(|ref_topic_key| !self.model.get_topics().get(ref_topic_key).unwrap().is_public()) {
                 let entry = map.entry(topic.get_topic_key()).or_insert(vec![]);
                 entry.push(ref_topic_key);
             }
@@ -228,6 +230,23 @@ impl <'a> GenFromModel<'a> {
                 let link = self.page_link_qualified(ref_topic_key);
                 page.add_list_item_unordered(1, &link);
             }
+        }
+    }
+
+    #[allow(dead_code)]
+    fn gen_reports_page_redactions(&self, page: &mut WikiGenPage) {
+        // While redactions should be used only for public renders, the report of redactions is
+        // private. So in this case we did the redactions just to get the report.
+        assert!(!self.model.is_public());
+        //let redaction_record = self.model.get_redaction_record().unwrap();
+    }
+
+    #[allow(dead_code)]
+    fn gen_reports_page_privacy_unknown(&self, page: &mut WikiGenPage) {
+        for topic in self.model.get_topics().values()
+                .filter(|topic| topic.has_attribute_value_temp_or_permanent(ATTRIBUTE_NAME_VISIBILITY, ATTRIBUTE_VALUE_UNKNOWN)) {
+            let link = self.page_link_qualified(&topic.get_topic_key());
+            page.add_list_item_unordered(1, &link);
         }
     }
 

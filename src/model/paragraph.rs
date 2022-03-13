@@ -141,6 +141,13 @@ impl Paragraph {
         text_blocks
     }
 
+    /*
+    pub(crate) fn visit_text_blocks_mut<V>(&mut self, func: F) -> V
+        where F: FnOnce()
+    {
+    }
+     */
+
     pub(crate) fn get_links(&self, include_generated: bool, dependencies_are_generated: bool) -> Vec<LinkRc> {
         let mut links = vec![];
         match self {

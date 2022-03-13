@@ -116,6 +116,13 @@ impl Topic {
         self.temp_attributes.contains_key(attr_name)
     }
 
+    pub(crate) fn has_temp_attribute_value(&self, attr_type_name: &str, attr_value: &str) -> bool {
+        match self.temp_attributes.get(attr_type_name) {
+            Some(attr_values) => attr_values.contains(&attr_value.to_string()),
+            None => false,
+        }
+    }
+
     pub(crate) fn set_temp_attribute_date(&mut self, attr_type_name: &str, value: &NaiveDate) {
         self.temp_attributes.remove(attr_type_name);
         self.temp_attributes.insert(attr_type_name.to_string(), vec![AttributeType::date_to_canonical_value(value)]);
@@ -246,8 +253,14 @@ impl Topic {
         }
     }
 
+    pub(crate) fn has_attribute_value_temp_or_permanent(&self, attr_type_name: &str, attr_value: &str) -> bool {
+        self.has_temp_attribute_value(attr_type_name, attr_value)
+            || self.has_attribute_value(attr_type_name, attr_value)
+    }
+
     pub(crate) fn is_public(&self) -> bool {
-        self.has_attribute_value(ATTRIBUTE_NAME_VISIBILITY, ATTRIBUTE_VALUE_PUBLIC)
+        self.has_temp_attribute_value(ATTRIBUTE_NAME_VISIBILITY, ATTRIBUTE_VALUE_PUBLIC)
+            || self.has_attribute_value(ATTRIBUTE_NAME_VISIBILITY, ATTRIBUTE_VALUE_PUBLIC)
     }
 
     /*
@@ -274,11 +287,9 @@ impl Topic {
         &self.paragraphs
     }
 
-    /*
     pub(crate) fn get_paragraphs_mut(&mut self) -> &mut Vec<Paragraph> {
         &mut self.paragraphs
     }
-    */
 
     /*
     pub(crate) fn get_paragraph(&self, index: usize) -> &Paragraph {
@@ -781,7 +792,7 @@ impl Topic {
                         item.get_text_block_mut().update_internal_links(keys);
                     }
                 },
-                Paragraph::Table { table} => {
+                Paragraph::Table { table } => {
                     for row in table.get_rows_mut().iter_mut() {
                         for cell in row.iter_mut() {
                             cell.update_internal_links(keys);

@@ -2,6 +2,9 @@ use super::*;
 use manage_projects::model::Model as ProjectModel;
 use std::collections::BTreeMap;
 use crate::model::date::update_date_attributes_from_file_monitor;
+use itertools::rev;
+use std::cmp::Reverse;
+use crate::model::redaction::RedactionRecord;
 // use crate::connectedtext::NAMESPACE_TOOLS;
 
 pub(crate) type TopicRefs = BTreeMap<String, TopicKey>;
@@ -23,6 +26,7 @@ pub(crate) struct Model {
     projects_name_map: Option<NameTopicMap>,
     original_pages: BTreeMap<String, String>,
     file_monitor_project: Option<file_monitor::model::Project>,
+    pub redaction_record: Option<RedactionRecord>,
     // used_by_map: BTreeMap<TopicKey, Vec<TopicKey>>,
     // links: Vec<LinkRc>,
 }
@@ -46,8 +50,7 @@ impl Model {
             projects_name_map: None,
             original_pages: Default::default(),
             file_monitor_project: None,
-            // used_by_map: Default::default(),
-            // links: vec![],
+            redaction_record: None,
         };
         wiki.add_namespace(main_namespace);
         wiki
@@ -400,13 +403,14 @@ impl Model {
         update_date_attributes_from_file_monitor(self);
     }
 
-    /*
     pub(crate) fn add_visibility_attributes(&mut self) {
         for topic in self.get_topics_mut().values_mut() {
-            topic.add_temp_attribute_values(ATTRIBUTE_NAME_VISIBILITY.to_string(), vec![ATTRIBUTE_VALUE_PUBLIC.to_string()]);
+            // topic.add_temp_attribute_values(ATTRIBUTE_NAME_VISIBILITY.to_string(), vec![ATTRIBUTE_VALUE_PUBLIC.to_string()]);
+            if !topic.has_temp_attribute(ATTRIBUTE_NAME_VISIBILITY) {
+                topic.add_temp_attribute_values(ATTRIBUTE_NAME_VISIBILITY.to_string(), vec![ATTRIBUTE_VALUE_UNKNOWN.to_string()]);
+            }
         }
     }
-     */
 
     pub(crate) fn has_topic(&self, topic_key: &TopicKey) -> bool {
         self.topics.contains_key(topic_key)
@@ -567,4 +571,20 @@ impl Model {
         }
     }
      */
+
+    pub(crate) fn is_public(&self) -> bool {
+        self.is_public
+    }
+
+    pub(crate) fn topic_is_public(&self, topic_key: &TopicKey) -> bool {
+        self.topics.get(topic_key).unwrap().is_public()
+    }
+
+    pub(crate) fn get_redaction_record(&self) -> Option<&RedactionRecord> {
+        self.redaction_record.as_ref()
+    }
+
+    pub(crate) fn redact(&mut self, preview_only: bool) {
+        self.redaction_record = Some(redaction::RedactionRecord::redact(self, preview_only));
+    }
 }

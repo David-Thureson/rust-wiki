@@ -43,6 +43,11 @@ pub(crate) fn complete_round_trip(mut model: model::Model, compare_only: bool) {
 
     println!("\ndokuwiki::gen_tools_wiki::complete_round_trip(): Start.");
 
+    // For now, do the redaction regardless of model.is_public, so we can get the report in
+    // GenFromModel::gen_reports_page_redactions().
+    let preview_only = true;
+    model.redact(preview_only);
+
     super::to_model::complete_model(&mut model);
 
     // Create DokuWiki pages from this new model.

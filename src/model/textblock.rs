@@ -95,6 +95,16 @@ impl TextBlock {
         }
     }
 
+    pub fn replace_item(&mut self, index: usize, item: TextItem) {
+        match self {
+            TextBlock::Resolved { items } => {
+                items[index] = item;
+            },
+            _ => {
+                panic!("Expected to find a resolved text block.")
+            }
+        }
+    }
         /*
         pub(crate) fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
             match self {

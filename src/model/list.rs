@@ -100,6 +100,18 @@ impl List {
         &self.items
     }
 
+    pub fn get_items_mut(&mut self) -> &mut Vec<ListItem> {
+        &mut self.items
+    }
+
+    pub fn set_header(&mut self, text_block: Option<TextBlock>) {
+        self.header = text_block;
+    }
+
+    pub fn set_item_text_block(&mut self, index: usize, text_block: TextBlock) {
+        self.items[index].text_block = text_block;
+    }
+
     pub(crate) fn is_generated(&self) -> bool {
         GENERATED_LIST_TYPES.contains(&&*self.type_)
     }
@@ -186,6 +198,10 @@ impl ListItem {
 
     pub(crate) fn get_text_block(&self) -> &TextBlock {
         &self.text_block
+    }
+
+    pub(crate) fn set_text_block(&mut self, text_block: TextBlock) {
+        self.text_block = text_block;
     }
 
     pub(crate) fn get_display_text(&self) -> String {
