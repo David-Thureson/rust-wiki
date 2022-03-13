@@ -24,7 +24,7 @@ pub(crate) struct Model {
     projects_name_map: Option<NameTopicMap>,
     original_pages: BTreeMap<String, String>,
     file_monitor_project: Option<file_monitor::model::Project>,
-    private_topic_names: Vec<String>,
+    redacted_phrases: Vec<String>,
     pub redaction_record: Option<RedactionRecord>,
     // used_by_map: BTreeMap<TopicKey, Vec<TopicKey>>,
     // links: Vec<LinkRc>,
@@ -49,7 +49,7 @@ impl Model {
             projects_name_map: None,
             original_pages: Default::default(),
             file_monitor_project: None,
-            private_topic_names: vec![],
+            redacted_phrases: vec![],
             redaction_record: None,
         };
         wiki.add_namespace(main_namespace);
@@ -585,17 +585,38 @@ impl Model {
         self.redaction_record.as_ref()
     }
 
-    pub(crate) fn add_private_topic_name(&mut self, topic_name: String) {
-        self.private_topic_names.push(topic_name);
+    pub(crate) fn add_redacted_phrase(&mut self, phrase: String) {
+        self.redacted_phrases.push(phrase);
     }
 
-    pub(crate) fn get_private_topic_names(&self) -> &Vec<String> {
-        &self.private_topic_names
+    /*
+    pub(crate) fn add_redacted_phrases(&mut self, phrases: &mut Vec<String>) {
+        self.redacted_phrases.append(phrases);
+    }
+    */
+
+    pub(crate) fn get_redacted_phrases(&self) -> &Vec<String> {
+        &self.redacted_phrases
     }
 
+    pub(crate) fn print_redacted_phrases(&self) {
+        println!("\nModel::print_redacted_phrases():");
+        for phrase in self.redacted_phrases.iter() {
+            println!("\t\"{}\"", phrase);
+        }
+        println!();
+    }
+
+    pub(crate) fn finalize_redacted_phrases(&mut self) {
+        let mut phrases = std::mem::replace(&mut self.redacted_phrases, vec![]);
+        self.redacted_phrases = redaction::finalize_redacted_phrases(phrases);
+    }
+
+    /*
     pub(crate) fn redact(&mut self, compare_only: bool, redaction_preview_only: bool) {
         self.redaction_record = Some(redaction::RedactionRecord::redact(self, compare_only, redaction_preview_only));
     }
+    */
 
     /*
     pub(crate) fn remove_non_public_parent_topic_refs(&mut self) {

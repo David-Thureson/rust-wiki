@@ -70,7 +70,9 @@ pub(crate) const MARKER_QUOTE_START_PREFIX: &str = "<WRAP";
 // pub(crate) const MARKER_QUOTE_END: &str = "</WRAP>";
 pub(crate) const MARKER_CODE_START_PREFIX: &str = "<code";
 pub(crate) const MARKER_CODE_END: &str = "</code>";
-pub(crate) const MARKER_REDACTION: &str = "%%*****%%";
+// Change the symbols if this causes a parsing issue.
+pub(crate) const MARKER_REDACTION: &str = "~~~redacted~~~";
+pub(crate) const MARKER_REDACTION_FINAL: &str = "%%*****%%";
 pub(crate) const MARKER_PUBLIC_IN_TEXT_FILE: &str = "^ Visibility | Public |";
 
 pub(crate) const TEMP_DELIM_IMG_START: &str = "[[{{";

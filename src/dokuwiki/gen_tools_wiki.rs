@@ -4,7 +4,6 @@ use crate::model::{FOLDER_PREFIX_WIKI_GEN_BACKUP, FOLDER_WIKI_GEN_BACKUP, FOLDER
 use crate::dokuwiki::gen_from_model::GenFromModel;
 use crate::dokuwiki::{PATH_MEDIA, PATH_PAGES, FILE_MONITOR_PROJECT_NAME_DOKUWIKI, FILE_MONITOR_SCAN_MINUTES};
 use file_monitor::model::Marker as FileMonitorMarker;
-use std::intrinsics::nontemporal_store;
 
 pub(crate) const PROJECT_NAME: &str = "Tools";
 
@@ -50,8 +49,8 @@ pub(crate) fn complete_round_trip(mut model: model::Model, compare_only: bool) {
 
     // For now, do the redaction regardless of model.is_public, so we can get the report in
     // GenFromModel::gen_reports_page_redactions().
-    let redaction_preview_only = false;
-    model.redact(compare_only, redaction_preview_only);
+    // let redaction_preview_only = false;
+    // model.redact(compare_only, redaction_preview_only);
 
     super::to_model::complete_model(&mut model);
 
@@ -59,12 +58,12 @@ pub(crate) fn complete_round_trip(mut model: model::Model, compare_only: bool) {
     let gen_path_pages = if compare_only { FOLDER_WIKI_COMPARE_NEW } else { PATH_PAGES };
     // clean_up_tools_dokuwiki_files(gen_path_pages, false);
 
-
+    /*
     Have this generate the new files in memory, then delete files from the gen path if they're no
     longer in the model, overwrite the files that have changed, and leave the unaffected files in
     place with their old timestamps.
     gen_tools_project_from_model(&model, gen_path_pages, compare_only);
-
+    */
     if !compare_only {
         // let path_pages_project = path_pages_project(PATH_PAGES);
         let backup_folder_new = util::file::back_up_folder_next_number_r(PATH_PAGES, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();

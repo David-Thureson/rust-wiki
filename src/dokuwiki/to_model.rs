@@ -2,15 +2,25 @@ use crate::*;
 use crate::model::*;
 use std::fs;
 use super::*;
+use crate::model::PUBLIC_ATTRIBUTES;
 
 struct BuildProcess {
     wiki_name: String,
     namespace_main: String,
     path_source: String,
+    is_public: bool,
+    topic_source_files: Vec<TopicSourceFile>,
     topic_refs: TopicRefs,
     errors: TopicErrorList,
     topic_limit: Option<usize>,
     topic_parse_state: TopicParseState,
+}
+
+struct TopicSourceFile {
+    namespace_name: String,
+    file_name: String,
+    topic_name: String,
+    content: String,
 }
 
 struct TopicParseState {
@@ -23,11 +33,13 @@ struct TopicParseState {
 }
 
 impl BuildProcess {
-    pub(crate) fn new(wiki_name: &str, namespace_main: &str, path_source: &str, topic_limit: Option<usize>) -> Self {
+    pub(crate) fn new(wiki_name: &str, namespace_main: &str, path_source: &str, is_public: bool, topic_limit: Option<usize>) -> Self {
         Self {
             wiki_name: wiki_name.to_string(),
             namespace_main: namespace_main.to_string(),
             path_source: path_source.to_string(),
+            is_public,
+            topic_source_files: vec![],
             topic_refs: Default::default(),
             errors: TopicErrorList::new(),
             topic_limit,
@@ -35,8 +47,8 @@ impl BuildProcess {
         }
     }
 
-    pub(crate) fn build(&mut self, project: Option<file_monitor::model::Project>, is_public: bool) -> Model {
-        let mut model = Model::new(&self.wiki_name, &self.namespace_main, is_public);
+    pub(crate) fn build(&mut self, project: Option<file_monitor::model::Project>) -> Model {
+        let mut model = Model::new(&self.wiki_name, &self.namespace_main, self.is_public);
 
         if let Some(project) = project {
             model.set_file_monitor_project(project);
@@ -46,18 +58,46 @@ impl BuildProcess {
         let namespace_book = model.namespace_book();
         model.add_namespace(&namespace_book);
 
+        // Fill self.topic_source_files with the raw content of the topics found in files, if
+        // necessary excluding non-public topics.
         // let topic_limit_per_namespace = self.topic_limit.map(|topic_limit| topic_limit / 2);
-        self.parse_from_folder(&mut model, &namespace_main, self.topic_limit);
+        self.read_from_folder(&mut model, &namespace_main, self.topic_limit);
         // self.parse_from_folder(&mut model, &namespace_book, topic_limit_per_namespace);
-        assert!(!model.get_topics().is_empty());
+        assert!(!self.topic_source_files.is_empty());
+
+        if self.is_public {
+            model.finalize_redacted_phrases();
+            // model.print_redacted_phrases();
+
+            // Remove any topic source files whose title contains a redacted phrase. This will
+            // handle cases like a combination topic marked as Public in which one or both of the
+            // parent topics are marked Private.
+            let dbg_topic_count_before = self.topic_source_files.len();
+            self.topic_source_files.retain(|topic_file| !redaction::text_contains_phrase(&topic_file.topic_name, model.get_redacted_phrases()));
+            let dbg_topic_count_after = self.topic_source_files.len();
+            //rintln!("BuildProcess::build(): started with {} topics, ended with {}.", dbg_topic_count_before, dbg_topic_count_after);
+        }
+
+        // Turn the raw file content into topics in the model.
+        self.parse_topics(&mut model);
+        let dbg_topic_source_file_count = self.topic_source_files.len();
+        let dbg_topic_count = model.get_topics().len();
+        let dbg_topic_ref_count = model.get_topic_refs().len();
+        //bg!(dbg_topic_source_file_count, dbg_topic_count, dbg_topic_ref_count);
+        assert_eq!(dbg_topic_source_file_count, dbg_topic_count, "dbg_topic_source_file_count = {}, dbg_topic_count = {}", dbg_topic_source_file_count, dbg_topic_count);
+        assert_eq!(dbg_topic_source_file_count, dbg_topic_ref_count, "dbg_topic_source_file_count = {}, dbg_topic_ref_count = {}", dbg_topic_source_file_count, dbg_topic_ref_count);
 
         self.topic_refs = model.get_topic_refs().clone();
 
         // Figure out the real nature of each paragraph.
         self.refine_paragraphs(&mut model);
 
-        tools_wiki::project::add_project_info_to_model(&mut model);
-        tools_wiki::project::update_projects_and_libraries(&mut model);
+        if !self.is_public {
+            tools_wiki::project::add_project_info_to_model(&mut model);
+            tools_wiki::project::update_projects_and_libraries(&mut model);
+        }
+
+        panic!();
 
         // if !model.is_public() {
         //     model.remove_non_public_parent_topic_refs();
@@ -91,12 +131,16 @@ impl BuildProcess {
         // Call the make tree functions after the last call to model.catalog_links().
         model.make_category_tree();
         model.make_subtopic_tree();
-        model.update_attributes_from_file_monitor();
+        if !self.is_public {
+            model.update_attributes_from_file_monitor();
+        }
 
         // One-time fix.
         remove_edited_attribute_from_private_topics(&mut model);
 
-        model.add_visibility_attributes();
+        if !self.is_public {
+            model.add_visibility_attributes();
+        }
         //bg!(&model.attributes);
         let attr_errors = model.catalog_attributes();
         attr_errors.print(Some("model.catalog_attributes()"));
@@ -107,74 +151,92 @@ impl BuildProcess {
         model
     }
 
-    fn parse_from_folder(&mut self, model: &mut Model, namespace_name: &str, topic_limit: Option<usize>) {
-        // Read each page's text file and read it as a topic, then break each topic into
-        // paragraphs. At this point we don't care about whether the paragraphs are plain or mixed
-        // text, attribute tables, section headers, breadcrumbs, etc.
+    fn read_from_folder(&mut self, model: &mut Model, namespace_name: &str, topic_limit: Option<usize>) {
+        // Read each page's text file. If this is a public build and the topic is not public,
+        // add that file name and topic name to the list of redacted phrases but otherwise don't
+        // include the topic in the build.
         TopicKey::assert_legal_namespace(namespace_name);
         let mut topic_count = 0;
-        let path_source = format!("{}/{}", self.path_source, gen::namespace_to_path(namespace_name));
+        let path_source_relative = format!("/{}", gen::namespace_to_path(namespace_name));
+        let path_source = format!("{}{}", self.path_source, path_source_relative);
         for dir_entry_result in fs::read_dir(path_source).unwrap() {
             let dir_entry = dir_entry_result.as_ref().unwrap();
             let file_name = util::file::dir_entry_to_file_name(dir_entry);
             if file_name.ends_with(".txt") {
                 let path_name = util::file::path_name(dir_entry.path());
                 let content = fs::read_to_string(&dir_entry.path()).unwrap();
-                //rintln!("{}: is_public = {}; marker_found = {}", &file_name, model.is_public(), content.contains(MARKER_PUBLIC_IN_TEXT_FILE));
-                let original_content = content.clone();
-
-                // Double linefeeds are fine since they count as paragraph breaks, but any
-                // linefeeds after that should be removed.
-                let content = util::format::remove_repeated_n(&content, "\n", 2);
-                assert_no_extra_lines(&file_name, &content);
-
-                // One-time fix:
-                // let content = content.replace(crate::connectedtext::to_model::CT_TEMP_DELIM_QUOTE_START, &format!("\n{}", MARKER_QUOTE_START));
-
-                let mut paragraphs = content.split(DELIM_PARAGRAPH).collect::<Vec<_>>();
-                // The first paragraph should have the topic name as a page header, like:
-                //   ======A Mind for Numbers======
-                let mut topic_name = paragraphs.remove(0).to_string();
-                assert!(topic_name.starts_with(DELIM_HEADER), "Topic name \"{}\" should start with \"{}\".", &topic_name, DELIM_HEADER);
-                assert!(topic_name.ends_with(DELIM_HEADER), "Topic name \"{}\" should end with \"{}\".", &topic_name, DELIM_HEADER);
-                topic_name = topic_name.replace(DELIM_HEADER, "").trim().to_string();
-                //bg!(&topic_name);
+                let topic_name_line = util::parse::before(&content, DELIM_LINEFEED);
+                assert!(topic_name_line.starts_with(DELIM_HEADER), "Topic name \"{}\" should start with \"{}\".", &topic_name_line, DELIM_HEADER);
+                assert!(topic_name_line.ends_with(DELIM_HEADER), "Topic name \"{}\" should end with \"{}\".", &topic_name_line, DELIM_HEADER);
+                let topic_name = topic_name_line.replace(DELIM_HEADER, "").trim().to_string();
 
                 // If we're doing a public-only build we don't even want to read the file unless
                 // it's explicitly tagged as a public topic.
                 if model.is_public() && !content.contains(MARKER_PUBLIC_IN_TEXT_FILE) {
                     // This is a private topic.
-                    model.add_private_topic_name(topic_name.clone());
+                    model.add_redacted_phrase(topic_name.clone());
+                    let file_name_no_extension = util::parse::before(&file_name, ".txt").to_string();
+                    model.add_redacted_phrase(file_name_no_extension);
                 } else {
-                    model.add_original_page(&path_name, original_content);
-
-                    let mut topic = Topic::new(namespace_name, &topic_name);
-                    for paragraph in paragraphs.iter() {
-                        topic.add_paragraph(Paragraph::new_unknown(paragraph));
-                    }
-                    model.add_topic(topic);
+                    let topic_source_file = TopicSourceFile::new(namespace_name, &file_name, &topic_name, content);
+                    self.topic_source_files.push(topic_source_file);
                     topic_count += 1;
                     if topic_limit.map_or(false, |topic_limit| topic_count >= topic_limit) {
-                        break;
+                        return;
                     }
                 }
             }
         }
     }
 
+    fn parse_topics(&mut self, model: &mut Model) {
+        // Turn the raw file content into topics in the model. This includes redaction (for a
+        // public build) and breaking each file's content into paragraphs. At this point we don't
+        // care about whether the paragraphs are plain or mixed text, attribute tables, section
+        // headers, breadcrumbs, etc.
+
+        for topic_source_file in self.topic_source_files.iter() {
+            let mut content = topic_source_file.content.clone();
+
+            // Double linefeeds are fine since they count as paragraph breaks, but any
+            // linefeeds after that should be removed.
+            let mut content = util::format::remove_repeated_n(&content, "\n", 2);
+            assert_no_extra_lines(&topic_source_file.file_name, &content);
+
+            if model.is_public() {
+                if let Some(mut new_content) = redaction::redact_text(&content, model.get_redacted_phrases()) {
+                    //rintln!("BuildProcess::parse_topics(): redactions in \"{}\".", topic_source_file.topic_name);
+                    std::mem::swap(&mut content, &mut new_content);
+                } else {
+                    //rintln!("BuildProcess::parse_topics(): \t\t\t***** NO REDACTIONS IN ***** \"{}\".", topic_source_file.topic_name);
+                }
+            }
+
+            let mut paragraphs = content.split(DELIM_PARAGRAPH).collect::<Vec<_>>();
+            // The first paragraph should have the topic name as a page header, like:
+            //   ======A Mind for Numbers======
+            // We already parsed this first line in read_from_folder() and we have the topic name,
+            // so we don't need this paragraph.
+            let mut first_paragraph = paragraphs.remove(0).to_string();
+            // The first paragraph should be a single line.
+            assert!(!first_paragraph.contains(DELIM_LINEFEED));
+
+            let mut topic = Topic::new(&topic_source_file.namespace_name, &topic_source_file.topic_name);
+            for paragraph in paragraphs.iter() {
+                topic.add_paragraph(Paragraph::new_unknown(paragraph));
+            }
+            model.add_topic(topic);
+        }
+    }
+
     fn refine_paragraphs(&mut self, model: &mut Model) {
-        let all_topic_keys = if model.is_public() {
-            model.get_topics().keys().map(|topic_key| topic_key.clone()).collect()
-        } else {
-            vec![]
-        };
         for topic in model.get_topics_mut().values_mut() {
             let context = format!("Refining paragraphs for \"{}\".", topic.get_name());
             self.topic_parse_state = TopicParseState::new();
             //rintln!("\n==================================================================\n\n{}\n", context);
             let paragraph_count = topic.get_paragraph_count();
             for paragraph_index in 0..paragraph_count {
-                match self.refine_one_paragraph_rc(topic, paragraph_index, &context, &all_topic_keys) {
+                match self.refine_one_paragraph_rc(topic, paragraph_index, &context) {
                     Err(msg) => {
                         let topic_key = TopicKey::new(&self.namespace_main, topic.get_name());
                         self.errors.add(&topic_key, &msg);
@@ -195,7 +257,7 @@ impl BuildProcess {
         }
     }
 
-    fn refine_one_paragraph_rc(&mut self, topic: &mut Topic, paragraph_index: usize, context: &str, all_topic_keys: &Vec<TopicKey>) -> Result<(), String> {
+    fn refine_one_paragraph_rc(&mut self, topic: &mut Topic, paragraph_index: usize, context: &str) -> Result<(), String> {
         let source_paragraph = topic.replace_paragraph_with_placeholder(paragraph_index);
         // Check whether we've finished with the more or less hand-written part of the page and are
         // now in the fully generated sections like "Inbound Links". We don't want to parse these
@@ -205,9 +267,17 @@ impl BuildProcess {
             match source_paragraph {
                 Paragraph::Unknown { text } => {
                     let text = util::parse::trim_linefeeds(&text);
+                    // For each of the calls in the next statement, the called function returns:
+                    //   - Ok(true) to indicate that the paragraph was found to be of this type and
+                    //     we can exit without calling any more paragraph_as_... functions.
+                    //   - Ok(false) to indicate that the paragraph is not of this type so we
+                    //     should keep going with further paragraph_as_... functions.
+                    //   - Err(msg) if there was some problem parsing the paragraph text and we
+                    //     need to quit trying to work on this paragraph and exit the current
+                    //     function.
                     if !(self.paragraph_as_category_rc(topic, &text, context)?
                         || self.paragraph_as_section_header_rc(topic, &text, paragraph_index, context)?
-                        || self.paragraph_as_breadcrumb_rc(topic, &text, context, all_topic_keys)?
+                        || self.paragraph_as_breadcrumb_rc(topic, &text, context)?
                         || self.paragraph_as_marker_start_or_end_rc(topic, &text, paragraph_index, context)?
                         || self.paragraph_as_table_rc(topic, &text, paragraph_index, context)?
                         || self.paragraph_as_list_rc(topic, &text, paragraph_index, context)?
@@ -243,6 +313,14 @@ impl BuildProcess {
             if text.trim().contains(DELIM_LINEFEED) {
                 return err_func("The text seems to be a category format but it has linefeeds.");
             } else {
+                if self.is_public && text.contains(MARKER_REDACTION) {
+                    // This appears to be a category reference to a private topic, or at least
+                    // part of the referenced topic name is a redacted phrase, so leave this topic
+                    // without a category. Returning Ok(true) means this paragraph has been
+                    // handled and we don't want to keep trying to figure out what it is.
+                    //rintln!("{}: Ignoring category reference with redaction: \"{}\".", context, text);
+                    return Ok(true);
+                }
                 let category_part = util::parse::after(text, PREFIX_CATEGORY).trim().to_string();
                 match parse_link_optional(&self.topic_refs,&category_part) {
                     Ok(Some(link)) => {
@@ -260,7 +338,7 @@ impl BuildProcess {
                     },
                     Ok(None) => {
                         let category_name = category_part;
-                        println!("\"{}\" in \"{}\"", topic.get_name(), category_name);
+                        //rintln!("\"{}\" in \"{}\"", topic.get_name(), category_name);
                         topic.set_category(&category_name);
                         return Ok(true);
                     },
@@ -309,7 +387,7 @@ impl BuildProcess {
         }
     }
 
-    fn paragraph_as_breadcrumb_rc(&mut self, topic: &mut Topic, text: &str, context: &str, all_topic_keys: &Vec<TopicKey>) -> Result<bool, String> {
+    fn paragraph_as_breadcrumb_rc(&mut self, topic: &mut Topic, text: &str, context: &str) -> Result<bool, String> {
         // A breadcrumb paragraph showing the parent and grandparent topic will look like this with
         // the links worked out:
         //   **[[tools:android|Android]] => [[tools:android_development|Android Development]] => Android Sensors**
@@ -325,13 +403,13 @@ impl BuildProcess {
         }
         let context = &format!("{} Seems to be a breadcrumb paragraph.", context);
         let err_func = |msg: &str| Err(format!("{} paragraph_as_breadcrumb_rc: {}: text = \"{}\".", context, msg, text));
-        match parse_breadcrumb_optional(text) {
+        match parse_breadcrumb_optional(text, context, self.is_public) {
             Ok(Some(parent_topic_keys)) => {
-                //bg!(&parent_topic_keys);
+                // If the vector of topic keys is empty, that means we found the redaction marker,
+                // so one or more of the parent references can't be used. In that case, leave the
+                // topic without any parents. In this case we still want to return Ok(true) so that
+                // we stop trying to parse this paragraph.
                 let parent_links = parent_topic_keys.iter()
-                    // If all_topic_keys is filled, we're doing a public build, so we need to ignore
-                    // any parent references to topics that we left off because they're private.
-                    .filter(|topic_key| all_topic_keys.is_empty() || all_topic_keys.contains(topic_key))
                     .map(|topic_key| r!(Link::new_topic_from_key(None, topic_key)))
                     .collect::<Vec<_>>();
                 if !parent_links.is_empty() {
@@ -425,32 +503,55 @@ impl BuildProcess {
                         let text = row[0].get_text_block().get_unresolved_text();
                         let attr_type_name = text_or_topic_link_label(&text)?;
                         //bg!(&attr_type_name);
-                        AttributeType::assert_legal_attribute_type_name(&attr_type_name);
-                        let mut attr_values = vec![];
-                        // let cell_items = row[1].text.split(",").collect::<Vec<_>>();
-                        let text = row[1].get_text_block().get_unresolved_text();
-
-                        // We want to split the attribute values using commas, but commas might be
-                        // part of a quoted string or inside a link, and in those cases we want to
-                        // avoid them during the split.
-                        // Replace any commas inside a quoted string with a placeholder.
-                        let text = util::parse::replace_within_delimiters_rc(&text,"\"", "\"", ",", TEMP_COMMA, context).unwrap();
-                        // Replace any commas inside a link with a placeholder.
-                        let text = util::parse::replace_within_delimiters_rc(&text,DELIM_LINK_START, DELIM_LINK_END, ",", TEMP_COMMA, context).unwrap();
-                        // Split the attribute values using the remaining commas, if any.
-                        let cell_items = util::parse::split_trim(&text, ",");
-                        // Put the commas back inside the quoted strings and links.
-                        let cell_items = cell_items.iter().map(|item| item.replace(TEMP_COMMA, ",")).collect::<Vec<_>>();
-                        // if topic.get_name().starts_with("Bayesian") { //bg!(topic.get_name(), &cell_items); }
-                        // let cell_items = util::parse::split_outside_of_delimiters_rc(&text, ",", "\"", "\"", context).unwrap();
-
-                        for cell_item in cell_items.iter() {
-                            let value = text_or_topic_link_label(cell_item)?;
-                            AttributeType::assert_legal_attribute_value(&value);
-                            attr_values.push(value);
+                        // If this is a public build, ignore attributes where the type name or text
+                        // has been at least partially redacted. Also ignore certain attributes
+                        // that don't go into a public build, like Visibility and contact
+                        // information.
+                        let mut use_this_attribute = true;
+                        if !self.is_public {
+                            let is_attr_public = PUBLIC_ATTRIBUTES.contains(&&*attr_type_name);
+                            dbg!(&attr_type_name, is_attr_public);
+                            if !is_attr_public {
+                                println!("{}: Ignoring \"{}\" attribute because it's not in the public list.", context, attr_type_name);
+                                use_this_attribute = false;
+                            }
+                            if attr_type_name.contains(MARKER_REDACTION) {
+                                //rintln!("{}: Ignoring \"{}\" attribute because the type name contains a redaction.", context, attr_type_name);
+                                use_this_attribute = false;
+                            }
                         }
-                        //bg!(&attr_values);
-                        topic.add_temp_attribute_values(attr_type_name, attr_values);
+                        if use_this_attribute {
+                            AttributeType::assert_legal_attribute_type_name(&attr_type_name);
+                            let mut attr_values = vec![];
+                            // let cell_items = row[1].text.split(",").collect::<Vec<_>>();
+                            let text = row[1].get_text_block().get_unresolved_text();
+
+                            if self.is_public && text.contains(MARKER_REDACTION) {
+                                //rintln!("{}: Ignoring \"{}\" attribute because the values contain a redaction: \"{}\".", context, attr_type_name, text);
+                            } else {
+                                // We want to split the attribute values using commas, but commas might be
+                                // part of a quoted string or inside a link, and in those cases we want to
+                                // avoid them during the split.
+                                // Replace any commas inside a quoted string with a placeholder.
+                                let text = util::parse::replace_within_delimiters_rc(&text, "\"", "\"", ",", TEMP_COMMA, context).unwrap();
+                                // Replace any commas inside a link with a placeholder.
+                                let text = util::parse::replace_within_delimiters_rc(&text, DELIM_LINK_START, DELIM_LINK_END, ",", TEMP_COMMA, context).unwrap();
+                                // Split the attribute values using the remaining commas, if any.
+                                let cell_items = util::parse::split_trim(&text, ",");
+                                // Put the commas back inside the quoted strings and links.
+                                let cell_items = cell_items.iter().map(|item| item.replace(TEMP_COMMA, ",")).collect::<Vec<_>>();
+                                // if topic.get_name().starts_with("Bayesian") { //bg!(topic.get_name(), &cell_items); }
+                                // let cell_items = util::parse::split_outside_of_delimiters_rc(&text, ",", "\"", "\"", context).unwrap();
+
+                                for cell_item in cell_items.iter() {
+                                    let value = text_or_topic_link_label(cell_item)?;
+                                    AttributeType::assert_legal_attribute_value(&value);
+                                    attr_values.push(value);
+                                }
+                                //bg!(&attr_values);
+                                topic.add_temp_attribute_values(attr_type_name, attr_values);
+                            }
+                        }
                     }
                     self.topic_parse_state.is_past_attributes = true;
                 } else {
@@ -515,11 +616,21 @@ impl BuildProcess {
                     let mut resolved_list = List::new(list.get_type().clone(), resolved_header);
                     for list_item in list.get_items() {
                         let resolved_text_block = self.make_text_block_rc(&list_item.get_text_block().get_unresolved_text(), context)?;
-                        let resolved_list_item = ListItem::new(list_item.get_depth(), list_item.is_ordered(), resolved_text_block);
-                        resolved_list.add_item(resolved_list_item);
+                        if self.is_public && resolved_text_block.is_redaction() {
+                            //rintln!("{}: paragraph_as_list_rc(): ignoring fully redacted list item.", context);
+                        } else {
+                            let resolved_list_item = ListItem::new(list_item.get_depth(), list_item.is_ordered(), resolved_text_block);
+                            resolved_list.add_item(resolved_list_item);
+                        }
                     }
                     // if debug { //bg!(&resolved_list); }
+                    // let paragraph = if resolved_list.is_empty() {
+                        // There are no list items, most likely because all of them were redacted
+                        // for the public build, so don't show the list at all.
+                        // Paragraph::Placeholder
+                    //} else {
                     let paragraph = Paragraph::new_list(resolved_list);
+                    //};
                     topic.replace_paragraph(paragraph_index, paragraph);
                 }
                 Ok(true)
@@ -568,15 +679,22 @@ impl BuildProcess {
             if *item_is_delimited {
                 //bg!(&item_text);
                 // Assume it's an internal or external link, or an image link.
-                let link_text = if item_text.starts_with(DELIM_IMAGE_START) {
-                    item_text.clone()
+                if self.is_public && item_text.contains(MARKER_REDACTION) {
+                    //rintln!("{}: make_text_block_rc(): removing a link with a redaction: \"{}\".", context, item_text);
+                    // Replace the whole link with a simple text item consisting only of the
+                    // redaction marker.
+                    items.push(TextItem::new_redaction());
                 } else {
-                    // Put the brackets back on since the parsing function will expect them.
-                    format!("{}{}{}", DELIM_LINK_START, item_text, DELIM_LINK_END)
-                };
-                //bg!(&link_text);
-                let link = self.make_link_rc(&link_text, context)?;
-                items.push(TextItem::new_link(link));
+                    let link_text = if item_text.starts_with(DELIM_IMAGE_START) {
+                        item_text.clone()
+                    } else {
+                        // Put the brackets back on since the parsing function will expect them.
+                        format!("{}{}{}", DELIM_LINK_START, item_text, DELIM_LINK_END)
+                    };
+                    //bg!(&link_text);
+                    let link = self.make_link_rc(&link_text, context)?;
+                    items.push(TextItem::new_link(link));
+                }
             } else {
                 // Assume it's plain text.
                 items.push(TextItem::new_text(item_text));
@@ -612,9 +730,20 @@ impl BuildProcess {
      */
 }
 
+impl TopicSourceFile {
+    fn new(namespace_name: &str, file_name: &str, topic_name: &str, content: String) -> Self {
+        Self {
+            namespace_name: namespace_name.to_string(),
+            file_name: file_name.to_string(),
+            topic_name: topic_name.to_string(),
+            content,
+        }
+    }
+}
+
 pub(crate) fn build_model(name: &str, namespace_main: &str, is_public: bool, topic_limit: Option<usize>, project: Option<file_monitor::model::Project>) -> Model {
-    let mut bp = BuildProcess::new(name, namespace_main,PATH_PAGES, topic_limit);
-    let model = bp.build(project, is_public);
+    let mut bp = BuildProcess::new(name, namespace_main,PATH_PAGES, is_public, topic_limit);
+    let model = bp.build(project);
     model
 }
 

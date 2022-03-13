@@ -1,4 +1,5 @@
 use super::*;
+use crate::dokuwiki::MARKER_REDACTION;
 
 // pub(crate) type TextBlockRc = Rc<RefCell<TextBlock>>;
 
@@ -63,7 +64,11 @@ impl TextBlock {
         }
     }
 
-   pub(crate) fn get_links(&self) -> Vec<LinkRc> {
+    pub(crate) fn is_redaction(&self) -> bool {
+        self.get_display_text().eq(MARKER_REDACTION)
+    }
+
+    pub(crate) fn get_links(&self) -> Vec<LinkRc> {
         let mut links = vec![];
         match self {
             TextBlock::Resolved { items } => {
@@ -133,6 +138,10 @@ impl TextItem {
         }
     }
 
+    pub(crate) fn new_redaction() -> Self {
+        Self::new_text(MARKER_REDACTION)
+    }
+
     pub(crate) fn new_link(link: Link) -> Self {
         TextItem::Link {
             link: r!(link),
@@ -148,6 +157,13 @@ impl TextItem {
         match self {
             TextItem::Link { link } => b!(link).get_display_text(),
             TextItem::Text { text } => text.to_string(),
+        }
+    }
+
+    pub(crate) fn is_redaction(&self) -> bool {
+        match self {
+            TextItem::Link { .. } => false,
+            TextItem::Text { text } => text.eq(MARKER_REDACTION),
         }
     }
 

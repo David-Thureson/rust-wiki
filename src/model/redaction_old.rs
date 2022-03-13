@@ -53,9 +53,9 @@ impl RedactionRecord {
     }
 
     fn redact_internal(&mut self, model: &mut Model) {
-        // self.make_phrase_and_topic_lists(model);
+        self.make_phrase_and_topic_lists(model);
         for topic in model.get_topics_mut().values_mut()
-                .filter(|topic| topic.is_public()) {
+            .filter(|topic| topic.is_public()) {
             let topic_key = topic.get_topic_key();
             if let Some(category) = topic.get_category().clone() {
                 if self.phrases.contains(&category.to_lowercase()) {
@@ -313,21 +313,13 @@ pub(crate) fn finalize_redacted_phrases(mut phrases: Vec<String>) -> Vec<String>
     // names for private topics.
     assert!(!phrases.is_empty());
 
-    let mut blacklist = util::file::read_file_as_lines_r(FILE_NAME_REDACT).unwrap();
+    blacklist = util::file::read_file_as_lines_r(FILE_NAME_REDACT).unwrap();
     phrases.append(&mut blacklist);
-
-    let mut whitelist = PHRASE_WHITELIST.iter().map(|x| x.to_string()).collect::<Vec<_>>();
-    // In the whitelist, add versions of the original whitelist where spaces are replaced with
-    // underscores. So if "social media" is on the list, "social_media" will be as well. This will
-    // cover more cases such as when a whitelisted phrase appears in a link.
-    whitelist.append(&mut PHRASE_WHITELIST.iter().map(|x| x.replace(" ", "_")).collect::<Vec<_>>());
-    whitelist.sort();
-    whitelist.dedup();
 
     // Lowercase and get rid of any blank phrases and whitespace.
     phrases = phrases.iter()
         .map(|phrase| phrase.trim().to_lowercase())
-        .filter(|phrase| !phrase.is_empty() && !whitelist.contains(phrase))
+        .filter(|phrase| !phrase.is_empty() && !PHRASE_WHITELIST.contains(&&**phrase))
         .collect();
     phrases.sort();
     phrases.dedup();
@@ -338,8 +330,6 @@ pub(crate) fn finalize_redacted_phrases(mut phrases: Vec<String>) -> Vec<String>
 }
 
 pub(crate) fn text_contains_phrase(text: &str, phrases: &Vec<String>) -> bool {
-    debug_assert!(!text.is_empty());
-    debug_assert!(!phrases.is_empty());
     let text_lower = text.to_lowercase();
     for phrase in phrases.iter() {
         if text_lower.contains(phrase) {
@@ -350,40 +340,7 @@ pub(crate) fn text_contains_phrase(text: &str, phrases: &Vec<String>) -> bool {
     false
 }
 
-pub fn redact_text(text: &str, phrases: &Vec<String>) -> Option<(String)> {
-    debug_assert!(!text.is_empty());
-    debug_assert!(!phrases.is_empty());
-    let mut working_text = text.to_string();
-    loop {
-        match find_match(&working_text, phrases) {
-            Some((start_index, end_index, phrase)) => {
-                working_text = format!("{}{}{}", &working_text[0..start_index], MARKER_REDACTION, &working_text[end_index..working_text.len()]);
-            },
-            None => {
-                break;
-            }
-        }
-    }
-    if working_text.ne(text) {
-        Some(working_text)
-    } else {
-        None
-    }
-}
-
-fn find_match(text: &str, phrases: &Vec<String>) -> Option<(usize, usize, String)> {
-    debug_assert!(!text.is_empty());
-    debug_assert!(!phrases.is_empty());
-    let text_lower = text.to_lowercase();
-    for phrase in phrases.iter() {
-        if let Some(pos) = text_lower.find(phrase) {
-            return Some((pos, pos + phrase.len(), phrase.clone()))
-        }
-    }
-    None
-}
-
-const PHRASE_WHITELIST: [&str; 34] = ["behavioral economics", "bluehost", "bold", "domains", "grit", "health", "keto", "machines", "main", "meetings",
+const PHRASE_WHITELIST: [&str; 32] = ["behavioral economics", "bluehost", "bold", "domains", "grit", "health", "machines", "main", "meetings",
     "meetup", "music", "nlp", "oracle vm virtualbox", "organizations", "pcs", "philips hue", "pmwiki", "podcasts", "practices",
-    "precalculus", "privacy", "queue", "rework", "sbt", "security project", "simplify", "skype", "social media platform", "to do", "twitter", "virtualbox",
+    "precalculus", "privacy", "queue", "rework", "sbt", "security project", "simplify", "skype", "to do", "twitter", "virtualbox",
     "winit", "wordpress"];

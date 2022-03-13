@@ -87,7 +87,7 @@ pub(crate) fn parse_header_optional(text: &str) -> Result<Option<(String, usize)
     Ok(None)
 }
 
-pub(crate) fn parse_breadcrumb_optional(text: &str) -> Result<Option<Vec<TopicKey>>, String> {
+pub(crate) fn parse_breadcrumb_optional(text: &str, context: &str, is_public: bool) -> Result<Option<Vec<TopicKey>>, String> {
     // A breadcrumb paragraph showing the parent and grandparent topic will look like this with
     // the links worked out:
     //   **[[tools:android|Android]] => [[tools:android_development|Android Development]] => Android Sensors**
@@ -101,6 +101,16 @@ pub(crate) fn parse_breadcrumb_optional(text: &str) -> Result<Option<Vec<TopicKe
     let text = text.trim().replace(DELIM_BOLD, "");
     //bg!(text);
     if !text.contains(DELIM_LINEFEED) && text.contains(DELIM_BREADCRUMB_RIGHT) {
+        // Presumably this is a breadcrumb line.
+        if is_public && text.contains(MARKER_REDACTION) {
+            // There appears to be at least one parent reference to a private topic, or at least
+            // part of the referenced topic name is a redacted phrase, so leave this topic
+            // without parent topics. Returning Ok() with an empty vector means we think this is
+            // a breadcrumb line and we didn't run into a parsing error, but we don't want the
+            // topic to have any parents.
+            println!("{}: Ignoring breadcrumbs with redaction: \"{}\".", context, text);
+            return Ok(Some(vec![]));
+        }
         //bg!(&text);
         if text.contains(DELIM_BREADCRUMB_LEFT) {
             // Presumably breadcrumbs for a combo topic.
@@ -197,7 +207,7 @@ pub(crate) fn parse_table_optional(text: &str) -> Result<Option<model::Table>, S
                 } else {
                     HorizontalAlignment::Left
                 };
-                let cell_text = cell_text.trim();
+                let mut cell_text = cell_text.trim();
                 row.push(model::TableCell::new_unresolved_text(cell_text, is_bold, &horizontal));
             }
             table.add_row(row);
