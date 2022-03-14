@@ -5,8 +5,9 @@ use std::rc::Rc;
 use std::cell::{RefCell, Ref};
 use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys, ATTRIBUTE_NAME_EDITED, ATTRIBUTE_NAME_ADDED, TopicTreeNode, ATTRIBUTE_VALUE_UNKNOWN, ATTRIBUTE_NAME_VISIBILITY};
 use std::collections::BTreeMap;
-use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD};
+use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD, legal_file_name};
 use crate::tree::TreeNode;
+use crate::dokuwiki::to_model::{make_topic_file_key, TopicFile};
 
 //const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
 
@@ -61,7 +62,7 @@ impl <'a> GenFromModel<'a> {
                 break;
             }
         }
-        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
+        page.write(&self.path_pages);
     }
 
     pub(crate) fn gen_all_topics_page(&mut self) {
@@ -77,7 +78,7 @@ impl <'a> GenFromModel<'a> {
                 page.add_line_with_break(&link);
             }
         }
-        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
+        page.write(&self.path_pages);
     }
 
     pub(crate) fn gen_topic_first_letter_links(&mut self, page: &mut WikiGenPage, column_count: usize) {
@@ -115,14 +116,14 @@ impl <'a> GenFromModel<'a> {
         // }
 
         self.gen_partial_topic_tree(&mut page, &nodes, true, None);
-        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
+        page.write(&self.path_pages);
     }
 
     pub(crate) fn gen_subtopics_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_SUBTOPICS,None);
         let nodes = self.model.subtopic_tree().unroll_to_depth(None);
         self.gen_partial_topic_tree(&mut page, &nodes, false, None);
-        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
+        page.write(&self.path_pages);
     }
 
     pub(crate) fn gen_attr_page(&self) {
@@ -148,7 +149,7 @@ impl <'a> GenFromModel<'a> {
                 page.add_linefeed();
             }
         }
-        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
+        page.write(&self.path_pages);
     }
 
     pub(crate) fn gen_attr_value_page(&self) {
@@ -179,7 +180,7 @@ impl <'a> GenFromModel<'a> {
             }
             page.add_linefeed();
         }
-        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
+        page.write(&self.path_pages);
     }
 
     #[allow(dead_code)]
@@ -189,7 +190,7 @@ impl <'a> GenFromModel<'a> {
         // self.gen_reports_page_public_ref_to_private(&mut page);
         // self.gen_reports_page_redactions(&mut page);
         self.gen_reports_page_privacy_unknown(&mut page);
-        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
+        page.write(&self.path_pages);
     }
 
     #[allow(dead_code)]
@@ -290,7 +291,7 @@ impl <'a> GenFromModel<'a> {
             }
             page.add_linefeed();
         }
-        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
+        page.write(&self.path_pages);
     }
 
     pub(crate) fn gen_attr_date_page(&self) {
@@ -314,7 +315,7 @@ impl <'a> GenFromModel<'a> {
                 }
             }
         }
-        page.write_if_changed(&self.path_pages, self.model.get_original_pages());
+        page.write(&self.path_pages);
     }
 
     fn page_link_if_exists(&self, topic_name: &str) -> Option<String> {
@@ -349,11 +350,12 @@ impl <'a> GenFromModel<'a> {
     }
     */
 
-    pub(crate) fn gen(&mut self) {
+    pub(crate) fn gen(&mut self) -> BTreeMap<String, TopicFile> {
+        let mut map = BTreeMap::new();
         for topic in self.model.get_topics().values() {
             // let debug = topic.get_name().eq("Terms");
-            let debug = false;
-            if debug { dbg!(topic.get_paragraphs().len()); }
+            // let debug = false;
+            // if debug { dbg!(topic.get_paragraphs().len()); }
             self.current_topic_key = Some(topic.get_topic_key());
             //bg!(&self.current_topic_key);
             let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(topic.get_namespace()), topic.get_name(), None);
@@ -362,10 +364,16 @@ impl <'a> GenFromModel<'a> {
             self.add_attributes_optional(&mut page, &topic);
             self.add_paragraphs(&mut page, &topic);
             self.add_inbound_links_section_optional(&mut page,  &topic);
-            page.write_if_changed(&self.path_pages, self.model.get_original_pages());
-            if debug { dbg!(&page); panic!(); }
+            page.fix_content_before_write();
+            let topic_file_name = legal_file_name(topic.get_name());
+            let topic_file_key = make_topic_file_key(topic.get_namespace(), &topic_file_name);
+            let topic_file = TopicFile::new(topic.get_namespace(), &topic_file_name, topic.get_name(), page.content);
+            map.insert(topic_file_key, topic_file);
+            // page.write_if_changed(&self.path_pages, self.model.get_original_pages());
+            // if debug { dbg!(&page); panic!(); }
         }
         self.errors.print(Some("GenFromModel::gen()"));
+        map
     }
 
     fn add_breadcrumbs_optional(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {

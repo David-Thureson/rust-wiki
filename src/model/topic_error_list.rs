@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use crate::model::{TopicKey, PANIC_ON_MODEL_ERROR};
 use crate::Itertools;
 
+#[derive(Debug)]
 pub(crate) struct TopicErrorList {
     errors: BTreeMap<TopicKey, Vec<String>>,
 }

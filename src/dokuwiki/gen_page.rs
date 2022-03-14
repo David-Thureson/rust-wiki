@@ -164,10 +164,11 @@ impl WikiGenPage {
 
     #[allow(dead_code)]
     pub(crate) fn write(&self, path_pages: &str) {
-        let (full_file_name, content) = self.prep_for_write(path_pages);
+        let (full_file_name, content) = self.prep_for_write_old(path_pages);
         fs::write(full_file_name, content).unwrap();
     }
 
+    /*
     pub(crate) fn write_if_changed(&self, path_pages: &str, original_pages: &BTreeMap<String, String>) {
         // Temporary fix:
         let (full_file_name, content) = self.prep_for_write(path_pages);
@@ -190,8 +191,17 @@ impl WikiGenPage {
 
          */
     }
+    */
 
-    fn prep_for_write(&self, path_pages: &str) -> (String, String) {
+    pub fn fix_content_before_write(&mut self) {
+        self.content = util::parse::trim_linefeeds(&self.content);
+        while self.content.contains("\n\n\n") {
+            self.content = self.content.replace("\n\n\n", "\n\n");
+        }
+        self.content = self.content.replace(MARKER_REDACTION, MARKER_REDACTION_FINAL);
+    }
+
+    pub fn prep_for_write_old(&self, path_pages: &str) -> (String, String) {
         let mut content = util::parse::trim_linefeeds(&self.content);
         while content.contains("\n\n\n") {
             content = content.replace("\n\n\n", "\n\n");

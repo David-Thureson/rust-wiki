@@ -18,6 +18,7 @@ pub mod to_model;
 
 pub(crate) const PATH_PAGES: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/pages";
 pub(crate) const PATH_MEDIA: &str = "C:/Doku/DokuWikiStick/dokuwiki/data/media";
+pub(crate) const PATH_TEMP_SOURCE: &str = "C:/Wiki Gen Backup/Temp_Source";
 
 pub(crate) const FILE_MONITOR_PROJECT_NAME_DOKUWIKI: &str = "DokuWiki";
 pub(crate) const FILE_MONITOR_SCAN_MINUTES: f32 = 1.0;

@@ -3,26 +3,34 @@ use crate::model::*;
 use std::fs;
 use super::*;
 use crate::model::PUBLIC_ATTRIBUTES;
+use std::collections::BTreeMap;
 
-struct BuildProcess {
-    wiki_name: String,
-    namespace_main: String,
-    path_source: String,
-    is_public: bool,
-    topic_source_files: Vec<TopicSourceFile>,
-    topic_refs: TopicRefs,
-    errors: TopicErrorList,
-    topic_limit: Option<usize>,
+#[derive(Debug)]
+pub(crate) struct BuildProcess {
+    pub(crate) wiki_name: String,
+    pub(crate) namespace_main: String,
+    pub(crate) path_source: String,
+    pub(crate) gen_path_pages: String,
+    pub(crate) compare_only: bool,
+    pub(crate) is_public: bool,
+    pub(crate) topic_source_files: BTreeMap<String, TopicFile>,
+    pub(crate) topic_dest_files: BTreeMap<String, TopicFile>,
+    pub(crate) topic_files_to_delete: Vec<String>,
+    pub(crate) topic_refs: TopicRefs,
+    pub(crate) errors: TopicErrorList,
+    pub(crate) topic_limit: Option<usize>,
     topic_parse_state: TopicParseState,
 }
 
-struct TopicSourceFile {
-    namespace_name: String,
-    file_name: String,
-    topic_name: String,
-    content: String,
+#[derive(Debug)]
+pub(crate) struct TopicFile {
+    pub(crate) namespace_name: String,
+    pub(crate) file_name: String,
+    pub(crate) topic_name: String,
+    pub(crate) content: String,
 }
 
+#[derive(Debug)]
 struct TopicParseState {
     is_past_attributes: bool,
     is_past_first_header: bool,
@@ -33,13 +41,17 @@ struct TopicParseState {
 }
 
 impl BuildProcess {
-    pub(crate) fn new(wiki_name: &str, namespace_main: &str, path_source: &str, is_public: bool, topic_limit: Option<usize>) -> Self {
+    pub(crate) fn new(wiki_name: &str, namespace_main: &str, path_source: &str, compare_only: bool, is_public: bool, topic_limit: Option<usize>) -> Self {
         Self {
             wiki_name: wiki_name.to_string(),
             namespace_main: namespace_main.to_string(),
             path_source: path_source.to_string(),
+            gen_path_pages: "".to_string(),
+            compare_only,
             is_public,
-            topic_source_files: vec![],
+            topic_source_files: Default::default(),
+            topic_dest_files: Default::default(),
+            topic_files_to_delete: vec![],
             topic_refs: Default::default(),
             errors: TopicErrorList::new(),
             topic_limit,
@@ -73,9 +85,20 @@ impl BuildProcess {
             // handle cases like a combination topic marked as Public in which one or both of the
             // parent topics are marked Private.
             let dbg_topic_count_before = self.topic_source_files.len();
-            self.topic_source_files.retain(|topic_file| !redaction::text_contains_phrase(&topic_file.topic_name, model.get_redacted_phrases()));
+            // self.topic_source_files.retain(|topic_file| !redaction::text_contains_phrase(&topic_file.topic_name, model.get_redacted_phrases()));
+            let mut filtered_source_files = BTreeMap::new();
+            for (key, topic_file) in self.topic_source_files.drain_filter(|_k, _v| true) {
+                if redaction::text_contains_phrase(&topic_file.topic_name, model.get_redacted_phrases()) {
+                    // Remove this topic.
+                    self.topic_files_to_delete.push(key);
+                } else {
+                    // Keep this topic.
+                    filtered_source_files.insert(key, topic_file);
+                }
+            }
+            std::mem::swap(&mut self.topic_source_files, &mut filtered_source_files);
             let dbg_topic_count_after = self.topic_source_files.len();
-            //rintln!("BuildProcess::build(): started with {} topics, ended with {}.", dbg_topic_count_before, dbg_topic_count_after);
+            println!("BuildProcess::build(): started with {} topics, ended with {}.", dbg_topic_count_before, dbg_topic_count_after);
         }
 
         // Turn the raw file content into topics in the model.
@@ -177,9 +200,12 @@ impl BuildProcess {
                     let topic_ref = format!("{}:{}", namespace_name, file_name_no_extension);
                     model.add_redacted_phrase(file_name_no_extension);
                     model.add_redacted_phrase(topic_ref);
+                    let topic_file_key = make_topic_file_key(namespace_name, &file_name);
+                    assert!(!self.topic_files_to_delete.contains(&topic_file_key));
+                    self.topic_files_to_delete.push(topic_file_key);
                 } else {
-                    let topic_source_file = TopicSourceFile::new(namespace_name, &file_name, &topic_name, content);
-                    self.topic_source_files.push(topic_source_file);
+                    let topic_source_file = TopicFile::new(namespace_name, &file_name, &topic_name, content);
+                    self.add_topic_source_file(topic_source_file);
                     topic_count += 1;
                     if topic_limit.map_or(false, |topic_limit| topic_count >= topic_limit) {
                         return;
@@ -195,7 +221,7 @@ impl BuildProcess {
         // care about whether the paragraphs are plain or mixed text, attribute tables, section
         // headers, breadcrumbs, etc.
 
-        for topic_source_file in self.topic_source_files.iter() {
+        for topic_source_file in self.topic_source_files.values() {
             let mut content = topic_source_file.content.clone();
 
             // Double linefeeds are fine since they count as paragraph breaks, but any
@@ -722,6 +748,102 @@ impl BuildProcess {
         }
     }
 
+    pub(crate) fn add_topic_source_file(&mut self, topic_file: TopicFile) {
+        let key = topic_file.get_key();
+        assert!(!self.topic_source_files.contains_key(&key));
+        self.topic_source_files.insert(key, topic_file);
+    }
+
+    pub(crate) fn add_topic_dest_file(&mut self, topic_file: TopicFile) {
+        let key = topic_file.get_key();
+        assert!(!self.topic_dest_files.contains_key(&key));
+        self.topic_dest_files.insert(key, topic_file);
+    }
+
+    pub(crate) fn write_main_topic_files(&self) {
+        let msg_prefix = "BuildProcess::write_main_topic_files(): ";
+        assert!(!self.topic_dest_files.is_empty());
+
+        for namespace in self.get_main_namespaces().iter() {
+            let path_source_namespace = format!("{}/{}", self.path_source, namespace_to_path(namespace));
+            let path_dest_namespace = format!("{}/{}", self.gen_path_pages, namespace_to_path(namespace));
+            let path_temp_source = format!("{}/{}", PATH_TEMP_SOURCE, namespace_to_path(namespace));
+
+            println!("{}About to remove all files from the temp source folder [{}].",
+                     msg_prefix, path_temp_source);
+            util::file::remove_files_r(&path_temp_source).unwrap();
+
+            if path_source_namespace.eq(&path_dest_namespace) {
+                // The source and destination paths are the same. This is the usual case when
+                // compare_only is false. Move all of the files out of the source folder and into
+                // the temp source folder.
+                println!("{}The source and destination are the same.\nAbout to move all files from [{}] to [{}].",
+                         msg_prefix, path_source_namespace, path_temp_source);
+                panic!();
+                util::file::move_files_r(&path_source_namespace, &path_temp_source).unwrap();
+            } else {
+                // The source and destination paths are different. Typically this means
+                // compare_only is true and the source folder is the main live Wiki folder, while
+                // the destination is under [C:/Wiki Gen Backup]. So we want the destination folder
+                // to start out empty (except for possible subfolders) and we want a temporary copy
+                // of the source files.
+                println!("{}The source and destination are different.\nAbout to copy all files from [{}] to [{}].\nAbout to remove all files from [{}].",
+                         msg_prefix, path_source_namespace, path_temp_source, path_dest_namespace);
+                // panic!();
+                util::file::copy_folder_files_r(&path_source_namespace, &path_temp_source).unwrap();
+                util::file::remove_files_r(&path_dest_namespace).unwrap();
+            }
+            // The destination folder should be empty, so it will only end up with those files that
+            // are currently in self.topic_dest_files. If a given file has changed, simply write it
+            // to the destination. If it hasn't changed, move it from the temporary source folder.
+            // This way we won't change the timestamp on unchanged files, which would mess up the
+            // file-monitor process.
+            for (key, topic_file_dest) in self.topic_dest_files.iter()
+                    .filter(|(_key, topic_file)| topic_file.namespace_name.eq(namespace)) {
+                let path_one_dest = format!("{}/{}.txt", path_dest_namespace, topic_file_dest.file_name);
+                let mut is_changed = true;
+                //bg!(&topic_file_dest);
+                //self.print_source_file_keys();
+                //bg!(&key);
+                if let Some(topic_file_source) = self.topic_source_files.get(key) {
+                    //bg!(&topic_file_source);
+                    // This file/topic existed before the round trip. See if it has changed.
+                    is_changed = topic_file_source.content.ne(&topic_file_dest.content);
+                    //bg!(is_changed);
+                }
+                //panic!();
+                if is_changed {
+                    println!("{}The topic \"{}\" is new or has been changed during the round trip. About to write [{}].",
+                             msg_prefix, topic_file_dest.topic_name, path_one_dest);
+                    util::file::write_file_r(&path_one_dest, &topic_file_dest.content).unwrap();
+                } else {
+                    let path_one_source = format!("{}/{}.txt", path_temp_source, topic_file_dest.file_name);
+                    println!("{}The topic \"{}\" has not been changed during the round trip. About to copy [{}] to [{}].",
+                             msg_prefix, topic_file_dest.topic_name, path_one_source, path_one_dest);
+                    assert_ne!(path_one_source, path_one_dest);
+                    util::file::copy_file_r(path_one_source, path_one_dest).unwrap();
+                }
+            }
+        }
+    }
+
+    fn get_main_namespaces(&self) -> Vec<String> {
+        let mut namespaces = self.topic_dest_files.values()
+            .map(|topic_file| topic_file.namespace_name.to_string())
+            .collect::<Vec<_>>();
+        namespaces.sort();
+        namespaces.dedup();
+        namespaces
+    }
+
+    fn print_source_file_keys(&self) {
+        println!("\nBuildProcess::print_source_file_keys()");
+        for key in self.topic_source_files.keys() {
+            println!("\t\"{}\"", key);
+        }
+        println!();
+    }
+
     /*
     fn clear_errors(&mut self) {
         self.errors.clear();
@@ -738,8 +860,8 @@ impl BuildProcess {
      */
 }
 
-impl TopicSourceFile {
-    fn new(namespace_name: &str, file_name: &str, topic_name: &str, content: String) -> Self {
+impl TopicFile {
+    pub(crate) fn new(namespace_name: &str, file_name: &str, topic_name: &str, content: String) -> Self {
         Self {
             namespace_name: namespace_name.to_string(),
             file_name: file_name.to_string(),
@@ -747,12 +869,22 @@ impl TopicSourceFile {
             content,
         }
     }
+
+    fn get_key(&self) -> String {
+        make_topic_file_key(&self.namespace_name, &self.file_name)
+    }
+
 }
 
-pub(crate) fn build_model(name: &str, namespace_main: &str, is_public: bool, topic_limit: Option<usize>, project: Option<file_monitor::model::Project>) -> Model {
-    let mut bp = BuildProcess::new(name, namespace_main,PATH_PAGES, is_public, topic_limit);
+pub fn make_topic_file_key(namespace_name: &str, file_name: &str) -> String {
+    let file_name_before_extension = util::parse::before(file_name, ".txt");
+    format!("{}:{}", namespace_name, file_name_before_extension)
+}
+
+pub(crate) fn build_model(name: &str, namespace_main: &str, compare_only: bool, is_public: bool, topic_limit: Option<usize>, project: Option<file_monitor::model::Project>) -> (Model, BuildProcess) {
+    let mut bp = BuildProcess::new(name, namespace_main,PATH_PAGES, compare_only, is_public, topic_limit);
     let model = bp.build(project);
-    model
+    (model, bp)
 }
 
 impl TopicParseState {
