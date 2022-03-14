@@ -8,8 +8,12 @@ use crate::dokuwiki::to_model::BuildProcess;
 
 pub(crate) const PROJECT_NAME: &str = "Tools";
 
-pub fn dokuwiki_round_trip(compare_only: bool, is_public: bool) {
+pub fn dokuwiki_round_trip(mut compare_only: bool, is_public: bool) {
     println!("\nDokuWiki round trip test: Start.");
+
+    if is_public {
+        compare_only = true;
+    }
 
     let (model, build_process) = prep_round_trip(compare_only, is_public);
     complete_round_trip(model, build_process);
@@ -52,9 +56,9 @@ pub(crate) fn complete_round_trip(mut model: model::Model, mut build_process: Bu
 
     // Create DokuWiki pages from this new model.
     build_process.gen_path_pages = if build_process.compare_only { FOLDER_WIKI_COMPARE_NEW.to_string() } else { PATH_PAGES.to_string() };
-    if build_process.compare_only || model.is_public() {
-        clean_up_tools_dokuwiki_files(&build_process.gen_path_pages, false);
-    }
+    // if build_process.compare_only || model.is_public() {
+    //     clean_up_tools_dokuwiki_files(&build_process.gen_path_pages, false);
+    // }
 
     gen_tools_project_from_model(&model, &mut build_process);
 
@@ -145,7 +149,9 @@ fn gen_tools_project_from_model(model: &model::Model, build_process: &mut BuildP
     gen.gen_attr_date_page();
     gen.gen_attr_page();
     gen.gen_attr_value_page();
-    gen.gen_reports_page();
+    if !model.is_public() {
+        gen.gen_reports_page();
+    }
     // gen_terms_page();
     build_process.topic_dest_files = gen.gen();
     assert!(!build_process.topic_dest_files.is_empty());
@@ -198,9 +204,11 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Model, use_l
         wiki::page_link(&namespace_nav, wiki::PAGE_NAME_ATTR_VALUE,None),
         wiki::page_link(&namespace_nav, wiki::PAGE_NAME_ATTR_YEAR,None),
         wiki::page_link(&namespace_nav, wiki::PAGE_NAME_ATTR_DATE,None),
-        wiki::page_link(&namespace_nav, wiki::PAGE_NAME_REPORTS, None),
-        wiki::page_link(&namespace_main, wiki::PAGE_NAME_TERMS, None),
     ]);
+    if !model.is_public() {
+        links.push(wiki::page_link(&namespace_nav, wiki::PAGE_NAME_REPORTS, None));
+    }
+    links.push(wiki::page_link(&namespace_main, wiki::PAGE_NAME_TERMS, None));
     if use_list {
         let mut list = wiki::WikiList::new(None);
         for link in links.iter() {

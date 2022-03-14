@@ -544,11 +544,13 @@ impl BuildProcess {
                             let is_attr_public = PUBLIC_ATTRIBUTES.contains(&&*attr_type_name);
                             //bg!(&attr_type_name, is_attr_public);
                             if !is_attr_public {
-                                //rintln!("{}: Ignoring \"{}\" attribute because it's not in the public list.", context, attr_type_name);
+                                // if attr_type_name.ne("Visibility") {
+                                //     println!("{}: Ignoring \"{}\" attribute because it's not in the public list.", context, attr_type_name);
+                                // }
                                 use_this_attribute = false;
                             }
                             if attr_type_name.contains(MARKER_REDACTION) {
-                                //rintln!("{}: Ignoring \"{}\" attribute because the type name contains a redaction.", context, attr_type_name);
+                                println!("{}: Ignoring \"{}\" attribute because the type name contains a redaction.", context, attr_type_name);
                                 use_this_attribute = false;
                             }
                         }
