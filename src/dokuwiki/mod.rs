@@ -30,6 +30,7 @@ pub(crate) const PAGE_NAME_MAIN: &str = "Main";
 pub(crate) const PAGE_NAME_START:   &str = "Start";
 pub(crate) const PAGE_NAME_RECENT_TOPICS: &str = "Recent Topics";
 pub(crate) const PAGE_NAME_REPORTS: &str = "Reports";
+pub(crate) const PAGE_NAME_DOKUWIKI_MARKUP: &str = "DokuWiki Markup";
 pub(crate) const PAGE_NAME_ALL_TOPICS: &str = "All Topics";
 pub(crate) const PAGE_NAME_CATEGORIES: &str = "Categories";
 pub(crate) const PAGE_NAME_SUBTOPICS: &str = "Subtopics";
@@ -75,6 +76,7 @@ pub(crate) const MARKER_CODE_END: &str = "</code>";
 pub(crate) const MARKER_REDACTION: &str = "~~~redacted~~~";
 pub(crate) const MARKER_REDACTION_FINAL: &str = "%%*****%%";
 pub(crate) const MARKER_PUBLIC_IN_TEXT_FILE: &str = "^ Visibility | Public |";
+pub(crate) const MARKER_DELETE_THIS_FILE: &str = "{{{delete}}}";
 
 pub(crate) const TEMP_DELIM_IMG_START: &str = "[[{{";
 pub(crate) const TEMP_DELIM_IMG_END: &str = "}}]]";

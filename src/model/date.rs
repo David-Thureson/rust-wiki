@@ -4,10 +4,10 @@ use crate::model::Model;
 pub(crate) fn update_date_attributes_from_file_monitor(model: &mut Model) {
     println!("\nupdate_date_attributes_from_file_monitor()");
     if let Some(project) = model.get_file_monitor_project() {
-        //bg!(&project.name);
         let summary = file_monitor::summary::Summary::read_or_create(project);
         for topic in model.get_topics_mut().values_mut() {
-            // let debug = topic.get_name().eq("Yew (crate)");
+            // let debug = topic.get_name().eq("Profisee");
+            // if debug { dbg!(topic.get_name()); }
             if !topic.has_temp_attribute(ATTRIBUTE_NAME_ADDED) {
                 if let Some(file) = topic.get_file_monitor_file(&summary) {
                     if !topic.has_temp_attribute(ATTRIBUTE_NAME_ADDED) {
@@ -19,11 +19,13 @@ pub(crate) fn update_date_attributes_from_file_monitor(model: &mut Model) {
                 }
             }
             if let Some(file) = topic.get_file_monitor_file(&summary) {
+                // if debug { dbg!(&file); }
                 if let Some(time_edited) = file.time_latest_edit {
-                    //bg!(&topic.get_name(), "Edited", &time_edited);
+                    // if debug { dbg!(&time_edited); }
                     topic.set_temp_attribute_date(ATTRIBUTE_NAME_EDITED, &time_edited.date());
                 }
             }
+            // if debug { panic!(); }
         }
     }
 }

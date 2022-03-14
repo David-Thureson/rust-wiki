@@ -38,6 +38,7 @@ struct TopicParseState {
     is_in_non_code_marker: bool,
     marker_exit_string: Option<String>,
     is_past_real_sections: bool,
+    is_debug: bool,
 }
 
 impl BuildProcess {
@@ -176,6 +177,7 @@ impl BuildProcess {
         // Read each page's text file. If this is a public build and the topic is not public,
         // add that file name and topic name to the list of redacted phrases but otherwise don't
         // include the topic in the build.
+        let mut errors = vec![];
         TopicKey::assert_legal_namespace(namespace_name);
         let mut topic_count = 0;
         let path_source_relative = format!("/{}", gen::namespace_to_path(namespace_name));
@@ -186,6 +188,9 @@ impl BuildProcess {
             if file_name.ends_with(".txt") {
                 let path_name = util::file::path_name(dir_entry.path());
                 let content = fs::read_to_string(&dir_entry.path()).unwrap();
+                if content.contains(MARKER_DELETE_THIS_FILE) {
+                    errors.push(format!("{} should be deleted.", file_name));
+                }
                 let topic_name_line = util::parse::before(&content, DELIM_LINEFEED);
                 assert!(topic_name_line.starts_with(DELIM_HEADER), "Topic name \"{}\" should start with \"{}\".", &topic_name_line, DELIM_HEADER);
                 assert!(topic_name_line.ends_with(DELIM_HEADER), "Topic name \"{}\" should end with \"{}\".", &topic_name_line, DELIM_HEADER);
@@ -212,6 +217,13 @@ impl BuildProcess {
                     }
                 }
             }
+        }
+        if !errors.is_empty() {
+            println!("\nErrors from read_from_folder():");
+            for msg in errors.iter() {
+                println!("\t{}", msg);
+            }
+            panic!()
         }
     }
 
@@ -259,6 +271,7 @@ impl BuildProcess {
         for topic in model.get_topics_mut().values_mut() {
             let context = format!("Refining paragraphs for \"{}\".", topic.get_name());
             self.topic_parse_state = TopicParseState::new();
+            // self.topic_parse_state.is_debug = topic.get_name().eq("DokuWiki Markup");
             //rintln!("\n==================================================================\n\n{}\n", context);
             let paragraph_count = topic.get_paragraph_count();
             for paragraph_index in 0..paragraph_count {
@@ -293,6 +306,7 @@ impl BuildProcess {
             match source_paragraph {
                 Paragraph::Unknown { text } => {
                     let text = util::parse::trim_linefeeds(&text);
+                    if self.topic_parse_state.is_debug { println!("\nNEW PARAGRAPH{}\n|{}|\n", "=".repeat(80), &text); }
                     // For each of the calls in the next statement, the called function returns:
                     //   - Ok(true) to indicate that the paragraph was found to be of this type and
                     //     we can exit without calling any more paragraph_as_... functions.
@@ -465,14 +479,20 @@ impl BuildProcess {
         // let debug = topic.get_name().eq("QuickBooks");
         // if debug { //rintln!("\n==================================================================\n"); }
         // if debug { //bg!(self.in_code, self.in_non_code_marker, self.marker_exit_string.as_ref(), text); }
+        if self.topic_parse_state.is_debug { dbg!(self.topic_parse_state.is_in_code, self.topic_parse_state.is_in_non_code_marker); }
         if self.topic_parse_state.is_in_code || self.topic_parse_state.is_in_non_code_marker {
             if text.trim().eq(*&self.topic_parse_state.marker_exit_string.as_ref().unwrap()) {
+                if self.topic_parse_state.is_debug { println!("\nparagraph_as_marker_start_or_end_rc(): Found marker exit string.\n"); }
                 topic.replace_paragraph(paragraph_index, Paragraph::new_marker(&text));
                 self.topic_parse_state.is_in_code = false;
                 self.topic_parse_state.is_in_non_code_marker = false;
                 self.topic_parse_state.marker_exit_string = None;
                 // if debug { //bg!(self.in_code, self.in_non_code_marker, self.marker_exit_string.as_ref()); }
                 return Ok(true);
+            } else {
+                // We're in a marker, but this paragraph is not the end marker, so don't process
+                // this paragraph in the current function.
+                return Ok(false);
             }
         }
         let context = &format!("{} Seems to be a marker start or end paragraph.", context);
@@ -480,6 +500,7 @@ impl BuildProcess {
         let text = text.trim();
         match parse_marker_optional(text) {
             Ok(Some((text, marker_exit_string))) => {
+                if self.topic_parse_state.is_debug { println!("\nparagraph_as_marker_start_or_end_rc(): Found marker \"{}\", exit string = \"{}\".\n", text, marker_exit_string); }
                 topic.replace_paragraph(paragraph_index, Paragraph::new_marker(&text));
                 if marker_exit_string.eq(MARKER_CODE_END) {
                     self.topic_parse_state.is_in_code = true;
@@ -898,12 +919,13 @@ impl TopicParseState {
             is_in_non_code_marker: false,
             marker_exit_string: None,
             is_past_real_sections: false,
+            is_debug: false,
         }
     }
 
     fn check_end_of_topic(&self, topic: &Topic) {
-        assert!(!self.is_in_code, "is_in_code in {}", topic.get_topic_key());
-        assert!(!self.is_in_non_code_marker, "is_in_non_code_marker in {}", topic.get_topic_key());
+        assert!(!self.is_in_code, "is_in_code in {}. Possibly needing blank lines before and after <WRAP>, <code>, a section header, etc.", topic.get_topic_key());
+        assert!(!self.is_in_non_code_marker, "is_in_non_code_marker in {}. Possibly needing blank lines before and after <WRAP>, <code>, a section header, etc.", topic.get_topic_key());
         assert!(self.marker_exit_string.is_none(), "marker_exit_string = \"{}\" in {}", self.marker_exit_string.as_ref().unwrap(), topic.get_topic_key());
     }
 }

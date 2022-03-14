@@ -145,7 +145,9 @@ pub(crate) fn parse_marker_optional(text: &str) -> Result<Option<(String, String
             return Err(format!("Text seems to be a marker because it starts with \"{}\" but it does not end with \"{}\": \"{}\".", MARKER_LINE_START, MARKER_LINE_END, text));
         }
         if text.trim().contains(DELIM_LINEFEED) {
-            return Err(format!("The text seems to be a marker but it has linefeeds: \"{}\".", text));
+            let msg = format!("The text seems to be a marker but it has linefeeds: \"{}\".", text);
+            panic!(msg);
+            return Err(msg);
         }
         // Switch the starting "<" to "</".
         let exit_text = text.replace(MARKER_LINE_START, MARKER_LINE_START_CLOSE);

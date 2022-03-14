@@ -207,6 +207,7 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Model, use_l
     ]);
     if !model.is_public() {
         links.push(wiki::page_link(&namespace_nav, wiki::PAGE_NAME_REPORTS, None));
+        links.push(wiki::page_link(&namespace_main, wiki::PAGE_NAME_DOKUWIKI_MARKUP, None));
     }
     links.push(wiki::page_link(&namespace_main, wiki::PAGE_NAME_TERMS, None));
     if use_list {

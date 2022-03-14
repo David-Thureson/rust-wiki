@@ -504,6 +504,8 @@ impl Topic {
     }
 
     pub(crate) fn has_section(&self, section_name: &str) -> bool {
+        // let debug = section_name.eq("free_account");
+        // if debug { dbg!(&section_name); }
         let section_name = section_name.to_lowercase();
         // let debug = section_name.contains("cognitive");
         // if debug { //bg!(&self.name, &section_name); }
@@ -511,6 +513,7 @@ impl Topic {
             match paragraph {
                 Paragraph::SectionHeader { name, depth: _, link_name } => {
                     // if debug { //bg!(&name); }
+                    // if debug { println!("Topic::has_section(): name = \"{}\", link_name = \"{}\".", name, link_name); }
                     if name.to_lowercase().eq(&section_name) || link_name.eq(&section_name) {
                         // if debug { //bg!("found section"); }
                         return true;
@@ -854,7 +857,7 @@ impl Topic {
         let path = self.namespace.replace(":", "/");
         let file_name = format!("{}.txt", legal_file_name(self.get_name()));
         let key = format!("{}/{}", path, file_name);
-        if self.name.eq("Yew (crate)") { dbg!(&key, summary.files.contains_key(&key)); }
+        // if self.name.eq("Yew (crate)") { dbg!(&key, summary.files.contains_key(&key)); }
         summary.files.get(&key)
     }
 }

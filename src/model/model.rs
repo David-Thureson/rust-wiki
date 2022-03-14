@@ -288,7 +288,7 @@ impl Model {
                     LinkType::Section { section_key } => {
                         if !self.has_section(section_key) {
                             self.print_sections(section_key.get_topic_key());
-                            errors.add(&topic.get_topic_key(), &format!("wiki::check_links(): Section link {} not found.", section_key));
+                            errors.add(&topic.get_topic_key(), &format!("Model::check_links(): Section link {} not found.", section_key));
                         }
                     },
                     _ => {},
@@ -444,7 +444,10 @@ impl Model {
     */
 
     pub(crate) fn has_section(&self, section_key: &SectionKey) -> bool {
+        // let debug = section_key.get_section_name().eq("free_account");
+        // if debug { dbg!(section_key); }
         if !self.has_topic(&section_key.get_topic_key()) {
+            // if debug { println!("Model::has_section(): topic not found."); }
             return false;
         }
         self.topics[&section_key.get_topic_key()].has_section(&section_key.get_section_name())
