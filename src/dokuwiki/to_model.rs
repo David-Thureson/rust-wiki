@@ -769,17 +769,17 @@ impl BuildProcess {
             let path_dest_namespace = format!("{}/{}", self.gen_path_pages, namespace_to_path(namespace));
             let path_temp_source = format!("{}/{}", PATH_TEMP_SOURCE, namespace_to_path(namespace));
 
-            println!("{}About to remove all files from the temp source folder [{}].",
-                     msg_prefix, path_temp_source);
+            //rintln!("{}About to remove all files from the temp source folder [{}].",
+            //         msg_prefix, path_temp_source);
             util::file::remove_files_r(&path_temp_source).unwrap();
 
             if path_source_namespace.eq(&path_dest_namespace) {
                 // The source and destination paths are the same. This is the usual case when
                 // compare_only is false. Move all of the files out of the source folder and into
                 // the temp source folder.
-                println!("{}The source and destination are the same.\nAbout to move all files from [{}] to [{}].",
-                         msg_prefix, path_source_namespace, path_temp_source);
-                panic!();
+                //rintln!("{}The source and destination are the same.\nAbout to move all files from [{}] to [{}].",
+                //         msg_prefix, path_source_namespace, path_temp_source);
+                // panic!();
                 util::file::move_files_r(&path_source_namespace, &path_temp_source).unwrap();
             } else {
                 // The source and destination paths are different. Typically this means
@@ -787,8 +787,8 @@ impl BuildProcess {
                 // the destination is under [C:/Wiki Gen Backup]. So we want the destination folder
                 // to start out empty (except for possible subfolders) and we want a temporary copy
                 // of the source files.
-                println!("{}The source and destination are different.\nAbout to copy all files from [{}] to [{}].\nAbout to remove all files from [{}].",
-                         msg_prefix, path_source_namespace, path_temp_source, path_dest_namespace);
+                //rintln!("{}The source and destination are different.\nAbout to copy all files from [{}] to [{}].\nAbout to remove all files from [{}].",
+                //         msg_prefix, path_source_namespace, path_temp_source, path_dest_namespace);
                 // panic!();
                 util::file::copy_folder_files_r(&path_source_namespace, &path_temp_source).unwrap();
                 util::file::remove_files_r(&path_dest_namespace).unwrap();
@@ -813,13 +813,13 @@ impl BuildProcess {
                 }
                 //panic!();
                 if is_changed {
-                    println!("{}The topic \"{}\" is new or has been changed during the round trip. About to write [{}].",
-                             msg_prefix, topic_file_dest.topic_name, path_one_dest);
+                    //rintln!("{}The topic \"{}\" is new or has been changed during the round trip. About to write [{}].",
+                    //         msg_prefix, topic_file_dest.topic_name, path_one_dest);
                     util::file::write_file_r(&path_one_dest, &topic_file_dest.content).unwrap();
                 } else {
                     let path_one_source = format!("{}/{}.txt", path_temp_source, topic_file_dest.file_name);
-                    println!("{}The topic \"{}\" has not been changed during the round trip. About to copy [{}] to [{}].",
-                             msg_prefix, topic_file_dest.topic_name, path_one_source, path_one_dest);
+                    //rintln!("{}The topic \"{}\" has not been changed during the round trip. About to copy [{}] to [{}].",
+                    //         msg_prefix, topic_file_dest.topic_name, path_one_source, path_one_dest);
                     assert_ne!(path_one_source, path_one_dest);
                     util::file::copy_file_r(path_one_source, path_one_dest).unwrap();
                 }
