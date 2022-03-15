@@ -186,10 +186,12 @@ impl <'a> GenFromModel<'a> {
     #[allow(dead_code)]
     pub(crate) fn gen_reports_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_REPORTS,None);
-        // self.gen_reports_page_public_topics_by_category(&mut page);
-        // self.gen_reports_page_public_ref_to_private(&mut page);
-        // self.gen_reports_page_redactions(&mut page);
-        self.gen_reports_page_privacy_unknown(&mut page);
+        if !self.model.is_public() {
+            // self.gen_reports_page_public_topics_by_category(&mut page);
+            // self.gen_reports_page_public_ref_to_private(&mut page);
+            // self.gen_reports_page_redactions(&mut page);
+            self.gen_reports_page_privacy_unknown(&mut page);
+        }
         page.write(&self.path_pages);
     }
 

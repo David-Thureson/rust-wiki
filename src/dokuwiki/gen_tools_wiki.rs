@@ -149,9 +149,7 @@ fn gen_tools_project_from_model(model: &model::Model, build_process: &mut BuildP
     gen.gen_attr_date_page();
     gen.gen_attr_page();
     gen.gen_attr_value_page();
-    if !model.is_public() {
-        gen.gen_reports_page();
-    }
+    gen.gen_reports_page();
     // gen_terms_page();
     build_process.topic_dest_files = gen.gen();
     assert!(!build_process.topic_dest_files.is_empty());
