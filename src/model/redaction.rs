@@ -65,13 +65,13 @@ pub(crate) fn text_contains_phrase(text: &str, phrases: &Vec<String>) -> bool {
     false
 }
 
-pub fn redact_text(text: &str, phrases: &Vec<String>) -> Option<(String)> {
+pub fn redact_text(text: &str, phrases: &Vec<String>) -> Option<String> {
     debug_assert!(!text.is_empty());
     debug_assert!(!phrases.is_empty());
     let mut working_text = text.to_string();
     loop {
         match find_match(&working_text, phrases) {
-            Some((start_index, end_index, phrase)) => {
+            Some((start_index, end_index)) => {
                 working_text = format!("{}{}{}", &working_text[0..start_index], MARKER_REDACTION, &working_text[end_index..working_text.len()]);
             },
             None => {
@@ -86,13 +86,13 @@ pub fn redact_text(text: &str, phrases: &Vec<String>) -> Option<(String)> {
     }
 }
 
-fn find_match(text: &str, phrases: &Vec<String>) -> Option<(usize, usize, String)> {
+fn find_match(text: &str, phrases: &Vec<String>) -> Option<(usize, usize)> {
     debug_assert!(!text.is_empty());
     debug_assert!(!phrases.is_empty());
     let text_lower = text.to_lowercase();
     for phrase in phrases.iter() {
         if let Some(pos) = text_lower.find(phrase) {
-            return Some((pos, pos + phrase.len(), phrase.clone()))
+            return Some((pos, pos + phrase.len()))
         }
     }
     None

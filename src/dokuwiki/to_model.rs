@@ -186,7 +186,7 @@ impl BuildProcess {
             let dir_entry = dir_entry_result.as_ref().unwrap();
             let file_name = util::file::dir_entry_to_file_name(dir_entry);
             if file_name.ends_with(".txt") {
-                let path_name = util::file::path_name(dir_entry.path());
+                //let path_name = util::file::path_name(dir_entry.path());
                 let content = fs::read_to_string(&dir_entry.path()).unwrap();
                 if content.contains(MARKER_DELETE_THIS_FILE) {
                     errors.push(format!("{} should be deleted.", file_name));
@@ -234,7 +234,7 @@ impl BuildProcess {
         // headers, breadcrumbs, etc.
 
         for topic_source_file in self.topic_source_files.values() {
-            let mut content = topic_source_file.content.clone();
+            let content = topic_source_file.content.clone();
 
             // Double linefeeds are fine since they count as paragraph breaks, but any
             // linefeeds after that should be removed.
@@ -255,7 +255,7 @@ impl BuildProcess {
             //   ======A Mind for Numbers======
             // We already parsed this first line in read_from_folder() and we have the topic name,
             // so we don't need this paragraph.
-            let mut first_paragraph = paragraphs.remove(0).to_string();
+            let first_paragraph = paragraphs.remove(0).to_string();
             // The first paragraph should be a single line.
             assert!(!first_paragraph.contains(DELIM_LINEFEED));
 
@@ -777,6 +777,7 @@ impl BuildProcess {
         self.topic_source_files.insert(key, topic_file);
     }
 
+    #[allow(dead_code)]
     pub(crate) fn add_topic_dest_file(&mut self, topic_file: TopicFile) {
         let key = topic_file.get_key();
         assert!(!self.topic_dest_files.contains_key(&key));
@@ -784,7 +785,7 @@ impl BuildProcess {
     }
 
     pub(crate) fn write_main_topic_files(&self) {
-        let msg_prefix = "BuildProcess::write_main_topic_files(): ";
+        // let msg_prefix = "BuildProcess::write_main_topic_files(): ";
         assert!(!self.topic_dest_files.is_empty());
 
         for namespace in self.get_main_namespaces().iter() {
@@ -859,6 +860,7 @@ impl BuildProcess {
         namespaces
     }
 
+    #[allow(dead_code)]
     fn print_source_file_keys(&self) {
         println!("\nBuildProcess::print_source_file_keys()");
         for key in self.topic_source_files.keys() {

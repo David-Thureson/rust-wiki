@@ -168,6 +168,7 @@ pub(crate) fn add_headline(page_text: &mut String, text: &str, level: usize) {
     page_text.push_str(&format!("{}{}{}\n\n", markers, text, markers));
 }
 
+/*
 #[allow(dead_code)]
 pub(crate) fn add_image_internal_link(page_text: &mut String, page_namespace: &str, page_name: &str, image_namespace: &str, image_file_name: &str, image_size: &WikiImageSize) {
     TopicKey::assert_legal_namespace(page_namespace);
@@ -200,7 +201,27 @@ pub(crate) fn add_image_row(page_text: &mut String, image_namespace: &str, image
         .join("");
     add_paragraph(page_text, &markup);
 }
+*/
 
+pub(crate) fn image_ref_from_file_name(image_namespace: &str, image_file_name: &str) -> String {
+    TopicKey::assert_legal_namespace(image_namespace);
+    format!("{}:{}", image_namespace, legal_file_name(image_file_name))
+}
+
+pub(crate) fn image_part(image_ref: &str, image_link_type: &WikiImageLinkType, image_size: &WikiImageSize) -> String {
+    // image_ref is either a URL or something like "tools:abc.txt".
+    let link_type_string = image_link_type.suffix();
+    let size_string = image_size.suffix();
+    let suffix = match (link_type_string, size_string) {
+        (Some(link_type_string), Some(size_string)) => format!("{}&{}", link_type_string, size_string),
+        (Some(link_type_string), None) => format!("{}", link_type_string),
+        (None, Some(size_string)) => format!("{}", size_string),
+        (None, None) => "".to_string(),
+    };
+    format!("{{{{{}?{}}}}}", image_ref, suffix)
+}
+
+/*
 pub(crate) fn image_part(image_namespace: &str, image_file_name: &str, image_link_type: &WikiImageLinkType, image_size: &WikiImageSize) -> String {
     TopicKey::assert_legal_namespace(image_namespace);
     let link_type_string = image_link_type.suffix();
@@ -214,6 +235,7 @@ pub(crate) fn image_part(image_namespace: &str, image_file_name: &str, image_lin
     // format!("{{{{:{}:{}?{}|}}}}", image_namespace, legal_file_name(image_file_name), suffix)
     format!("{{{{{}:{}?{}}}}}", image_namespace, legal_file_name(image_file_name), suffix)
 }
+*/
 
 #[allow(dead_code)]
 pub(crate) fn add_page_link(page_text: &mut String, namespace: &str, page_name: &str, label: Option<&str>) {

@@ -100,6 +100,7 @@ impl TextBlock {
         }
     }
 
+    #[allow(dead_code)]
     pub fn replace_item(&mut self, index: usize, item: TextItem) {
         match self {
             TextBlock::Resolved { items } => {
@@ -160,6 +161,7 @@ impl TextItem {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn is_redaction(&self) -> bool {
         match self {
             TextItem::Link { .. } => false,

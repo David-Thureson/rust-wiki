@@ -105,10 +105,12 @@ impl List {
         &mut self.items
     }
 
+    #[allow(dead_code)]
     pub fn set_header(&mut self, text_block: Option<TextBlock>) {
         self.header = text_block;
     }
 
+    #[allow(dead_code)]
     pub fn set_item_text_block(&mut self, index: usize, text_block: TextBlock) {
         self.items[index].text_block = text_block;
     }

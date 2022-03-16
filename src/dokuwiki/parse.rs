@@ -146,7 +146,7 @@ pub(crate) fn parse_marker_optional(text: &str) -> Result<Option<(String, String
         }
         if text.trim().contains(DELIM_LINEFEED) {
             let msg = format!("The text seems to be a marker but it has linefeeds: \"{}\".", text);
-            panic!(msg);
+            //anic!(msg);
             return Err(msg);
         }
         // Switch the starting "<" to "</".
@@ -209,7 +209,7 @@ pub(crate) fn parse_table_optional(text: &str) -> Result<Option<model::Table>, S
                 } else {
                     HorizontalAlignment::Left
                 };
-                let mut cell_text = cell_text.trim();
+                let cell_text = cell_text.trim();
                 row.push(model::TableCell::new_unresolved_text(cell_text, is_bold, &horizontal));
             }
             table.add_row(row);

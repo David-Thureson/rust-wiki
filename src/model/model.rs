@@ -561,6 +561,7 @@ impl Model {
         self.is_public
     }
 
+    #[allow(dead_code)]
     pub(crate) fn topic_is_public(&self, topic_key: &TopicKey) -> bool {
         self.topics.get(topic_key).unwrap().is_public()
     }
@@ -579,6 +580,7 @@ impl Model {
         &self.redacted_phrases
     }
 
+    #[allow(dead_code)]
     pub(crate) fn print_redacted_phrases(&self) {
         println!("\nModel::print_redacted_phrases():");
         for phrase in self.redacted_phrases.iter() {
@@ -588,7 +590,8 @@ impl Model {
     }
 
     pub(crate) fn finalize_redacted_phrases(&mut self) {
-        let mut phrases = std::mem::replace(&mut self.redacted_phrases, vec![]);
+        // Take the value from self.redacted_phrases so that we avoid cloning it.
+        let phrases = std::mem::replace(&mut self.redacted_phrases, vec![]);
         self.redacted_phrases = redaction::finalize_redacted_phrases(phrases);
     }
 

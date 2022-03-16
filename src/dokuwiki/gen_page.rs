@@ -3,7 +3,6 @@ use std::fs;
 use super::*;
 use crate::Itertools;
 use crate::model::TopicKey;
-use std::collections::BTreeMap;
 
 #[derive(Debug)]
 pub(crate) struct WikiGenPage {

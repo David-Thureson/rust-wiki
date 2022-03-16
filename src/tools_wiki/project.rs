@@ -111,7 +111,11 @@ fn update_dependency_paragraphs(model: &mut Model) {
                                 list.add_item_topic_link_if_missing(1, false, dep_topic_key);
                             },
                             None => {
-                                println!("In topic \"{}\", dependency \"{}\" not found.", &topic.get_name(), &dep.crate_name);
+                                // sim is a reference in the Monkeybait Dev project to an internal
+                                // Rust project. We don't handle this case yet.
+                                if dep.crate_name.ne("sim") {
+                                    println!("In topic \"{}\", dependency \"{}\" not found.", &topic.get_name(), &dep.crate_name);
+                                }
                             }
                         }
                     }

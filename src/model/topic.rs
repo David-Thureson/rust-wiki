@@ -107,6 +107,7 @@ impl Topic {
         self.category = Some(category.to_string());
     }
 
+    #[allow(dead_code)]
     pub(crate) fn clear_category(&mut self) {
         self.category = None;
     }
@@ -202,6 +203,7 @@ impl Topic {
     }
     */
 
+    #[allow(dead_code)]
     pub(crate) fn remove_temp_attribute(&mut self, attr_type_name: &str) {
         self.temp_attributes.remove(attr_type_name);
     }

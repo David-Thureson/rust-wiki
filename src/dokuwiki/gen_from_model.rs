@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::cell::{RefCell, Ref};
 use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys, ATTRIBUTE_NAME_EDITED, ATTRIBUTE_NAME_ADDED, TopicTreeNode, ATTRIBUTE_VALUE_UNKNOWN, ATTRIBUTE_NAME_VISIBILITY};
 use std::collections::BTreeMap;
-use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD, legal_file_name};
+use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD, legal_file_name, image_ref_from_file_name};
 use crate::tree::TreeNode;
 use crate::dokuwiki::to_model::{make_topic_file_key, TopicFile};
 
@@ -69,8 +69,11 @@ impl <'a> GenFromModel<'a> {
         let namespace = &self.model.qualify_namespace(&self.model.namespace_navigation());
         let mut page = wiki::WikiGenPage::new(namespace, wiki::PAGE_NAME_ALL_TOPICS,None);
         let first_letter_map = self.model.get_topics_first_letter_map();
-        for (map_key, topic_keys) in first_letter_map.iter() {
+        for (index, (map_key, topic_keys)) in first_letter_map.iter().enumerate() {
             let section_name = if map_key.eq("#") { "Number" } else { map_key };
+            if index > 0 {
+                page.add_linefeed();
+            }
             page.add_headline(section_name, 1);
             self.gen_topic_first_letter_links(&mut page, 9);
             for topic_key in topic_keys {
@@ -746,14 +749,19 @@ impl <'a> GenFromModel<'a> {
                 // pub(crate) fn image_part(image_namespace: &str, image_file_name: &str, image_link_type: &WikiImageLinkType, image_size: &WikiImageSize) -> String {
                 match source {
                     model::ImageSource::Internal { namespace, file_name } => {
+                        let image_ref = image_ref_from_file_name(&namespace, &file_name);
                         let link_type = wiki::gen::WikiImageLinkType::Direct;
                         let size = wiki::gen::WikiImageSize::Original;
-                        let text = wiki::gen::image_part(&namespace, &file_name, &link_type, &size);
+                        let text = wiki::gen::image_part(&image_ref, &link_type, &size);
                         text
                     }
-                    model::ImageSource::External {..} => {
-                        self.add_error(&msg_func_unexpected("ImageSource", "External"));
-                        "".to_string()
+                    model::ImageSource::External { url } => {
+                        let link_type = wiki::gen::WikiImageLinkType::Direct;
+                        let size = wiki::gen::WikiImageSize::Original;
+                        let text = wiki::gen::image_part(&url, &link_type, &size);
+                        text
+                        // self.add_error(&msg_func_unexpected("ImageSource", "External"));
+                        //"".to_string()
                     }
                 }
             },
