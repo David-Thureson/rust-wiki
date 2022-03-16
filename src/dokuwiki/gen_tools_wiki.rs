@@ -147,7 +147,7 @@ fn gen_tools_project_from_model(model: &model::Model, build_process: &mut BuildP
     gen.gen_subtopics_page();
     gen.gen_attr_year_page();
     gen.gen_attr_date_page();
-    gen.gen_attr_page();
+    gen.gen_attr_pages();
     gen.gen_attr_value_page();
     gen.gen_reports_page();
     // gen_terms_page();

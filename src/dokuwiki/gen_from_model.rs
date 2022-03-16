@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::cell::{RefCell, Ref};
 use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys, ATTRIBUTE_NAME_EDITED, ATTRIBUTE_NAME_ADDED, TopicTreeNode, ATTRIBUTE_VALUE_UNKNOWN, ATTRIBUTE_NAME_VISIBILITY};
 use std::collections::BTreeMap;
-use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD, legal_file_name, image_ref_from_file_name};
+use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD, legal_file_name, image_ref_from_file_name};
 use crate::tree::TreeNode;
 use crate::dokuwiki::to_model::{make_topic_file_key, TopicFile};
 
@@ -129,7 +129,51 @@ impl <'a> GenFromModel<'a> {
         page.write(&self.path_pages);
     }
 
-    pub(crate) fn gen_attr_page(&self) {
+    pub(crate) fn gen_attr_pages(&self) {
+        let mut page_all = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR,None);
+        for attribute_type in self.model.get_attribute_types().values()
+            .filter(|attribute_type| {
+                let value_type = attribute_type.get_value_type();
+                AttributeValueType::Date.ne(value_type) && AttributeValueType::Year.ne(value_type)
+            })
+            .filter(|attribute_type| self.model.is_attribute_indexed(attribute_type.get_name())) {
+            let attr_type_name = attribute_type.get_name();
+            let page_one_name = Self::attr_type_page_name(attr_type_name);
+            let mut page_one = wiki::WikiGenPage::new(&self.model.namespace_navigation(), &page_one_name, Some(attr_type_name));
+            page_all.add_headline(attr_type_name,1);
+            for (value, topic_keys) in attribute_type.get_values().iter() {
+                let headline = attribute_type.get_value_display_string(value);
+                page_all.add_headline(&headline, 2);
+                page_one.add_headline(&headline, 1);
+                if let Some(link) = self.page_link_if_exists(value) {
+                    page_all.add_paragraph(&link);
+                    page_one.add_paragraph(&link);
+                }
+                if let Some(line) = self.make_related_domains_line(value, false) {
+                    page_all.add_paragraph(&line);
+                    page_one.add_paragraph(&line);
+                }
+                page_all.add_line("Topics:");
+                page_one.add_line("Topics:");
+                for topic_key in topic_keys.iter() {
+                    let link = self.page_link_simple(&topic_key);
+                    page_all.add_list_item_unordered(1, &link);
+                    page_one.add_list_item_unordered(1, &link);
+                }
+                page_all.add_linefeed();
+                page_one.add_linefeed();
+            }
+            page_one.write(&self.path_pages);
+        }
+        page_all.write(&self.path_pages);
+    }
+
+    fn attr_type_page_name(attr_type_name: &str) -> String {
+        format!("attributes_{}", legal_file_name(attr_type_name))
+    }
+
+    /*
+    pub(crate) fn gen_attr_pages(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR,None);
         for attribute_type in self.model.get_attribute_types().values()
             .filter(|attribute_type| {
@@ -154,6 +198,7 @@ impl <'a> GenFromModel<'a> {
         }
         page.write(&self.path_pages);
     }
+    */
 
     pub(crate) fn gen_attr_value_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_ATTR_VALUE,None);
@@ -172,7 +217,9 @@ impl <'a> GenFromModel<'a> {
             if let Some(link) = self.page_link_if_exists(value) {
                 page.add_paragraph(&link);
             }
-            self.add_related_domains_optional(&mut page,value, true);
+            if let Some(line) = self.make_related_domains_line(value, true) {
+                page.add_paragraph(&line);
+            }
             // Sort by topic name, then attribute type name.
             list.sort_by(|a, b| a.1.get_topic_name().to_lowercase().cmp(&b.1.get_topic_name().to_lowercase()).then(a.0.cmp(&b.0)));
             page.add_line("Topics:");
@@ -271,7 +318,7 @@ impl <'a> GenFromModel<'a> {
         }
     }
 
-    fn add_related_domains_optional(&self, page: &mut wiki::WikiGenPage, attribute_value_name: &str, on_attribute_value_page: bool) {
+    fn make_related_domains_line(&self, attribute_value_name: &str, on_attribute_value_page: bool) -> Option<String> {
         if let Some(domain) = self.model.get_domain(attribute_value_name) {
             let related_by_count = domain.get_related_by_count();
             if !related_by_count.is_empty() {
@@ -279,9 +326,10 @@ impl <'a> GenFromModel<'a> {
                     .map(|related_name| self.domain_link(related_name, on_attribute_value_page))
                     .join(", ");
                 let line = format!("Related: {}", related_link_list);
-                page.add_paragraph(&line);
+                return Some(line)
             }
         }
+        None
     }
 
     pub(crate) fn gen_attr_year_page(&self) {
@@ -448,7 +496,9 @@ impl <'a> GenFromModel<'a> {
                     AttributeValueType::Date => wiki::page_link(&namespace_navigation, PAGE_NAME_ATTR_DATE,Some(attr_type_name)),
                     AttributeValueType::Year => wiki::page_link(&namespace_navigation, PAGE_NAME_ATTR_YEAR,Some(attr_type_name)),
                     _ => if self.model.is_attribute_indexed(attr_type_name) {
-                        wiki::section_link(&namespace_navigation, PAGE_NAME_ATTR, attr_type_name, Some(attr_type_name))
+                        let page_name_attr_type = Self::attr_type_page_name(attr_type_name);
+                        wiki::page_link(&namespace_navigation, &page_name_attr_type, Some(attr_type_name))
+                        //wiki::section_link(&namespace_navigation, PAGE_NAME_ATTR, attr_type_name, Some(attr_type_name))
                     } else {
                         attr_type_name.to_string()
                     },
