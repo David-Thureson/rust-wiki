@@ -619,7 +619,9 @@ impl Topic {
         for (parent_topic_key, child_topic_key) in parent_child_pairs.iter() {
             // let parent_topic_key= b!(parent_link_rc).get_topic_key().unwrap();
             let link_rc = r!(Link::new_topic_from_key(None, child_topic_key));
-            let parent_topic = model.get_topics_mut().get_mut(&parent_topic_key);
+            let parent_topic = model.find_topic_mut(&parent_topic_key);
+            parent_topic.subtopics.push(link_rc);
+            /*
             match parent_topic {
                 Some(parent_topic) => {
                     parent_topic.subtopics.push(link_rc);
@@ -630,10 +632,14 @@ impl Topic {
                     // }
                 }
             }
+             */
         }
         for (parent_topic_key, combo_topic_key) in parent_combo_pairs.iter() {
             let link_rc = r!(Link::new_topic_from_key(None, combo_topic_key));
-            let parent_topic = model.get_topics_mut().get_mut(&parent_topic_key);
+            // let parent_topic = model.get_topics_mut().get_mut(&parent_topic_key);
+            let parent_topic = model.find_topic_mut(&parent_topic_key);
+            parent_topic.combo_subtopics.push(link_rc);
+            /*
             match parent_topic {
                 Some(parent_topic) => {
                     parent_topic.combo_subtopics.push(link_rc);
@@ -644,6 +650,8 @@ impl Topic {
                     // }
                 }
             }
+
+             */
             // model.get_topics_mut().get_mut(&parent_topic_key).unwrap().combo_subtopics.push(link_rc);
         }
         let mut tree = util::tree::Tree::create(parent_child_pairs, true);
@@ -1010,7 +1018,7 @@ impl Display for SectionKey {
 pub(crate) fn make_topic_ref(namespace: &str, topic_name: &str) -> String {
     // For now use the DokuWiki conventions. If we later need to generate a different wiki format,
     // create a function like this for each wiki engine and pass it to the gen process.
-    let canonical_topic_name = super::dokuwiki::gen::legal_file_name(topic_name);
+    let canonical_topic_name = super::dokuwiki::gen::internal_link_name(topic_name);
     let topic_ref = format!("{}{}{}", namespace, super::dokuwiki::DELIM_NAMESPACE, canonical_topic_name);
     topic_ref
 }
