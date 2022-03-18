@@ -588,9 +588,9 @@ impl BuildProcess {
                                 // part of a quoted string or inside a link, and in those cases we want to
                                 // avoid them during the split.
                                 // Replace any commas inside a quoted string with a placeholder.
-                                let text = util::parse::replace_within_delimiters_rc(&text, "\"", "\"", ",", TEMP_COMMA, context).unwrap();
+                                let text = util::parse::replace_within_delimiters_rc(&text, "\"", "\"", ",", TEMP_COMMA, true, context).unwrap();
                                 // Replace any commas inside a link with a placeholder.
-                                let text = util::parse::replace_within_delimiters_rc(&text, DELIM_LINK_START, DELIM_LINK_END, ",", TEMP_COMMA, context).unwrap();
+                                let text = util::parse::replace_within_delimiters_rc(&text, DELIM_LINK_START, DELIM_LINK_END, ",", TEMP_COMMA, true, context).unwrap();
                                 // Split the attribute values using the remaining commas, if any.
                                 let cell_items = util::parse::split_trim(&text, ",");
                                 // Put the commas back inside the quoted strings and links.
@@ -719,7 +719,6 @@ impl BuildProcess {
     fn make_text_block_rc(&self, text: &str, context: &str) -> Result<TextBlock, String> {
         //bg!(context);
         // if text.contains("tools:nav") { dbg!(context, text); panic!() };
-        let text = text.trim();
         // An image link will look like this:
         //   {{tools:antlr_plugin.png?direct}}
         // To make it easier to split the text into link and non-link parts, first change text like
@@ -727,9 +726,15 @@ impl BuildProcess {
         //   [[{{tools:antlr_plugin.png?direct}}]]
         // This way all we have to do is split based on what is inside or outside of pairs of "[["
         // and "]]".
+        // let debug = text.contains("[[tools:excel|Excel]] Data Science");
+        let debug = text.contains("[[tools:excel|Excel]]Data Science");
+        // let debug = text.contains("[[tools:excel|Excel]]");
+        if debug { dbg!(text, context); panic!() }
+        if debug { dbg!(text); }
         let text = text.replace(DELIM_IMAGE_START, TEMP_DELIM_IMG_START)
             .replace(DELIM_IMAGE_END, TEMP_DELIM_IMG_END);
-        let delimited_splits = util::parse::split_delimited_and_normal_rc(&text, DELIM_LINK_START, DELIM_LINK_END, context)?;
+        let delimited_splits = util::parse::split_delimited_and_normal_rc(&text, DELIM_LINK_START, DELIM_LINK_END, false, context)?;
+        if debug { dbg!(&delimited_splits); }
         // if text.contains("format|Num-Format") { dbg!(&delimited_splits); panic!(); }
         let mut items = vec![];
         for (item_is_delimited, item_text) in delimited_splits.iter() {
@@ -758,11 +763,12 @@ impl BuildProcess {
             }
         }
         let text_block = TextBlock::new_resolved(items);
+        if debug { dbg!(&text_block, text_block.get_display_text()); }
         Ok(text_block)
     }
 
     fn make_link_rc(&self, text: &str, context: &str) -> Result<Link, String> {
-        let text = text.trim();
+        // let text = text.trim();
         let err_func = |msg: &str| Err(format!("{} make_link_rc: {}: text = \"{}\".", context, msg, text));
         //bg!(context, text);
         match parse_link_optional(&self.topic_refs, &text)? {

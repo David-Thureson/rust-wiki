@@ -111,23 +111,40 @@ impl TextBlock {
             }
         }
     }
-        /*
-        pub(crate) fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
-            match self {
-                Self::Resolved { items } => {
-                    for text_item in items.iter_mut() {
-                        //bg!(&text_item);
-                        *text_item = text_item.clone().update_internal_link_optional(keys);
-                        //bg!(&text_item);
+
+    pub fn starts_with_text(&self, pat: &str) -> bool {
+        match self {
+            TextBlock::Resolved { items } => {
+                if items.is_empty() {
+                    false
+                } else {
+                    match &items[0] {
+                        TextItem::Text { text } => text.starts_with(pat),
+                        TextItem::Link { .. } => false,
                     }
-                    //bg!(&items);
                 }
-                Self::Unresolved { .. } => {
-                    panic!("This shouldn't be called for unresolved text blocks.")
-                },
-            }
+            },
+            TextBlock::Unresolved { text } => text.starts_with(pat)
         }
-        */
+    }
+
+    /*
+    pub(crate) fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
+        match self {
+            Self::Resolved { items } => {
+                for text_item in items.iter_mut() {
+                    //bg!(&text_item);
+                    *text_item = text_item.clone().update_internal_link_optional(keys);
+                    //bg!(&text_item);
+                }
+                //bg!(&items);
+            }
+            Self::Unresolved { .. } => {
+                panic!("This shouldn't be called for unresolved text blocks.")
+            },
+        }
+    }
+    */
 }
 
 impl TextItem {

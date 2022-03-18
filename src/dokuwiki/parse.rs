@@ -186,7 +186,7 @@ pub(crate) fn parse_table_optional(text: &str) -> Result<Option<model::Table>, S
             // between the link destination and the label, so the row might look like this (with
             // the bold first cell already turned into "|^" above).
             // |^ [[tools:nav:attributes#Narrator|Narrator]] | [[tools:nav:attribute_values#Mark Steinberg|Mark Steinberg]] |
-            let mut splits = util::parse::split_outside_of_delimiters_rc(&line, DELIM_TABLE_CELL, DELIM_LINK_START, DELIM_LINK_END, context)?;
+            let mut splits = util::parse::split_outside_of_delimiters_rc(&line, DELIM_TABLE_CELL, DELIM_LINK_START, DELIM_LINK_END, false, context)?;
             // We don't want the first and last splits because these are simply empty strings
             // outside the first and last "|" characters (or just a "^"), not actual table cells.
             assert_eq!("", splits[0]);
@@ -210,6 +210,7 @@ pub(crate) fn parse_table_optional(text: &str) -> Result<Option<model::Table>, S
                     HorizontalAlignment::Left
                 };
                 let cell_text = cell_text.trim();
+                if cell_text.contains("[[tools:excel|Excel]]Data Science") { dbg!(cell_text); panic!() }
                 row.push(model::TableCell::new_unresolved_text(cell_text, is_bold, &horizontal));
             }
             table.add_row(row);

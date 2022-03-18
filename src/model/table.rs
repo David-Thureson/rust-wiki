@@ -30,6 +30,10 @@ impl Table {
         }
     }
 
+    pub(crate) fn is_empty(&self) -> bool {
+        self.rows.is_empty()
+    }
+
     pub(crate) fn add_row(&mut self, row: Vec<TableCell>) {
         self.rows.push(row);
     }
@@ -120,6 +124,7 @@ impl Table {
     }
 
 }
+
 
 impl TableCell {
     pub(crate) fn new_unresolved_text(text: &str, is_bold: bool, horizontal: &HorizontalAlignment) -> Self {

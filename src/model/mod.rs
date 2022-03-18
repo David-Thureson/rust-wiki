@@ -14,6 +14,8 @@ pub(crate) mod date;
 pub(crate) mod domain;
 pub(crate) use domain::*;
 
+pub(crate) mod glossary;
+
 pub(crate) mod link;
 pub(crate) use link::*;
 
