@@ -100,6 +100,46 @@ impl TextBlock {
         }
     }
 
+    pub fn get_single_resolved_text(&self) -> &String {
+        // The caller assumes that the TextBlock is resolved and contains a single TextItem::Text.
+        match self {
+            TextBlock::Resolved { items } => {
+                assert_eq!(1, items.len(), "Expected to find one TextItem, found {} in \"{}\".", items.len(), self.get_display_text());
+                match &items[0] {
+                    TextItem::Link { .. } => {
+                        panic!("Expected a TextItem::Text, found a TextItem::Link in \"{}\".", self.get_display_text())
+                    },
+                    TextItem::Text { text } => {
+                        text
+                    }
+                }
+            },
+            TextBlock::Unresolved { .. } => {
+                panic!("Expected a TextBlock::Resolved, found a TextBlock::Unresolved in \"{}\".", self.get_display_text())
+            }
+        }
+    }
+
+    pub fn get_single_link(&self) -> LinkRc {
+        // The caller assumes that the TextBlock is resolved and contains a single TextItem::Link.
+        match self {
+            TextBlock::Resolved { items } => {
+                assert_eq!(1, items.len(), "Expected to find one TextItem, found {} in \"{}\".", items.len(), self.get_display_text());
+                match &items[0] {
+                    TextItem::Link { link } => {
+                        link.clone()
+                    },
+                    TextItem::Text { .. } => {
+                        panic!("Expected a TextItem::Text, found a TextItem::Link in \"{}\".", self.get_display_text())
+                    }
+                }
+            },
+            TextBlock::Unresolved { .. } => {
+                panic!("Expected a TextBlock::Resolved, found a TextBlock::Unresolved in \"{}\".", self.get_display_text())
+            }
+        }
+    }
+
     #[allow(dead_code)]
     pub fn replace_item(&mut self, index: usize, item: TextItem) {
         match self {
@@ -112,6 +152,7 @@ impl TextBlock {
         }
     }
 
+    #[allow(dead_code)]
     pub fn starts_with_text(&self, pat: &str) -> bool {
         match self {
             TextBlock::Resolved { items } => {
@@ -125,6 +166,21 @@ impl TextBlock {
                 }
             },
             TextBlock::Unresolved { text } => text.starts_with(pat)
+        }
+    }
+
+    pub fn trim(&mut self) {
+        match self {
+            TextBlock::Resolved { items } => {
+                for item in items.iter_mut() {
+                    item.trim();
+                }
+            },
+            TextBlock::Unresolved { text } => {
+                if text.len() != text.trim().len() {
+                    *text = text.trim().to_string();
+                }
+            }
         }
     }
 
@@ -195,6 +251,17 @@ impl TextItem {
                 }
             },
             _ => false,
+        }
+    }
+
+    pub(crate) fn trim(&mut self) {
+        match self {
+            TextItem::Text { text } => {
+                if text.len() != text.trim().len() {
+                    *text = text.trim().to_string();
+                }
+            },
+            _ => {},
         }
     }
 

@@ -118,6 +118,14 @@ impl Table {
         links
     }
 
+    pub(crate) fn trim(&mut self) {
+        for row in self.rows.iter_mut() {
+            for cell in row.iter_mut() {
+                cell.text_block.trim();
+            }
+        }
+    }
+
     #[allow(dead_code)]
     pub(crate) fn set_cell_text_block(&mut self, row_index: usize, col_index: usize, text_block: TextBlock) {
         self.rows[row_index][col_index].text_block = text_block;

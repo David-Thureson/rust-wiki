@@ -2,7 +2,7 @@ use wiki::*;
 
 pub(crate) fn main() {
 
-    let compare_only = false;
+    let compare_only = true;
     let is_public = false;
 
     // connectedtext::to_dokuwiki::main();

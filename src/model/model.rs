@@ -2,10 +2,12 @@ use super::*;
 use manage_projects::model::Model as ProjectModel;
 use std::collections::BTreeMap;
 use crate::model::date::update_date_attributes_from_file_monitor;
+use crate::model::glossary::Glossary;
 // use crate::connectedtext::NAMESPACE_TOOLS;
 
 pub(crate) type TopicRefs = BTreeMap<String, TopicKey>;
 pub(crate) type NameTopicMap = BTreeMap<String, TopicKey>;
+pub(crate) type GlossaryMap = BTreeMap<String, Glossary>;
 
 pub(crate) struct Model {
     _name: String,
@@ -22,6 +24,7 @@ pub(crate) struct Model {
     projects: Option<ProjectModel>,
     projects_name_map: Option<NameTopicMap>,
     file_monitor_project: Option<file_monitor::model::Project>,
+    glossaries: GlossaryMap,
     redacted_phrases: Vec<String>,
 }
 
@@ -43,6 +46,7 @@ impl Model {
             projects: None,
             projects_name_map: None,
             file_monitor_project: None,
+            glossaries: Default::default(),
             redacted_phrases: vec![],
         };
         wiki.add_namespace(main_namespace);
@@ -611,6 +615,28 @@ impl Model {
         // Take the value from self.redacted_phrases so that we avoid cloning it.
         let phrases = std::mem::replace(&mut self.redacted_phrases, vec![]);
         self.redacted_phrases = redaction::finalize_redacted_phrases(phrases);
+    }
+
+    pub(crate) fn get_glossaries(&self) -> &GlossaryMap {
+        &self.glossaries
+    }
+
+    pub(crate) fn take_glossaries(&mut self) -> GlossaryMap {
+        std::mem::replace(&mut self.glossaries, BTreeMap::new())
+    }
+
+    pub(crate) fn set_glossaries(&mut self, glossaries: GlossaryMap) {
+        self.glossaries = glossaries;
+    }
+
+    pub(crate) fn build_glossaries(&mut self) {
+        let mut glossaries = self.take_glossaries();
+        for glossary in glossaries.values_mut() {
+            if let Some(glossary_errors) = glossary.build_from_raw_list(self) {
+                println!("\nGlossary errors for \"{}\":\n{}\n", glossary.name, glossary_errors);
+            }
+        }
+        self.glossaries = glossaries;
     }
 
     /*

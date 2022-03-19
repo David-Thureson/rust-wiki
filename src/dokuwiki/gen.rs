@@ -378,7 +378,8 @@ pub(crate) fn legal_file_name(name: &str) -> String {
     let page_name = page_name.trim().to_lowercase()
         .chars()
         .map(|c| {
-            if c.is_alphabetic() || c.is_digit(10) || c == '.' || c == '-' || c == '_' {
+            // if c.is_alphabetic() || c.is_digit(10) || c == '.' || c == '-' || c == '_' {
+            if c.is_alphabetic() || c.is_digit(10) || c == '.' || c == '_' {
                 c
             } else if c == '+' {
                 // This means "C++" will be turned into "cpp" rather than simply "c" which would

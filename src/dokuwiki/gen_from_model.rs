@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD, legal_file_name, image_ref_from_file_name};
 use crate::tree::TreeNode;
 use crate::dokuwiki::to_model::{make_topic_file_key, TopicFile};
+use crate::model::glossary::Glossary;
 
 //const SUBCATEGORY_TREE_MAX_SIZE: usize = 30;
 
@@ -415,7 +416,7 @@ impl <'a> GenFromModel<'a> {
             self.add_breadcrumbs_optional(&mut page, &topic);
             self.add_category_optional(&mut page, &topic);
             self.add_attributes_optional(&mut page, &topic);
-            self.add_paragraphs(&mut page, &topic);
+            self.add_paragraphs(&mut page, &topic, self.model.get_glossaries());
             self.add_inbound_links_section_optional(&mut page,  &topic);
             page.fix_content_before_write();
             let topic_file_name = legal_file_name(topic.get_name());
@@ -532,7 +533,7 @@ impl <'a> GenFromModel<'a> {
         }
     }
 
-    fn add_paragraphs(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic) {
+    fn add_paragraphs(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic, glossaries: &BTreeMap<String, Glossary>) {
         //let debug = topic.get_name().eq("Terms");
         let debug = false;
         let msg_func_unexpected = |variant_name: &str| format!("In dokuwiki::gen_from_model::add_paragraphs(), unexpected Paragraph variant = \"{}\"", variant_name);
@@ -560,6 +561,10 @@ impl <'a> GenFromModel<'a> {
                 model::Paragraph::Category => {}, // This was already added to the page.
                 model::Paragraph::GenStart => {},
                 model::Paragraph::GenEnd => {},
+                model::Paragraph::Glossary { name } => {
+                    let glossary = glossaries.get(name).unwrap();
+                    self.add_glossary(page, glossary);
+                },
                 model::Paragraph::List { list} => {
                     self.add_list(page, list);
                 },
@@ -719,6 +724,32 @@ impl <'a> GenFromModel<'a> {
             }
         }
         markup
+    }
+
+    fn add_glossary(&mut self, _page: &mut wiki::WikiGenPage, _glossary: &Glossary) {
+        unimplemented!()
+        /*
+        if list.is_generated() {
+            return;
+        }
+        if let Some(header) = list.get_header() {
+            match header {
+                model::TextBlock::Unresolved { text } => {
+                    panic!("Text block should be resolved by this point. Page = \"{}\"; text = \"{}\".", page.topic_name, text)
+                }
+                _ => {},
+            }
+            page.add(&self.text_block_to_markup(header));
+            page.add_linefeed();
+        }
+        for list_item in list.get_items().iter() {
+            let markup = &self.text_block_to_markup(list_item.get_text_block());
+            page.add_list_item(list_item.get_depth(),list_item.is_ordered(), markup);
+        }
+        page.add_linefeed();
+        // if page.topic_name.contains("10,000") { //bg!(&page.content); }
+
+         */
     }
 
     fn add_list(&mut self, page: &mut wiki::WikiGenPage, list: &model::List) {

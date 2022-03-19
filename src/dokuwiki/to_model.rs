@@ -4,6 +4,7 @@ use std::fs;
 use super::*;
 use crate::model::PUBLIC_ATTRIBUTES;
 use std::collections::BTreeMap;
+use crate::model::glossary::Glossary;
 
 #[derive(Debug)]
 pub(crate) struct BuildProcess {
@@ -115,6 +116,8 @@ impl BuildProcess {
 
         // Figure out the real nature of each paragraph.
         self.refine_paragraphs(&mut model);
+
+        model.build_glossaries();
 
         if !self.is_public {
             tools_wiki::project::add_project_info_to_model(&mut model);
@@ -268,6 +271,7 @@ impl BuildProcess {
     }
 
     fn refine_paragraphs(&mut self, model: &mut Model) {
+        let mut glossaries = model.take_glossaries();
         for topic in model.get_topics_mut().values_mut() {
             let context = format!("Refining paragraphs for \"{}\".", topic.get_name());
             self.topic_parse_state = TopicParseState::new();
@@ -275,7 +279,7 @@ impl BuildProcess {
             //rintln!("\n==================================================================\n\n{}\n", context);
             let paragraph_count = topic.get_paragraph_count();
             for paragraph_index in 0..paragraph_count {
-                match self.refine_one_paragraph_rc(topic, paragraph_index, &context) {
+                match self.refine_one_paragraph_rc(topic, paragraph_index, &mut glossaries, &context) {
                     Err(msg) => {
                         let topic_key = TopicKey::new(&self.namespace_main, topic.get_name());
                         self.errors.add(&topic_key, &msg);
@@ -294,9 +298,10 @@ impl BuildProcess {
             //bg!(topic.get_name());
             self.topic_parse_state.check_end_of_topic(topic);
         }
+        model.set_glossaries(glossaries);
     }
 
-    fn refine_one_paragraph_rc(&mut self, topic: &mut Topic, paragraph_index: usize, context: &str) -> Result<(), String> {
+    fn refine_one_paragraph_rc(&mut self, topic: &mut Topic, paragraph_index: usize, glossaries: &mut GlossaryMap, context: &str) -> Result<(), String> {
         let source_paragraph = topic.replace_paragraph_with_placeholder(paragraph_index);
         // Check whether we've finished with the more or less hand-written part of the page and are
         // now in the fully generated sections like "Inbound Links". We don't want to parse these
@@ -319,7 +324,7 @@ impl BuildProcess {
                         || self.paragraph_as_section_header_rc(topic, &text, paragraph_index, context)?
                         || self.paragraph_as_breadcrumb_rc(topic, &text, context)?
                         || self.paragraph_as_marker_start_or_end_rc(topic, &text, paragraph_index, context)?
-                        || self.paragraph_as_table_rc(topic, &text, paragraph_index, context)?
+                        || self.paragraph_as_table_rc(topic, &text, paragraph_index, glossaries, context)?
                         || self.paragraph_as_list_rc(topic, &text, paragraph_index, context)?
                         || self.paragraph_as_text_rc(topic, &text, paragraph_index, context)?
                     ) {
@@ -521,7 +526,7 @@ impl BuildProcess {
         }
     }
 
-    fn paragraph_as_table_rc(&mut self, topic: &mut Topic, text: &str, paragraph_index: usize, context: &str) -> Result<bool, String> {
+    fn paragraph_as_table_rc(&mut self, topic: &mut Topic, text: &str, paragraph_index: usize, glossaries: &mut GlossaryMap, context: &str) -> Result<bool, String> {
         // A paragraph with a list of attributes will look something like this:
         //   ^ [[tools:nav:attributes#Platform|Platform]] | [[tools:nav:attribute_values#Android|Android]] |
         //   ^ [[tools:nav:dates|Added]] | [[tools:nav:dates#Jul 24, 2018|Jul 24, 2018]] |
@@ -625,7 +630,14 @@ impl BuildProcess {
                     }
                     if text.contains("tools:nav:dates|Added") { dbg!(&table); panic!() }
                     if debug { dbg!(&table); }
-                    let paragraph = Paragraph::new_table(table);
+                    let paragraph = if topic.get_name().eq(PAGE_NAME_TERMS) {
+                        let glossary_name = PAGE_NAME_TERMS;
+                        let glossary = Glossary::new_with_raw_list(glossary_name, vec![], table);
+                        glossaries.insert(glossary_name.to_string(), glossary);
+                        Paragraph::new_glossary(glossary_name)
+                    } else {
+                        Paragraph::new_table(table)
+                    };
                     //bg!(&paragraph);
                     topic.replace_paragraph(paragraph_index, paragraph);
                 }

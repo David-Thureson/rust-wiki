@@ -6,6 +6,7 @@ pub(crate) const PARAGRAPH_VARIANT_NAME_BREADCRUMBS: &str = "Breadcrumbs";
 pub(crate) const PARAGRAPH_VARIANT_NAME_CATEGORY: &str = "Category";
 pub(crate) const PARAGRAPH_VARIANT_NAME_GEN_START: &str = "GenStart";
 pub(crate) const PARAGRAPH_VARIANT_NAME_GEN_END: &str = "GenEnd";
+pub(crate) const PARAGRAPH_VARIANT_NAME_GLOSSARY: &str = "Glossary";
 pub(crate) const PARAGRAPH_VARIANT_NAME_LIST: &str = "List";
 pub(crate) const PARAGRAPH_VARIANT_NAME_MARKER: &str = "Marker";
 pub(crate) const PARAGRAPH_VARIANT_NAME_PLACEHOLDER: &str = "Placeholder";
@@ -23,6 +24,9 @@ pub(crate) enum Paragraph {
     Category,
     GenStart,
     GenEnd,
+    Glossary {
+        name: String,
+    },
     List {
         list: List,
     },
@@ -50,6 +54,12 @@ pub(crate) enum Paragraph {
 }
 
 impl Paragraph {
+
+    pub(crate) fn new_glossary(name: &str) -> Self {
+        Self::Glossary {
+            name: name.to_string(),
+        }
+    }
 
     pub(crate) fn new_list(list: List) -> Self {
         Self::List {
@@ -111,6 +121,7 @@ impl Paragraph {
             Paragraph::Category { .. } => PARAGRAPH_VARIANT_NAME_CATEGORY,
             Paragraph::GenStart { .. } => PARAGRAPH_VARIANT_NAME_GEN_START,
             Paragraph::GenEnd { .. } => PARAGRAPH_VARIANT_NAME_GEN_END,
+            Paragraph::Glossary { .. } => PARAGRAPH_VARIANT_NAME_GLOSSARY,
             Paragraph::List { .. } => PARAGRAPH_VARIANT_NAME_LIST,
             Paragraph::Marker { .. } => PARAGRAPH_VARIANT_NAME_MARKER,
             Paragraph::Placeholder { .. } => PARAGRAPH_VARIANT_NAME_PLACEHOLDER,
@@ -135,7 +146,7 @@ impl Paragraph {
                 text_blocks.push(text_block.clone());
             },
             Paragraph::Attributes | Paragraph::Breadcrumbs | Paragraph::Category | Paragraph::GenStart
-                | Paragraph::GenEnd | Paragraph::Marker { .. } | Paragraph::Placeholder | Paragraph::SectionHeader { .. }
+                | Paragraph::GenEnd | Paragraph::Glossary { .. } | Paragraph::Marker { .. } | Paragraph::Placeholder | Paragraph::SectionHeader { .. }
                 | Paragraph::TextUnresolved { .. } | Paragraph::Unknown { .. } => {},
         }
         text_blocks
@@ -161,7 +172,7 @@ impl Paragraph {
                 links.append(&mut text_block.get_links());
             },
             Paragraph::Attributes | Paragraph::Breadcrumbs | Paragraph::Category | Paragraph::GenStart
-            | Paragraph::GenEnd | Paragraph::Marker { .. } | Paragraph::Placeholder | Paragraph::SectionHeader { .. }
+            | Paragraph::GenEnd | Paragraph::Glossary { .. } | Paragraph::Marker { .. } | Paragraph::Placeholder | Paragraph::SectionHeader { .. }
             | Paragraph::TextUnresolved { .. } | Paragraph::Unknown { .. } => {},
         }
         links
