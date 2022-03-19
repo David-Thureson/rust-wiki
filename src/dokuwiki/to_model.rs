@@ -621,7 +621,7 @@ impl BuildProcess {
                     for temp_row in temp_table.get_rows().iter() {
                         let mut cells = vec![];
                         for temp_cell in temp_row.iter() {
-                            let text = temp_cell.get_text_block().get_unresolved_text();
+                            let text = temp_cell.get_text_block().get_unresolved_text().trim().to_string();
                             //bg!(topic.get_name(), &text);
                             let text_block = self.make_text_block_rc(&text, context)?;
                             cells.push(TableCell::new_text_block(text_block, temp_cell.is_bold(), &temp_cell.get_horizontal()));
@@ -632,7 +632,7 @@ impl BuildProcess {
                     if debug { dbg!(&table); }
                     let paragraph = if topic.get_name().eq(PAGE_NAME_TERMS) {
                         let glossary_name = PAGE_NAME_TERMS;
-                        let glossary = Glossary::new_with_raw_list(glossary_name, vec![], table);
+                        let glossary = Glossary::new_with_raw_list(glossary_name, Some(topic.get_topic_key()), vec![], table);
                         glossaries.insert(glossary_name.to_string(), glossary);
                         Paragraph::new_glossary(glossary_name)
                     } else {
@@ -739,14 +739,14 @@ impl BuildProcess {
         // This way all we have to do is split based on what is inside or outside of pairs of "[["
         // and "]]".
         // let debug = text.contains("[[tools:excel|Excel]] Data Science");
-        let debug = text.contains("[[tools:excel|Excel]]Data Science");
+        //et debug = text.contains("Another term for a process virtual machine such");
         // let debug = text.contains("[[tools:excel|Excel]]");
-        if debug { dbg!(text, context); panic!() }
-        if debug { dbg!(text); }
+        //f debug { dbg!(&text, context); }
         let text = text.replace(DELIM_IMAGE_START, TEMP_DELIM_IMG_START)
             .replace(DELIM_IMAGE_END, TEMP_DELIM_IMG_END);
+        //f debug { dbg!(&text); }
         let delimited_splits = util::parse::split_delimited_and_normal_rc(&text, DELIM_LINK_START, DELIM_LINK_END, false, context)?;
-        if debug { dbg!(&delimited_splits); }
+        //f debug { dbg!(&delimited_splits); }
         // if text.contains("format|Num-Format") { dbg!(&delimited_splits); panic!(); }
         let mut items = vec![];
         for (item_is_delimited, item_text) in delimited_splits.iter() {
@@ -775,7 +775,7 @@ impl BuildProcess {
             }
         }
         let text_block = TextBlock::new_resolved(items);
-        if debug { dbg!(&text_block, text_block.get_display_text()); }
+        //f debug { dbg!(&text_block, text_block.get_display_text()); panic!(); }
         Ok(text_block)
     }
 

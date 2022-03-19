@@ -118,6 +118,7 @@ impl Table {
         links
     }
 
+    /*
     pub(crate) fn trim(&mut self) {
         for row in self.rows.iter_mut() {
             for cell in row.iter_mut() {
@@ -125,6 +126,7 @@ impl Table {
             }
         }
     }
+     */
 
     #[allow(dead_code)]
     pub(crate) fn set_cell_text_block(&mut self, row_index: usize, col_index: usize, text_block: TextBlock) {
@@ -149,6 +151,37 @@ impl TableCell {
             is_bold,
             horizontal: horizontal.clone(),
         }
+    }
+
+    pub(crate) fn new_link_rc(link: LinkRc, is_bold: bool, horizontal: &HorizontalAlignment) -> Self {
+        Self {
+            text_block: TextBlock::new_link_rc(link),
+            is_bold,
+            horizontal: horizontal.clone(),
+        }
+    }
+
+    pub(crate) fn new_link_rc_opt(link: Option<LinkRc>, is_bold: bool, horizontal: &HorizontalAlignment) -> Self {
+        match link {
+            Some(link) => {
+                Self::new_link_rc(link.clone(), is_bold, horizontal)
+            },
+            None => {
+                Self::new_empty()
+            },
+        }
+    }
+
+    pub(crate) fn new_resolved_text(text: &str, is_bold: bool, horizontal: &HorizontalAlignment) -> Self {
+        Self {
+            text_block: TextBlock::new_resolved_text(text),
+            is_bold,
+            horizontal: horizontal.clone(),
+        }
+    }
+
+    pub(crate) fn new_empty() -> Self {
+        Self::new_resolved_text("", false, &HorizontalAlignment::Left)
     }
 
     #[allow(dead_code)]

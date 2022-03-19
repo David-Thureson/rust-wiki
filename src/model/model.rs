@@ -26,6 +26,7 @@ pub(crate) struct Model {
     file_monitor_project: Option<file_monitor::model::Project>,
     glossaries: GlossaryMap,
     redacted_phrases: Vec<String>,
+    warnings: Vec<String>,
 }
 
 impl Model {
@@ -48,6 +49,7 @@ impl Model {
             file_monitor_project: None,
             glossaries: Default::default(),
             redacted_phrases: vec![],
+            warnings: vec![],
         };
         wiki.add_namespace(main_namespace);
         wiki
@@ -180,8 +182,15 @@ impl Model {
                 entry.push(topic.get_topic_key());
             }
         }
-        // let dbg_key = map.keys().filter(|topic_key| topic_key.get_topic_name().eq("Algorithms (Rust project)")).take(1).collect::<Vec<_>>()[0].clone();
-        //bg!(map.get(&dbg_key).unwrap());
+        for glossary in self.glossaries.values() {
+            if let Some(glossary_topic_key) = &glossary.topic_key {
+                for dest_topic_key in glossary.get_links().iter()
+                    .filter_map(|link_rc| b!(link_rc).get_topic_key()) {
+                    let entry = map.entry(dest_topic_key).or_insert(vec![]);
+                    entry.push(glossary_topic_key.clone());
+                }
+            }
+        }
         for (topic_key, inbound_topic_keys) in map.drain_filter(|_, _| true) {
             let topic = self.topics.get_mut(&topic_key).unwrap();
             topic.set_inbound_topic_keys(inbound_topic_keys);
@@ -632,11 +641,21 @@ impl Model {
     pub(crate) fn build_glossaries(&mut self) {
         let mut glossaries = self.take_glossaries();
         for glossary in glossaries.values_mut() {
-            if let Some(glossary_errors) = glossary.build_from_raw_list(self) {
-                println!("\nGlossary errors for \"{}\":\n{}\n", glossary.name, glossary_errors);
-            }
+            self.warnings.append(&mut glossary.build_from_raw_list(self));
         }
         self.glossaries = glossaries;
+    }
+
+    pub(crate) fn print_warnings(&self) {
+        if self.warnings.is_empty() {
+            println!("\nNo model warnings.\n");
+        } else {
+            println!("\nModel warnings:");
+            for warning in self.warnings.iter() {
+                println!("\t{}", warning);
+            }
+            println!();
+        }
     }
 
     /*

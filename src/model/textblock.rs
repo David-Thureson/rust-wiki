@@ -49,6 +49,10 @@ impl TextBlock {
         Self::new_resolved(vec![TextItem::new_topic_link(topic_key)])
     }
 
+    pub(crate) fn new_link_rc(link: LinkRc) -> Self {
+        Self::new_resolved(vec![TextItem::new_link_rc(link)])
+    }
+
     pub(crate) fn get_unresolved_text(&self) -> String {
         match self {
             Self::Resolved { .. } => panic!("Expected an unresolved text block."),
@@ -169,6 +173,7 @@ impl TextBlock {
         }
     }
 
+    /*
     pub fn trim(&mut self) {
         match self {
             TextBlock::Resolved { items } => {
@@ -183,6 +188,7 @@ impl TextBlock {
             }
         }
     }
+    */
 
     /*
     pub(crate) fn update_internal_links(&mut self, keys: &Vec<(TopicKey, TopicKey)>) {
@@ -222,6 +228,12 @@ impl TextItem {
         }
     }
 
+    pub(crate) fn new_link_rc(link: LinkRc) -> Self {
+        TextItem::Link {
+            link: link,
+        }
+    }
+
     pub(crate) fn new_topic_link(topic_key: &TopicKey) -> Self {
         let link = Link::new_topic_from_key(None, topic_key);
         Self::new_link(link)
@@ -254,6 +266,7 @@ impl TextItem {
         }
     }
 
+    /*
     pub(crate) fn trim(&mut self) {
         match self {
             TextItem::Text { text } => {
@@ -264,6 +277,7 @@ impl TextItem {
             _ => {},
         }
     }
+    */
 
     /*
     pub(crate) fn update_internal_link_optional(self, keys: &Vec<(TopicKey, TopicKey)>) -> Self {

@@ -563,7 +563,8 @@ impl <'a> GenFromModel<'a> {
                 model::Paragraph::GenEnd => {},
                 model::Paragraph::Glossary { name } => {
                     let glossary = glossaries.get(name).unwrap();
-                    self.add_glossary(page, glossary);
+                    let table = glossary.make_table();
+                    self.add_table(page, &table);
                 },
                 model::Paragraph::List { list} => {
                     self.add_list(page, list);
@@ -705,15 +706,18 @@ impl <'a> GenFromModel<'a> {
     }
 
     fn text_block_to_markup(&mut self, text_block: &model::TextBlock) -> String {
+        //et debug = text_block.get_display_text().contains("Another term for a process virtual machine such as");
         let mut markup = "".to_string();
         match text_block {
             model::TextBlock::Resolved { items} => {
                 for text_item in items.iter() {
                     match text_item {
                         model::TextItem::Text { text } => {
+                            //f debug { dbg!(text); }
                             markup.push_str(text);
                         },
                         model::TextItem::Link { link } => {
+                            //f debug { dbg!(&self.link_to_markup(link)); }
                             markup.push_str(&self.link_to_markup(link));
                         }
                     }
@@ -723,33 +727,8 @@ impl <'a> GenFromModel<'a> {
                 panic!("Text block should be resolved by this point. Text = \"{}\".", text)
             }
         }
+        //f debug { dbg!(&markup); panic!() }
         markup
-    }
-
-    fn add_glossary(&mut self, _page: &mut wiki::WikiGenPage, _glossary: &Glossary) {
-        unimplemented!()
-        /*
-        if list.is_generated() {
-            return;
-        }
-        if let Some(header) = list.get_header() {
-            match header {
-                model::TextBlock::Unresolved { text } => {
-                    panic!("Text block should be resolved by this point. Page = \"{}\"; text = \"{}\".", page.topic_name, text)
-                }
-                _ => {},
-            }
-            page.add(&self.text_block_to_markup(header));
-            page.add_linefeed();
-        }
-        for list_item in list.get_items().iter() {
-            let markup = &self.text_block_to_markup(list_item.get_text_block());
-            page.add_list_item(list_item.get_depth(),list_item.is_ordered(), markup);
-        }
-        page.add_linefeed();
-        // if page.topic_name.contains("10,000") { //bg!(&page.content); }
-
-         */
     }
 
     fn add_list(&mut self, page: &mut wiki::WikiGenPage, list: &model::List) {

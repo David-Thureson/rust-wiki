@@ -87,6 +87,8 @@ pub(crate) fn complete_round_trip(mut model: model::Model, mut build_process: Bu
         }
     }
 
+    model.print_warnings();
+
     println!("\ndokuwiki::gen_tools_wiki::complete_round_trip(): Done.");
 }
 
