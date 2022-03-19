@@ -156,6 +156,17 @@ impl TextBlock {
         }
     }
 
+    pub fn insert_item(&mut self, index: usize, item: TextItem) {
+        match self {
+            TextBlock::Resolved { items } => {
+                items.insert(index, item);
+            },
+            _ => {
+                panic!("Expected to find a resolved text block.")
+            }
+        }
+    }
+
     #[allow(dead_code)]
     pub fn starts_with_text(&self, pat: &str) -> bool {
         match self {
