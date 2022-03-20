@@ -3,9 +3,9 @@ use crate::{model, Itertools};
 use crate::dokuwiki as wiki;
 use std::rc::Rc;
 use std::cell::{RefCell, Ref};
-use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys, ATTRIBUTE_NAME_EDITED, ATTRIBUTE_NAME_ADDED, TopicTreeNode, ATTRIBUTE_VALUE_UNKNOWN, ATTRIBUTE_NAME_VISIBILITY};
+use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys, ATTRIBUTE_NAME_EDITED, ATTRIBUTE_NAME_ADDED, TopicTreeNode, ATTRIBUTE_VALUE_UNKNOWN, ATTRIBUTE_NAME_VISIBILITY, Model};
 use std::collections::BTreeMap;
-use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD, legal_file_name, image_ref_from_file_name};
+use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD, legal_file_name, image_ref_from_file_name, PAGE_NAME_TERMS, PAGE_NAME_CLOUD_TERMS};
 use crate::tree::TreeNode;
 use crate::dokuwiki::to_model::{make_topic_file_key, TopicFile};
 use crate::model::glossary::Glossary;
@@ -243,6 +243,25 @@ impl <'a> GenFromModel<'a> {
             // self.gen_reports_page_redactions(&mut page);
             self.gen_reports_page_privacy_unknown(&mut page);
         }
+        page.write(&self.path_pages);
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn gen_glossary_pages(&mut self, model: &Model) {
+        let base_glossary = model.get_glossaries().get(PAGE_NAME_TERMS).unwrap();
+        self.gen_glossary_page(PAGE_NAME_CLOUD_TERMS, &base_glossary, vec!["cl", "d"]);
+    }
+
+    pub(crate) fn gen_glossary_page(&mut self, page_name: &str, base_glossary: &Glossary, tags: Vec<&str>) {
+        let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), page_name,None);
+        page.add_line("See also:");
+        let link = self.page_link_simple(&TopicKey::new("tools", PAGE_NAME_TERMS));
+        page.add_list_item_unordered(1, &link);
+        page.add_linefeed();
+
+        let table = base_glossary.make_table_filtered(&tags);
+        self.add_table(&mut page, &table);
+
         page.write(&self.path_pages);
     }
 

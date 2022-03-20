@@ -632,7 +632,7 @@ impl BuildProcess {
                     if debug { dbg!(&table); }
                     let paragraph = if topic.get_name().eq(PAGE_NAME_TERMS) {
                         let glossary_name = PAGE_NAME_TERMS;
-                        let glossary = Glossary::new_with_raw_list(glossary_name, Some(topic.get_topic_key()), vec![], table);
+                        let glossary = Glossary::new_with_raw_list(Some(topic.get_topic_key()), table);
                         glossaries.insert(glossary_name.to_string(), glossary);
                         Paragraph::new_glossary(glossary_name)
                     } else {

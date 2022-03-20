@@ -39,6 +39,7 @@ pub(crate) const PAGE_NAME_ATTR_VALUE: &str = "Attribute Values";
 pub(crate) const PAGE_NAME_ATTR_YEAR: &str = "Years";
 pub(crate) const PAGE_NAME_ATTR_DATE: &str = "Dates";
 pub(crate) const PAGE_NAME_TERMS: &str = "Terms";
+pub(crate) const PAGE_NAME_CLOUD_TERMS: &str = "Cloud and Data Management Terms";
 
 pub(crate) const HEADLINE_LINKS: &str = "Generated Links";
 

@@ -152,6 +152,7 @@ fn gen_tools_project_from_model(model: &model::Model, build_process: &mut BuildP
     gen.gen_attr_pages();
     gen.gen_attr_value_page();
     gen.gen_reports_page();
+    gen.gen_glossary_pages(&model);
     // gen_terms_page();
     build_process.topic_dest_files = gen.gen();
     assert!(!build_process.topic_dest_files.is_empty());
@@ -210,6 +211,7 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Model, use_l
         links.push(wiki::page_link(&namespace_main, wiki::PAGE_NAME_DOKUWIKI_MARKUP, None));
     }
     links.push(wiki::page_link(&namespace_main, wiki::PAGE_NAME_TERMS, None));
+    links.push(wiki::page_link(&namespace_nav, wiki::PAGE_NAME_CLOUD_TERMS, Some("Cloud and Data Terms")));
     if use_list {
         let mut list = wiki::WikiList::new(None);
         for link in links.iter() {

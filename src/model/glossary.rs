@@ -12,9 +12,7 @@ const PREFIX_ACRONYM: &str = "Acronym for";
 
 #[derive(Clone, Debug)]
 pub(crate) struct Glossary {
-    pub _name: String,
     pub topic_key: Option<TopicKey>,
-    pub _tags: Vec<String>,
     pub items: BTreeMap<String, GlossaryItem>,
     pub raw_list: Table,
 }
@@ -38,11 +36,9 @@ pub(crate) enum GlossaryItemType {
 }
 
 impl Glossary {
-    pub(crate) fn new_with_raw_list(name: &str, topic_key: Option<TopicKey>, tags: Vec<String>, raw_list: Table) -> Self {
+    pub(crate) fn new_with_raw_list(topic_key: Option<TopicKey>, raw_list: Table) -> Self {
         Self {
-            _name: name.to_string(),
             topic_key,
-            _tags: tags,
             items: Default::default(),
             raw_list,
         }
@@ -196,10 +192,15 @@ impl Glossary {
     }
 
     pub(crate) fn make_table(&self) -> Table {
+        self.make_table_filtered(&vec![])
+    }
+
+    pub(crate) fn make_table_filtered(&self, tags: &Vec<&str>) -> Table {
         // This is the final table used for generating the page, as opposed to the initial raw
         // table we got at the beginning of the process.
         let mut table = Table::new(false);
-        for item in self.items.values() {
+        for item in self.items.values()
+            .filter(|item| tags.is_empty() || item.is_tag_match(tags)) {
             let row = Self::make_table_row(&item.name, &item.link, &item.definition, &item.tags);
             table.add_row(row);
         }
@@ -271,6 +272,15 @@ impl GlossaryItem {
             definition,
             tags,
         }
+    }
+
+    fn is_tag_match(&self, match_tags: &Vec<&str>) -> bool {
+        for tag in self.tags.iter() {
+            if match_tags.contains(&&**tag) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 
