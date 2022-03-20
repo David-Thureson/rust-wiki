@@ -249,17 +249,24 @@ impl <'a> GenFromModel<'a> {
     #[allow(dead_code)]
     pub(crate) fn gen_glossary_pages(&mut self, model: &Model) {
         let base_glossary = model.get_glossaries().get(PAGE_NAME_TERMS).unwrap();
-        self.gen_glossary_page(PAGE_NAME_CLOUD_TERMS, &base_glossary, vec!["cl", "d"]);
+        self.gen_glossary_page(PAGE_NAME_CLOUD_TERMS, &base_glossary, Some(vec!["cl", "d"]), None);
     }
 
-    pub(crate) fn gen_glossary_page(&mut self, page_name: &str, base_glossary: &Glossary, tags: Vec<&str>) {
+    pub(crate) fn gen_glossary_page(&mut self, page_name: &str, base_glossary: &Glossary, included_tags: Option<Vec<&str>>, excluded_tags: Option<Vec<&str>>) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), page_name,None);
         page.add_line("See also:");
         let link = self.page_link_simple(&TopicKey::new("tools", PAGE_NAME_TERMS));
         page.add_list_item_unordered(1, &link);
         page.add_linefeed();
 
-        let table = base_glossary.make_table_filtered(&tags);
+        page.add_headline("Acronyms and Abbreviations", 1);
+
+        let table = base_glossary.make_table(false, true, false, &included_tags, &excluded_tags, self.model.is_public());
+        self.add_table(&mut page, &table);
+
+        page.add_headline("Terms", 1);
+
+        let table = base_glossary.make_table(true, false, false, &included_tags, &excluded_tags, self.model.is_public());
         self.add_table(&mut page, &table);
 
         page.write(&self.path_pages);
@@ -581,9 +588,7 @@ impl <'a> GenFromModel<'a> {
                 model::Paragraph::GenStart => {},
                 model::Paragraph::GenEnd => {},
                 model::Paragraph::Glossary { name } => {
-                    let glossary = glossaries.get(name).unwrap();
-                    let table = glossary.make_table();
-                    self.add_table(page, &table);
+                    self.add_glossary(page, glossaries, name);
                 },
                 model::Paragraph::List { list} => {
                     self.add_list(page, list);
@@ -748,6 +753,12 @@ impl <'a> GenFromModel<'a> {
         }
         //f debug { dbg!(&markup); panic!() }
         markup
+    }
+
+    fn add_glossary(&mut self, page: &mut wiki::WikiGenPage, glossaries: &BTreeMap<String, Glossary>, glossary_name: &str) {
+        let glossary = glossaries.get(glossary_name).unwrap();
+        let table = glossary.make_table(true, true, true, &None, &None, self.model.is_public());
+        self.add_table(page, &table);
     }
 
     fn add_list(&mut self, page: &mut wiki::WikiGenPage, list: &model::List) {

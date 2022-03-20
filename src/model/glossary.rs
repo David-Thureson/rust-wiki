@@ -25,6 +25,7 @@ pub(crate) struct GlossaryItem {
     acronym: Option<String>,
     link: Option<LinkRc>,
     definition: TextBlock,
+    alt_definition: Option<TextBlock>,
     tags: Vec<String>,
 }
 
@@ -65,7 +66,14 @@ impl Glossary {
             let item_count = link_text_block.get_resolved_items().len();
             assert!(item_count < 2);
             let link = if item_count == 1 {
-                Some(link_text_block.get_single_link())
+                // Normally there should be a single TextItem::Link in the text block, but it may
+                // have been redacted in which case it will be a TextItem::Text and we can ignore
+                // it.
+                match &link_text_block.get_resolved_items()[0] {
+                    TextItem::Link { link } => Some(link.clone()),
+                    _ => None,
+                }
+                //Some(link_text_block.get_single_link())
             } else {
                 None
             };
@@ -174,6 +182,17 @@ impl Glossary {
                 }
                 definition.insert_item(0, TextItem::new_text(&beginning));
                 item.definition = definition;
+
+                // Make an alternative definition for when the acronym or abbreviation appears in
+                // a table of only acronyms or abbreviations. In that case we don't need the
+                // "Acronym for " or "Abbreviation of " prefix.
+                let mut alt_definition = term_item.definition.clone();
+                let mut beginning = format!("{}.", term_item.term);
+                if !term_item.definition.get_display_text().is_empty() {
+                    beginning.push_str(" ");
+                }
+                alt_definition.insert_item(0, TextItem::new_text(&beginning));
+                item.alt_definition = Some(alt_definition);
             }
         }
 
@@ -191,31 +210,65 @@ impl Glossary {
         list.insert(key, item);
     }
 
-    pub(crate) fn make_table(&self) -> Table {
-        self.make_table_filtered(&vec![])
-    }
-
-    pub(crate) fn make_table_filtered(&self, tags: &Vec<&str>) -> Table {
+    pub(crate) fn make_table(&self, include_terms: bool, include_acronyms: bool, show_tags: bool, included_tags: &Option<Vec<&str>>, excluded_tags: &Option<Vec<&str>>, is_public: bool) -> Table {
         // This is the final table used for generating the page, as opposed to the initial raw
         // table we got at the beginning of the process.
+        // If both include_terms and include_acronyms are false, the table will be empty.
+        assert!(include_terms || include_acronyms);
+        // If included_tags or excluded_tags are provided, they can't be empty.
+        if let Some(tags) = included_tags {
+            assert!(!tags.is_empty());
+        }
+        if let Some(tags) = excluded_tags {
+            assert!(!tags.is_empty());
+        }
+
+        let excluded_tags = if is_public {
+            match excluded_tags {
+                Some(tags) => {
+                    let mut tags = tags.clone();
+                    tags.push("p");
+                    Some(tags)
+                },
+                None => {
+                    Some(vec!["p"])
+                },
+            }
+        } else {
+            excluded_tags.clone()
+        };
+
         let mut table = Table::new(false);
         for item in self.items.values()
-            .filter(|item| tags.is_empty() || item.is_tag_match(tags)) {
-            let row = Self::make_table_row(&item.name, &item.link, &item.definition, &item.tags);
+            .filter(|item|
+                if item.type_.is_term() { include_terms } else { include_acronyms }
+                    && item.is_included_by_tag(included_tags)
+                    && !item.is_excluded_by_tag(&excluded_tags)) {
+            let definition = if !item.type_.is_term() && !include_terms {
+                // We're creating a table only of acronyms and abbreviations, so use a slightly
+                // shorter definition that doesn't include the "Acronym for " or "Abbreviation of"
+                // prefix.
+                &item.alt_definition.as_ref().unwrap()
+            } else {
+                &item.definition
+            };
+            let row = Self::make_table_row(&item.name, &item.link, definition, &item.tags, show_tags);
             table.add_row(row);
         }
         table
     }
 
-    fn make_table_row(name: &str, link: &Option<LinkRc>, definition: &TextBlock, tags: &Vec<String>) -> Vec<TableCell> {
+    fn make_table_row(name: &str, link: &Option<LinkRc>, definition: &TextBlock, tags: &Vec<String>, show_tags: bool) -> Vec<TableCell> {
         let align = HorizontalAlignment::Left;
         let bold = false;
         let mut cells = vec![];
         cells.push(TableCell::new_resolved_text(name, bold, &align));
         cells.push(TableCell::new_link_rc_opt(link.clone(), bold, &align));
         cells.push(TableCell::new_text_block(definition.clone(), bold, &align));
-        let tags = tags.iter().join(", ");
-        cells.push(TableCell::new_resolved_text(&tags, bold, &align));
+        if show_tags {
+            let tags = tags.iter().join(", ");
+            cells.push(TableCell::new_resolved_text(&tags, bold, &align));
+        }
         cells
 }
 
@@ -270,11 +323,26 @@ impl GlossaryItem {
             acronym,
             link,
             definition,
+            alt_definition: None,
             tags,
         }
     }
 
-    fn is_tag_match(&self, match_tags: &Vec<&str>) -> bool {
+    fn is_included_by_tag(&self, tags: &Option<Vec<&str>>) -> bool {
+        match tags {
+            Some(tags) => self.is_matched_by_tag(&tags),
+            None => true,
+        }
+    }
+
+    fn is_excluded_by_tag(&self, tags: &Option<Vec<&str>>) -> bool {
+        match tags {
+            Some(tags) => self.is_matched_by_tag(&tags),
+            None => false,
+        }
+    }
+
+    fn is_matched_by_tag(&self, match_tags: &Vec<&str>) -> bool {
         for tag in self.tags.iter() {
             if match_tags.contains(&&**tag) {
                 return true;
@@ -282,6 +350,7 @@ impl GlossaryItem {
         }
         return false;
     }
+
 }
 
 impl GlossaryItemType {
@@ -290,6 +359,13 @@ impl GlossaryItemType {
             GlossaryItemType::Abbreviation => PREFIX_ABBREVIATION,
             GlossaryItemType::Acronym => PREFIX_ACRONYM,
             GlossaryItemType::Term => "",
+        }
+    }
+
+    pub fn is_term(&self) -> bool {
+        match self {
+            GlossaryItemType::Term => true,
+            _ => false,
         }
     }
 }

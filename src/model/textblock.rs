@@ -124,6 +124,7 @@ impl TextBlock {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_single_link(&self) -> LinkRc {
         // The caller assumes that the TextBlock is resolved and contains a single TextItem::Link.
         match self {
