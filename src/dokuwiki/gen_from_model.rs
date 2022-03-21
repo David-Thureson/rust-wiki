@@ -241,7 +241,7 @@ impl <'a> GenFromModel<'a> {
             // self.gen_reports_page_public_topics_by_category(&mut page);
             // self.gen_reports_page_public_ref_to_private(&mut page);
             // self.gen_reports_page_redactions(&mut page);
-            self.gen_reports_page_privacy_unknown(&mut page);
+            self.gen_report_privacy_unknown(&mut page);
         }
         page.write(&self.path_pages);
     }
@@ -249,7 +249,7 @@ impl <'a> GenFromModel<'a> {
     #[allow(dead_code)]
     pub(crate) fn gen_glossary_pages(&mut self, model: &Model) {
         let base_glossary = model.get_glossaries().get(PAGE_NAME_TERMS).unwrap();
-        self.gen_glossary_page(PAGE_NAME_CLOUD_TERMS, &base_glossary, Some(vec!["cl", "d"]), None);
+        self.gen_glossary_page(PAGE_NAME_CLOUD_TERMS, &base_glossary, Some(vec!["az", "cl", "d"]), None);
     }
 
     pub(crate) fn gen_glossary_page(&mut self, page_name: &str, base_glossary: &Glossary, included_tags: Option<Vec<&str>>, excluded_tags: Option<Vec<&str>>) {
@@ -322,11 +322,17 @@ impl <'a> GenFromModel<'a> {
     }
 
     #[allow(dead_code)]
-    fn gen_reports_page_privacy_unknown(&self, page: &mut WikiGenPage) {
+    fn gen_report_privacy_unknown(&self, page: &mut WikiGenPage) {
+        page.add_headline("Privacy Unknown", 1);
+        let mut count = 0;
         for topic in self.model.get_topics().values()
                 .filter(|topic| topic.has_attribute_value_temp_or_permanent(ATTRIBUTE_NAME_VISIBILITY, ATTRIBUTE_VALUE_UNKNOWN)) {
             let link = self.page_link_qualified(&topic.get_topic_key());
             page.add_list_item_unordered(1, &link);
+            count += 1;
+        }
+        if count > 0 {
+            page.add_linefeed();
         }
     }
 
