@@ -359,6 +359,8 @@ impl <'a> GenFromModel<'a> {
                 let related_link_list = related_by_count.iter()
                     .map(|related_name| self.domain_link(related_name, on_attribute_value_page))
                     .join(", ");
+                //et debug = related_link_list.contains("[[#|]]");
+                //f debug { dbg!(attribute_value_name, on_attribute_value_page, &related_link_list, &related_by_count); panic!() }
                 let line = format!("Related: {}", related_link_list);
                 return Some(line)
             }
@@ -440,9 +442,9 @@ impl <'a> GenFromModel<'a> {
     pub(crate) fn gen(&mut self) -> BTreeMap<String, TopicFile> {
         let mut map = BTreeMap::new();
         for topic in self.model.get_topics().values() {
-            // let debug = topic.get_name().eq("Terms");
-            // let debug = false;
-            // if debug { dbg!(topic.get_paragraphs().len()); }
+            //et debug = topic.get_name().eq("Terms");
+            //et debug = false;
+            //f debug { dbg!(topic.get_paragraphs().len()); }
             self.current_topic_key = Some(topic.get_topic_key());
             //bg!(&self.current_topic_key);
             let mut page = wiki::WikiGenPage::new(&self.model.qualify_namespace(topic.get_namespace()), topic.get_name(), None);
@@ -457,7 +459,7 @@ impl <'a> GenFromModel<'a> {
             let topic_file = TopicFile::new(topic.get_namespace(), &topic_file_name, topic.get_name(), page.content);
             map.insert(topic_file_key, topic_file);
             // page.write_if_changed(&self.path_pages, self.model.get_original_pages());
-            // if debug { dbg!(&page); panic!(); }
+            //f debug { dbg!(&page); panic!(); }
         }
         self.errors.print(Some("GenFromModel::gen()"));
         map
@@ -567,15 +569,15 @@ impl <'a> GenFromModel<'a> {
     }
 
     fn add_paragraphs(&mut self, page: &mut wiki::WikiGenPage, topic: &model::Topic, glossaries: &BTreeMap<String, Glossary>) {
-        //let debug = topic.get_name().eq("Terms");
-        let debug = false;
+        //et debug = topic.get_name().eq("Terms");
+        //et debug = false;
         let msg_func_unexpected = |variant_name: &str| format!("In dokuwiki::gen_from_model::add_paragraphs(), unexpected Paragraph variant = \"{}\"", variant_name);
         // let add_error_unexpected = |paragraph_variant: &str| self.add_error(&msg_func_unexpected(paragraph_variant));
         let mut generated_navigation_paragraphs_added = false;
         for paragraph in topic.get_paragraphs().iter() {
             // First see if it's necessary to add generated navigation paragraphs like subtopics
             // and subcategories.
-            if debug { dbg!(paragraph.get_variant_name()); }
+            //f debug { dbg!(paragraph.get_variant_name()); }
             match paragraph {
                 // model::Paragraph::List { .. } | model::Paragraph::SectionHeader { .. } => {
                 model::Paragraph::SectionHeader { .. } => {
@@ -614,7 +616,7 @@ impl <'a> GenFromModel<'a> {
                 }
                 model::Paragraph::Table { table} => {
                     //bg!(topic.get_name());
-                    if debug { dbg!(table); }
+                    //f debug { dbg!(table); }
                     self.add_table(page, table);
                 }
                 model::Paragraph::Text { text_block} => {

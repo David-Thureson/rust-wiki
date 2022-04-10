@@ -411,8 +411,8 @@ impl Topic {
     */
 
     pub(crate) fn set_inbound_topic_keys(&mut self, topic_keys: Vec<TopicKey>) {
-        // let debug = self.name.eq("Algorithms (Rust project)");
-        // if debug { //bg!(&topic_keys); }
+        //et debug = self.name.eq("Algorithms (Rust project)");
+        //f debug { //bg!(&topic_keys); }
         self.inbound_topic_keys = topic_keys;
     }
 
@@ -519,25 +519,25 @@ impl Topic {
     }
 
     pub(crate) fn has_section(&self, section_name: &str) -> bool {
-        // let debug = section_name.eq("free_account");
-        // if debug { dbg!(&section_name); }
+        //et debug = section_name.eq("free_account");
+        //f debug { dbg!(&section_name); }
         let section_name = section_name.to_lowercase();
-        // let debug = section_name.contains("cognitive");
-        // if debug { //bg!(&self.name, &section_name); }
+        //et debug = section_name.contains("cognitive");
+        //f debug { //bg!(&self.name, &section_name); }
         for paragraph in self.paragraphs.iter() {
             match paragraph {
                 Paragraph::SectionHeader { name, depth: _, link_name } => {
-                    // if debug { //bg!(&name); }
-                    // if debug { println!("Topic::has_section(): name = \"{}\", link_name = \"{}\".", name, link_name); }
+                    //f debug { //bg!(&name); }
+                    //f debug { println!("Topic::has_section(): name = \"{}\", link_name = \"{}\".", name, link_name); }
                     if name.to_lowercase().eq(&section_name) || link_name.eq(&section_name) {
-                        // if debug { //bg!("found section"); }
+                        //f debug { //bg!("found section"); }
                         return true;
                     }
                 },
                 _ => {},
             }
         }
-        // if debug { //bg!("didn't find section"); }
+        //f debug { //bg!("didn't find section"); }
         false
     }
 
@@ -758,7 +758,7 @@ impl Topic {
     */
 
     pub(crate) fn get_links(&self, include_generated: bool, dependencies_are_generated: bool) -> Vec<LinkRc> {
-        // let debug = self.name.eq("Criterion (Rust crate)");
+        //et debug = self.name.eq("Criterion (Rust crate)");
         let mut links = vec![];
         // for parent in self.parents.iter() {
         //     links.push(parent.clone());
@@ -768,7 +768,7 @@ impl Topic {
         }
         // links.append(&mut self.subtopics.iter().map(|link_rc| link_rc.clone()).collect());
         // links.append(&mut self.combo_subtopics.iter().map(|link_rc| link_rc.clone()).collect());
-        // if debug { Link::print_link_ref_list(&links, self.get_name()); //bg!(include_generated, dependencies_are_generated); }
+        //f debug { Link::print_link_ref_list(&links, self.get_name()); //bg!(include_generated, dependencies_are_generated); }
         links
     }
 

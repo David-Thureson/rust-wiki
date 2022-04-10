@@ -7,8 +7,8 @@ pub(crate) fn update_date_attributes_from_file_monitor(model: &mut Model) {
     if let Some(project) = model.get_file_monitor_project() {
         let summary = file_monitor::summary::Summary::read_or_create(project);
         for topic in model.get_topics_mut().values_mut() {
-            // let debug = topic.get_name().eq("Profisee");
-            // if debug { dbg!(topic.get_name()); }
+            //et debug = topic.get_name().eq("Profisee");
+            //f debug { dbg!(topic.get_name()); }
             if !topic.has_temp_attribute(ATTRIBUTE_NAME_ADDED) {
                 if let Some(file) = topic.get_file_monitor_file(&summary) {
                     if !topic.has_temp_attribute(ATTRIBUTE_NAME_ADDED) {
@@ -20,9 +20,9 @@ pub(crate) fn update_date_attributes_from_file_monitor(model: &mut Model) {
                 }
             }
             if let Some(file) = topic.get_file_monitor_file(&summary) {
-                // if debug { dbg!(&file); }
+                //f debug { dbg!(&file); }
                 if let Some(time_edited) = file.time_latest_edit {
-                    // if debug { dbg!(&time_edited); }
+                    //f debug { dbg!(&time_edited); }
                     let date_edited = time_edited.date();
                     // If the topic has an Added attribute with this date, don't create an Edited
                     // attribute.
@@ -31,11 +31,12 @@ pub(crate) fn update_date_attributes_from_file_monitor(model: &mut Model) {
                     }
                 }
             }
-            // if debug { panic!(); }
+            //f debug { panic!(); }
         }
     }
 }
 
+#[allow(dead_code)]
 pub(crate) fn remove_edited_same_as_added(model: &mut Model) {
     // One-time cleanup. Remove Edited attributes that have the same date as Added.
     // We're still working with the raw attributes.

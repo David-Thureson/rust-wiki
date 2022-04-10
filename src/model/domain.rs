@@ -32,6 +32,8 @@ impl DomainList {
     }
 
     pub(crate) fn add_related_domain(&mut self, domain_name: &str, related_name: &str) {
+        //et debug = domain_name.is_empty() || related_name.is_empty();
+        //f debug { dbg!(domain_name, related_name); panic!() }
         let domain= self.domains.get_mut(domain_name).unwrap();
         let entry = domain.related.entry(related_name.to_string()).or_insert(0);
         *entry += 1;
@@ -52,6 +54,8 @@ impl DomainList {
                         domain_list.add_domain_optional(&attribute_instance.get_values()[i]);
                         for j in 0..values.len() {
                             if i != j {
+                                //et debug = attribute_instance.get_values()[i].contains("start") || attribute_instance.get_values()[j].contains("start");
+                                //f debug { dbg!(topic.get_name(), &attribute_instance); panic!(); }
                                 domain_list.add_related_domain(&attribute_instance.get_values()[i], &attribute_instance.get_values()[j]);
                             }
                         }

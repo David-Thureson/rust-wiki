@@ -221,17 +221,17 @@ impl BuildProcess {
         // The key difference from a normal table or an attribute block is that there is at least
         // one row within the start and end delimiters that does not end with "||".
         TopicKey::assert_legal_topic_name(topic_name);
-        // let debug = topic_text.contains("||Card Type||MC||");
+        //et debug = topic_text.contains("||Card Type||MC||");
         let mut new_text = "".to_string();
         let lines = topic_text.split("\n").collect::<Vec<_>>();
         let mut line_index = 0;
         while line_index < lines.len() {
-            // if debug { dbg!(line_index, &lines[line_index]); }
+            //f debug { dbg!(line_index, &lines[line_index]); }
             if lines[line_index].trim().starts_with(CT_TABLE_START) {
                 // The line is "{|", so we're starting a table that may be a quote.
                 let line_table_start = line_index;
-                // let debug = lines[line_table_start + 1].contains("||Card Type||MC||");
-                // if debug { //bg!(line_table_start); }
+                //et debug = lines[line_table_start + 1].contains("||Card Type||MC||");
+                //f debug { //bg!(line_table_start); }
                 // Find the end of this table.
                 let mut line_table_end = line_index + 1;
                 // If this is an attributes block it will start like this and we need to ignore it:
@@ -239,7 +239,7 @@ impl BuildProcess {
                 // ||Added||[[Added:=20180524]]||
                 if !lines[line_table_start + 1].contains(CT_ATTRIBUTE_ASSIGN) && !lines[line_table_start + 1].trim().ends_with(CT_TABLE_DELIM) {
                     loop {
-                        // if debug { //bg!(line_table_end, &lines[line_table_end]); }
+                        //f debug { //bg!(line_table_end, &lines[line_table_end]); }
                         //if line_table_end == lines.len() || lines[line_table_end].trim().is_empty() {
                         if line_table_end == lines.len() {
                             //anic!("No table end for topic \"{}\".", topic_name);
@@ -254,12 +254,12 @@ impl BuildProcess {
                 }
                 let mut is_quotation = false;
                 // We know the lines on which the table starts and ends.
-                // if debug { //bg!(line_table_start, line_table_end); }
+                //f debug { //bg!(line_table_start, line_table_end); }
                 if line_table_end - line_table_start > 1 {
                     // There's at least one row.
                     // The first row in the table should start with "||".
-                    // let debug = lines[line_table_start + 1].contains("This short, but packed demonstration");
-                    // if debug { //bg!(line_table_start, line_table_end, &lines[line_table_start], &lines[line_table_end]); }
+                    //et debug = lines[line_table_start + 1].contains("This short, but packed demonstration");
+                    //f debug { //bg!(line_table_start, line_table_end, &lines[line_table_start], &lines[line_table_end]); }
                     if !lines[line_table_start + 1].starts_with(CT_TABLE_DELIM) {
                         panic!("No first row table delimiter for topic \"{}\" at line {}.", topic_name, line_table_start + 1);
                     }
@@ -550,18 +550,18 @@ impl BuildProcess {
                     }
                     let max_value_count = if name.eq(ATTRIBUTE_NAME_ADDED) { Some(1) } else { None };
                     let values = row.remove(0);
-                    // let debug = name.eq("Date") && values.eq("[[Date:=20160824]], [[Date:=20160505]]");
+                    //et debug = name.eq("Date") && values.eq("[[Date:=20160824]], [[Date:=20160505]]");
                     assert!(row.is_empty());
                     let attribute = topic.add_or_find_temp_attribute(&name);
                     let values = between(&values, CT_BRACKETS_LEFT, CT_BRACKETS_RIGHT);
                     let bracket_delim_with_space = format!("{}, {}", CT_BRACKETS_RIGHT, CT_BRACKETS_LEFT);
                     let bracket_delim_no_space = format!("{},{}", CT_BRACKETS_RIGHT, CT_BRACKETS_LEFT);
                     let assignments = values.replace(&bracket_delim_with_space, &bracket_delim_no_space);
-                    // if debug { //bg!(values, &bracket_delim_with_space, &bracket_delim_no_space, &assignments); };
+                    //f debug { //bg!(values, &bracket_delim_with_space, &bracket_delim_no_space, &assignments); };
                     for assignment in assignments.split(&bracket_delim_no_space) {
                         if max_value_count.map_or(true, |max_value_count| max_value_count > attribute.len()) {
                             let value = util::parse::after(assignment, CT_ATTRIBUTE_ASSIGN).trim().to_string();
-                            // if debug { //bg!(&value); }
+                            //f debug { //bg!(&value); }
                             if !value.contains("*") && !value.is_empty() {
                                 if !AttributeType::is_legal_attribute_value(&value) {
                                     return Err(format!("{} In attribute \"{}\", value \"{}\" is invalid.", context, name, value));

@@ -190,9 +190,9 @@ fn make_name_map(model: &Model, project_model: &ProjectModel) -> NameTopicMap {
                         name_map.insert("geo".to_string(), TopicKey::new("tools", "Geo (Rust crate)"));
                     } else {
                         for possible_name in project_potential_crate_names_lower(&dependency.crate_name).iter() {
-                            // let debug = possible_name.eq("sim");
+                            //et debug = possible_name.eq("sim");
                             if let Some(topic_key) = topic_names.get(possible_name) {
-                                // if debug { //bg!(&topic_key); }
+                                //f debug { //bg!(&topic_key); }
                                 name_map.insert(dependency.crate_name.to_lowercase(), topic_key.clone());
                                 break;
                             }

@@ -158,12 +158,12 @@ impl Model {
         // that uses the title form.
         // if topic_name.eq("//www.alteryx.com/") { panic!(); }
         let topic_ref = make_topic_ref(namespace, topic_name);
-        // let debug = topic_ref.eq("tools:crates_io");
-        // if debug { //bg!(&topic_ref, topic_refs.get(&topic_ref)); }
+        //et debug = topic_ref.eq("tools:crates_io");
+        //f debug { //bg!(&topic_ref, topic_refs.get(&topic_ref)); }
         match topic_refs.get(&topic_ref) {
             Some(topic_key) => Ok(topic_key.clone()),
             None => {
-                // if debug { //bg!(topic_refs); panic!(); }
+                //f debug { //bg!(topic_refs); panic!(); }
                 Err(format!("Model::get_corrected_topic_key(): Corrected topic key not found for namespace = \"{}\", topic_name = \"{}\", topic_ref = \"{}\".", namespace, topic_name, topic_ref))
             },
         }
@@ -417,6 +417,7 @@ impl Model {
         update_date_attributes_from_file_monitor(self);
     }
 
+    #[allow(dead_code)]
     pub(crate) fn remove_edited_same_as_added(&mut self) {
         // One-time cleanup. Remove Edited attributes that have the same date as Added.
         remove_edited_same_as_added(self);
@@ -481,10 +482,10 @@ impl Model {
     */
 
     pub(crate) fn has_section(&self, section_key: &SectionKey) -> bool {
-        // let debug = section_key.get_section_name().eq("free_account");
-        // if debug { dbg!(section_key); }
+        //et debug = section_key.get_section_name().eq("free_account");
+        //f debug { dbg!(section_key); }
         if !self.has_topic(&section_key.get_topic_key()) {
-            // if debug { println!("Model::has_section(): topic not found."); }
+            //f debug { println!("Model::has_section(): topic not found."); }
             return false;
         }
         self.topics[&section_key.get_topic_key()].has_section(&section_key.get_section_name())

@@ -490,9 +490,9 @@ impl BuildProcess {
         //   </code>;
         // Or it might specify the language, like "<code rust>". Other markers are "<html>" and
         // "<php>".
-        // let debug = topic.get_name().eq("QuickBooks");
-        // if debug { //rintln!("\n==================================================================\n"); }
-        // if debug { //bg!(self.in_code, self.in_non_code_marker, self.marker_exit_string.as_ref(), text); }
+        //et debug = topic.get_name().eq("QuickBooks");
+        //f debug { //rintln!("\n==================================================================\n"); }
+        //f debug { //bg!(self.in_code, self.in_non_code_marker, self.marker_exit_string.as_ref(), text); }
         if self.topic_parse_state.is_debug { dbg!(self.topic_parse_state.is_in_code, self.topic_parse_state.is_in_non_code_marker); }
         if self.topic_parse_state.is_in_code || self.topic_parse_state.is_in_non_code_marker {
             if text.trim().eq(*&self.topic_parse_state.marker_exit_string.as_ref().unwrap()) {
@@ -501,7 +501,7 @@ impl BuildProcess {
                 self.topic_parse_state.is_in_code = false;
                 self.topic_parse_state.is_in_non_code_marker = false;
                 self.topic_parse_state.marker_exit_string = None;
-                // if debug { //bg!(self.in_code, self.in_non_code_marker, self.marker_exit_string.as_ref()); }
+                //f debug { //bg!(self.in_code, self.in_non_code_marker, self.marker_exit_string.as_ref()); }
                 return Ok(true);
             } else {
                 // We're in a marker, but this paragraph is not the end marker, so don't process
@@ -522,7 +522,7 @@ impl BuildProcess {
                     self.topic_parse_state.is_in_non_code_marker = true;
                 }
                 self.topic_parse_state.marker_exit_string = Some(marker_exit_string);
-                // if debug { //bg!(self.in_code, self.in_non_code_marker, self.marker_exit_string.as_ref()); }
+                //f debug { //bg!(self.in_code, self.in_non_code_marker, self.marker_exit_string.as_ref()); }
                 Ok(true)
             },
             Ok(None) => {
@@ -549,9 +549,9 @@ impl BuildProcess {
         // and the date might be "2018-Jul-24", "2018-07-24", or some other supported format.
         // A regular table will look similar. The Terms page has a large example of a regular
         // table.
-        // let debug = topic.get_name().eq("Terms");
-        let debug = false;
-        if debug { dbg!(&text); }
+        //et debug = topic.get_name().eq("Terms");
+        //et debug = false;
+        //f debug { dbg!(&text); }
 
         if self.topic_parse_state.is_in_code || self.topic_parse_state.is_in_non_code_marker {
             return Ok(false);
@@ -562,10 +562,10 @@ impl BuildProcess {
             Ok(Some(temp_table)) => {
                 // if text.contains("tools:nav:dates|Added") { dbg!(text, &temp_table, temp_table.has_header, temp_table.get_column_count(), self.topic_parse_state.is_past_attributes, self.topic_parse_state.is_past_first_header); }
                 //bg!(&table);
-                if debug { dbg!(&temp_table); }
+                //f debug { dbg!(&temp_table); }
                 if !self.topic_parse_state.is_past_attributes && !self.topic_parse_state.is_past_first_header && !temp_table.has_header() && temp_table.get_column_count() == 2 {
                     // For now assume this is a table of attributes.
-                    if debug { println!("This is a table of attributes."); }
+                    //f debug { println!("This is a table of attributes."); }
                     for row in temp_table.get_rows().iter() {
                         let text = row[0].get_text_block().get_unresolved_text();
                         let attr_type_name = text_or_topic_link_label(&text)?;
@@ -613,7 +613,8 @@ impl BuildProcess {
                                 // let cell_items = util::parse::split_outside_of_delimiters_rc(&text, ",", "\"", "\"", context).unwrap();
 
                                 for cell_item in cell_items.iter() {
-                                    let value = text_or_topic_link_label(cell_item)?;
+                                    let value = text_or_topic_link_label(cell_item)?.trim().to_string();
+                                    assert!(!value.is_empty(), "In context \"{}\", attribute value is empty for \"{}\".", context, attr_type_name);
                                     AttributeType::assert_legal_attribute_value(&value);
                                     attr_values.push(value);
                                 }
@@ -625,7 +626,7 @@ impl BuildProcess {
                     self.topic_parse_state.is_past_attributes = true;
                 } else {
                     // Assume this is a normal (non-attribute) table.
-                    if debug { println!("This is a regular table."); }
+                    //f debug { println!("This is a regular table."); }
                     let mut table = Table::new(temp_table.assume_has_header());
                     for temp_row in temp_table.get_rows().iter() {
                         let mut cells = vec![];
@@ -638,7 +639,7 @@ impl BuildProcess {
                         table.add_row(cells);
                     }
                     if text.contains("tools:nav:dates|Added") { dbg!(&table); panic!() }
-                    if debug { dbg!(&table); }
+                    //f debug { dbg!(&table); }
                     let paragraph = if topic.get_name().eq(PAGE_NAME_TERMS) {
                         let glossary_name = PAGE_NAME_TERMS;
                         let glossary = Glossary::new_with_raw_list(Some(topic.get_topic_key()), table);
@@ -680,9 +681,9 @@ impl BuildProcess {
                 // If the list is one of the generated types like "Subcategories" or "All topics"
                 // we don't want to parse it and add it to the model. It will be generated later
                 // automatically.
-                // let debug = topic.get_name().eq("Software Projects");
-                // let debug = text.contains("Tool Categories");
-                // if debug { //bg!(&list); }
+                //et debug = topic.get_name().eq("Software Projects");
+                //et debug = text.contains("Tool Categories");
+                //f debug { //bg!(&list); }
                 if !list.is_generated() {
                     // Resolve links and such within the the header, if any.
                     let resolved_header = if let Some(unresolved_header) = list.get_header() {
@@ -701,7 +702,7 @@ impl BuildProcess {
                             resolved_list.add_item(resolved_list_item);
                         }
                     }
-                    // if debug { //bg!(&resolved_list); }
+                    //f debug { //bg!(&resolved_list); }
                     // let paragraph = if resolved_list.is_empty() {
                         // There are no list items, most likely because all of them were redacted
                         // for the public build, so don't show the list at all.
@@ -747,9 +748,9 @@ impl BuildProcess {
         //   [[{{tools:antlr_plugin.png?direct}}]]
         // This way all we have to do is split based on what is inside or outside of pairs of "[["
         // and "]]".
-        // let debug = text.contains("[[tools:excel|Excel]] Data Science");
+        //et debug = text.contains("[[tools:excel|Excel]] Data Science");
         //et debug = text.contains("Another term for a process virtual machine such");
-        // let debug = text.contains("[[tools:excel|Excel]]");
+        //et debug = text.contains("[[tools:excel|Excel]]");
         //f debug { dbg!(&text, context); }
         let text = text.replace(DELIM_IMAGE_START, TEMP_DELIM_IMG_START)
             .replace(DELIM_IMAGE_END, TEMP_DELIM_IMG_END);

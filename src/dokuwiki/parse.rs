@@ -167,9 +167,9 @@ pub(crate) fn parse_table_optional(text: &str) -> Result<Option<model::Table>, S
     //   ^ Platform | Android, Windows |
     //   ^ Added | Jul 24, 2018 |
     let context = "parse_table_optional()";
-    // let debug = text.contains("tools:nav:attributes#Language|Language");
+    //et debug = text.contains("tools:nav:attributes#Language|Language");
     let text = text.trim();
-    // if debug { dbg!(text, text.starts_with(DELIM_TABLE_CELL), text.starts_with(DELIM_TABLE_CELL_BOLD)); }
+    //f debug { dbg!(text, text.starts_with(DELIM_TABLE_CELL), text.starts_with(DELIM_TABLE_CELL_BOLD)); }
     if text.starts_with(DELIM_TABLE_CELL) || text.starts_with(DELIM_TABLE_CELL_BOLD) {
         // This looks like a table.
         let lines = text.split(DELIM_LINEFEED).collect::<Vec<_>>();
@@ -301,11 +301,11 @@ pub(crate) fn text_or_topic_link_label(text: &str) -> Result<String, String> {
 }
 
 pub(crate) fn parse_list_optional(text: &str) -> Result<Option<model::List>, String> {
-    // let debug = text.contains("on_data_structures_and_algorithms_with_rust|Hands-On Data Structures and Algorithms with Rust]]");
+    //et debug = text.contains("on_data_structures_and_algorithms_with_rust|Hands-On Data Structures and Algorithms with Rust]]");
     let debug = false;
-    if debug { println!("\nparse_list_optional(): text = \"{}\".", text); }
+    //f debug { println!("\nparse_list_optional(): text = \"{}\".", text); }
     let mut lines = text.split(DELIM_LINEFEED).collect::<Vec<_>>();
-    if debug { dbg!(&lines); };
+    //f debug { dbg!(&lines); };
     let first_line = lines.remove(0);
     //util::parse::print_chars(first_line);
     let first_line_as_list_item = parse_list_item_optional(first_line, debug)?;
@@ -326,7 +326,7 @@ pub(crate) fn parse_list_optional(text: &str) -> Result<Option<model::List>, Str
     // the rest of the lines are all list items.
     let mut rest_of_lines_as_list_items = lines.iter()
         .filter_map(|line| {
-            if debug { dbg!(line); }
+            //f debug { dbg!(line); }
             let list_item = parse_list_item_optional(line, debug).ok()?;
             list_item
         })
@@ -367,8 +367,8 @@ pub(crate) fn parse_list_optional(text: &str) -> Result<Option<model::List>, Str
     }
 }
 
-pub(crate) fn parse_list_item_optional(line: &str, debug: bool) -> Result<Option<model::ListItem>, String> {
-    if debug { println!("\nparse_list_item_optional(): line = \"{}\".", line); }
+pub(crate) fn parse_list_item_optional(line: &str, _debug: bool) -> Result<Option<model::ListItem>, String> {
+    //f debug { println!("\nparse_list_item_optional(): line = \"{}\".", line); }
     assert!(!line.contains(DELIM_LINEFEED));
     let (is_list, is_ordered) = if line.trim().starts_with(DELIM_LIST_ITEM_ORDERED) {
         (true, true)
@@ -377,7 +377,7 @@ pub(crate) fn parse_list_item_optional(line: &str, debug: bool) -> Result<Option
     } else {
         (false, false)
     };
-    if debug { dbg!(line, is_list, is_ordered); }
+    //f debug { dbg!(line, is_list, is_ordered); }
     if !is_list {
         return Ok(None);
     }
