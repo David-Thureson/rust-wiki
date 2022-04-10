@@ -895,12 +895,19 @@ impl Ord for Topic {
 
 impl TopicKey {
     pub(crate) fn new(namespace: &str, topic_name: &str) -> Self {
-        if topic_name.eq("functional_programming") { panic!() }
         Self::assert_legal_namespace(namespace);
         Self::assert_legal_topic_name(topic_name);
         Self {
             namespace: namespace.to_lowercase().to_string(),
             topic_name: topic_name.to_string(),
+        }
+    }
+
+    pub(crate) fn new_if_legal(namespace: &str, topic_name: &str) -> Option<Self> {
+        if Self::is_legal_namespace(namespace) && Self::is_legal_topic_name(topic_name) {
+            Some(Self::new(namespace, topic_name))
+        } else {
+            None
         }
     }
 
@@ -932,6 +939,19 @@ impl TopicKey {
         }
     }
 
+    pub(crate) fn is_legal_topic_name(topic_name: &str) -> bool {
+        if topic_name != topic_name.trim() {
+            panic!("Topic name \"{}\" is not trimmed.", topic_name);
+        }
+        if topic_name.contains(":=")
+            || topic_name.contains("[")
+            || topic_name.contains("]")
+            || topic_name.starts_with("_") {
+            return false;
+        }
+        return true;
+    }
+
     pub(crate) fn assert_legal_namespace(namespace: &str) {
         if namespace != namespace.trim() {
             panic!("Namespace \"{}\" is not trimmed.", namespace);
@@ -941,6 +961,18 @@ impl TopicKey {
                 panic!("Namespace name \"{}\" contains invalid characters.", namespace);
             }
         });
+    }
+
+    pub(crate) fn is_legal_namespace(namespace: &str) -> bool {
+        if namespace != namespace.trim() {
+            return false;
+        }
+        for c in namespace.chars() {
+            if !(c.is_ascii_lowercase() || c == ':') {
+                return false;
+            }
+        }
+        return true;
     }
 
     pub(crate) fn get_display_text(&self) -> String {

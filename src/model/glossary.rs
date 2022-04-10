@@ -2,6 +2,7 @@ use crate::model::{Table, TextBlock, TextItem, LinkRc, Model, TopicKey, TableCel
 use crate::Itertools;
 use std::collections::BTreeMap;
 use crate::dokuwiki::gen_tools_wiki::PROJECT_NAME;
+use crate::dokuwiki::MARKER_TERMS_ADD_DEFINITION;
 
 // TO DO: Look for mismatched links between terms and acronyms.
 
@@ -82,8 +83,8 @@ impl Glossary {
             //f debug { dbg!(&definition); panic!() }
 
             let definition_text = definition.get_display_text().trim().to_string();
-            if !definition_text.is_empty() && !definition_text.ends_with(".") {
-                warnings.push(format!("Row {}: Definition does not end with a period: term = \"{}\"", row_index, term));
+            if !definition_text.is_empty() && !definition_text.ends_with(".") && !definition_text.ends_with("?") && !definition_text.ends_with(MARKER_TERMS_ADD_DEFINITION) {
+                warnings.push(format!("Row {}: Definition does not end with a period, question mark, or \"{}\": term = \"{}\"", row_index, MARKER_TERMS_ADD_DEFINITION, term));
             }
 
             let tags = row[3].get_text_block().get_display_text();
@@ -153,12 +154,13 @@ impl Glossary {
         for item in terms.values() {
             if item.link.is_none() {
                 // For now assume the only namespace is "tools".
-                let topic_key = TopicKey::new(&namespace, &item.term);
-                if model.get_topics().contains_key(&topic_key) {
-                    warnings.push(format!("Glossary::build_from_raw_list(): Term \"{}\" might need a link to {}.", item.term, topic_key));
-                } else {
-                    if let Some(acronym) = &item.acronym {
-                        let topic_key = TopicKey::new(&namespace, &format!("{} ({})", item.term, acronym));
+                if let Some(topic_key) = TopicKey::new_if_legal(&namespace, &item.term) {
+                    if model.get_topics().contains_key(&topic_key) {
+                        warnings.push(format!("Glossary::build_from_raw_list(): Term \"{}\" might need a link to {}.", item.term, topic_key));
+                    }
+                }
+                if let Some(acronym) = &item.acronym {
+                    if let Some(topic_key) = TopicKey::new_if_legal(&namespace, &format!("{} ({})", item.term, acronym)) {
                         if model.get_topics().contains_key(&topic_key) {
                             warnings.push(format!("Glossary::build_from_raw_list(): Term \"{}\" might need a link to {}.", item.term, topic_key));
                         }
@@ -252,7 +254,7 @@ impl Glossary {
                 // We're creating a table only of acronyms and abbreviations, so use a slightly
                 // shorter definition that doesn't include the "Acronym for " or "Abbreviation of"
                 // prefix.
-                &item.alt_definition.as_ref().unwrap()
+                &item.alt_definition.as_ref().expect(&format!("Expected item to have an alt_definition: \"{}\".", item.name))
             } else {
                 &item.definition
             };
@@ -274,7 +276,7 @@ impl Glossary {
             cells.push(TableCell::new_resolved_text(&tags, bold, &align));
         }
         cells
-}
+    }
 
     /*
     pub(crate) fn get_all_text_blocks_cloned(&self) -> Vec<TextBlock> {

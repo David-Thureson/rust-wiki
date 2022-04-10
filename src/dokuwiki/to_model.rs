@@ -191,6 +191,13 @@ impl BuildProcess {
             if file_name.ends_with(".txt") {
                 //let path_name = util::file::path_name(dir_entry.path());
                 let content = fs::read_to_string(&dir_entry.path()).unwrap();
+
+                // if content.contains("“") { dbg!(&file_name); panic!() }
+                // let content = content.replace("‘", "'");
+                // let content = content.replace("’", "'");
+                // let content = content.replace("“", "\"");
+                // let content = content.replace("”", "\"");
+
                 if content.contains(MARKER_DELETE_THIS_FILE) {
                     errors.push(format!("{} should be deleted.", file_name));
                 }
@@ -771,7 +778,7 @@ impl BuildProcess {
                 }
             } else {
                 // Assume it's plain text.
-                items.push(TextItem::new_text(item_text));
+                items.push(TextItem::new_text_in_context(item_text, context));
             }
         }
         let text_block = TextBlock::new_resolved(items);

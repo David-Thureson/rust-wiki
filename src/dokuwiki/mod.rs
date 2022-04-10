@@ -40,6 +40,7 @@ pub(crate) const PAGE_NAME_ATTR_YEAR: &str = "Years";
 pub(crate) const PAGE_NAME_ATTR_DATE: &str = "Dates";
 pub(crate) const PAGE_NAME_TERMS: &str = "Terms";
 pub(crate) const PAGE_NAME_CLOUD_TERMS: &str = "Cloud and Data Management Terms";
+pub(crate) const PAGE_NAME_PROFISEE_TERMS: &str = "Profisee Terms";
 
 pub(crate) const HEADLINE_LINKS: &str = "Generated Links";
 
@@ -78,6 +79,7 @@ pub(crate) const MARKER_REDACTION: &str = "~~~redacted~~~";
 pub(crate) const MARKER_REDACTION_FINAL: &str = "%%*****%%";
 pub(crate) const MARKER_PUBLIC_IN_TEXT_FILE: &str = "^ Visibility | Public |";
 pub(crate) const MARKER_DELETE_THIS_FILE: &str = "{{{delete}}}";
+pub(crate) const MARKER_TERMS_ADD_DEFINITION: &str = "(//add definition//)";
 
 pub(crate) const TEMP_DELIM_IMG_START: &str = "[[{{";
 pub(crate) const TEMP_DELIM_IMG_END: &str = "}}]]";

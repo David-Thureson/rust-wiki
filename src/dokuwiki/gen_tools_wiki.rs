@@ -212,6 +212,7 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Model, use_l
     }
     links.push(wiki::page_link(&namespace_main, wiki::PAGE_NAME_TERMS, None));
     links.push(wiki::page_link(&namespace_nav, wiki::PAGE_NAME_CLOUD_TERMS, Some("Cloud and Data Terms")));
+    links.push(wiki::page_link(&namespace_nav, wiki::PAGE_NAME_PROFISEE_TERMS, Some("Profisee Terms")));
     if use_list {
         let mut list = wiki::WikiList::new(None);
         for link in links.iter() {

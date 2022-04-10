@@ -252,7 +252,12 @@ fn eval_breadcrumb_topic_ref(topic_ref: &str) -> Result<TopicKey, String> {
 pub(crate) fn topic_ref_to_topic_key(topic_refs: &TopicRefs, topic_ref: &str) -> Result<model::TopicKey, String> {
     // Something like "tools:books:Zero to One".
     if !topic_ref.contains(DELIM_NAMESPACE) {
-        return Err(format!("Namespace delimiter \"{}\" not found in topic reference \"{}\".", DELIM_NAMESPACE, topic_ref));
+        let msg = if topic_ref.is_empty() {
+            format!("Topic reference is empty. Possibly an internal link starting with \"[[#\", which is not handled yet in the round trip.")
+        } else {
+            format!("Namespace delimiter \"{}\" not found in topic reference \"{}\".", DELIM_NAMESPACE, topic_ref)
+        };
+        return Err(msg);
     }
     let (topic_name, namespace) = util::parse::rsplit_2(topic_ref, DELIM_NAMESPACE);
     // Ok(model::TopicKey::new(namespace, topic_name))

@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::cell::{RefCell, Ref};
 use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys, ATTRIBUTE_NAME_EDITED, ATTRIBUTE_NAME_ADDED, TopicTreeNode, ATTRIBUTE_VALUE_UNKNOWN, ATTRIBUTE_NAME_VISIBILITY, Model};
 use std::collections::BTreeMap;
-use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD, legal_file_name, image_ref_from_file_name, PAGE_NAME_TERMS, PAGE_NAME_CLOUD_TERMS};
+use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD, legal_file_name, image_ref_from_file_name, PAGE_NAME_TERMS, PAGE_NAME_CLOUD_TERMS, PAGE_NAME_PROFISEE_TERMS};
 use crate::tree::TreeNode;
 use crate::dokuwiki::to_model::{make_topic_file_key, TopicFile};
 use crate::model::glossary::Glossary;
@@ -250,6 +250,7 @@ impl <'a> GenFromModel<'a> {
     pub(crate) fn gen_glossary_pages(&mut self, model: &Model) {
         let base_glossary = model.get_glossaries().get(PAGE_NAME_TERMS).unwrap();
         self.gen_glossary_page(PAGE_NAME_CLOUD_TERMS, &base_glossary, Some(vec!["az", "cl", "d"]), None);
+        self.gen_glossary_page(PAGE_NAME_PROFISEE_TERMS, &base_glossary, Some(vec!["pr"]), None);
     }
 
     pub(crate) fn gen_glossary_page(&mut self, page_name: &str, base_glossary: &Glossary, included_tags: Option<Vec<&str>>, excluded_tags: Option<Vec<&str>>) {
@@ -475,7 +476,7 @@ impl <'a> GenFromModel<'a> {
                 loop {
                     //bg!(&parent_topic_key);
                     topic_keys.push(parent_topic_key.clone());
-                    let parent_topic = self.model.get_topics().get(&parent_topic_key).unwrap();
+                    let parent_topic = self.model.get_topics().get(&parent_topic_key).expect(&format!("Topic \"{}\": breadcrumbs seem to have one parent but it can't be found: \"{}\".", topic.get_name(), parent_topic_key));
                     //bg!(&parent_topic.get_name(), &parent_topic.parents);
                     match parent_topic.get_parent_count() {
                         0 => {

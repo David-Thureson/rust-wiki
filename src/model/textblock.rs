@@ -230,6 +230,14 @@ impl TextItem {
         }
     }
 
+    pub(crate) fn new_text_in_context(text: &str, context: &str) -> Self {
+        assert!(!text.starts_with('\n'), "{}: TextItem text starts with linefeed (could be spaces in an otherwise blank line): \"{}\".", context, text);
+        assert!(!text.ends_with('\n'), "{}: TextItem text ends with linefeed (could be spaces in an otherwise blank line): \"{}\".", context, text);
+        TextItem::Text {
+            text: text.to_string(),
+        }
+    }
+
     pub(crate) fn new_redaction() -> Self {
         Self::new_text(MARKER_REDACTION)
     }
