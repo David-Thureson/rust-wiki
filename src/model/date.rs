@@ -2,6 +2,7 @@ use crate::model::{ATTRIBUTE_NAME_ADDED, ATTRIBUTE_NAME_EDITED};
 use crate::model::Model;
 
 pub(crate) fn update_date_attributes_from_file_monitor(model: &mut Model) {
+    // We're still working with the temp attributes.
     println!("\nupdate_date_attributes_from_file_monitor()");
     if let Some(project) = model.get_file_monitor_project() {
         let summary = file_monitor::summary::Summary::read_or_create(project);
@@ -22,10 +23,32 @@ pub(crate) fn update_date_attributes_from_file_monitor(model: &mut Model) {
                 // if debug { dbg!(&file); }
                 if let Some(time_edited) = file.time_latest_edit {
                     // if debug { dbg!(&time_edited); }
-                    topic.set_temp_attribute_date(ATTRIBUTE_NAME_EDITED, &time_edited.date());
+                    let date_edited = time_edited.date();
+                    // If the topic has an Added attribute with this date, don't create an Edited
+                    // attribute.
+                    if topic.get_temp_attribute_date_opt(ATTRIBUTE_NAME_ADDED).map_or(true, |date_added| date_added != date_edited) {
+                        topic.set_temp_attribute_date(ATTRIBUTE_NAME_EDITED, &date_edited);
+                    }
                 }
             }
             // if debug { panic!(); }
+        }
+    }
+}
+
+pub(crate) fn remove_edited_same_as_added(model: &mut Model) {
+    // One-time cleanup. Remove Edited attributes that have the same date as Added.
+    // We're still working with the raw attributes.
+    for topic in model.get_topics_mut().values_mut() {
+        let date_added = topic.get_temp_attribute_date_opt(ATTRIBUTE_NAME_ADDED);
+        let date_edited = topic.get_temp_attribute_date_opt(ATTRIBUTE_NAME_EDITED);
+        match(date_added, date_edited) {
+            (Some(date_added), Some(date_edited)) => {
+                if date_added == date_edited {
+                    topic.remove_temp_attribute(ATTRIBUTE_NAME_EDITED);
+                }
+            },
+            _ => {},
         }
     }
 }

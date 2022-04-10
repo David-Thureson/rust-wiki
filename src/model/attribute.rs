@@ -285,6 +285,10 @@ impl AttributeType {
         util::date_time::naive_date_from_sortable_format(value).unwrap()
     }
 
+    pub(crate) fn value_to_date_multiple_formats_r(value: &str) -> Result<NaiveDate, String> {
+        util::date_time::naive_date_from_multiple_formats(value)
+    }
+
     pub(crate) fn get_topic_count(&self) -> usize {
         self.values.values().map(|topics| topics.len()).sum()
     }

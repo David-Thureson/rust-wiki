@@ -157,6 +157,8 @@ impl BuildProcess {
         model.make_category_tree();
         model.make_subtopic_tree();
         if !self.is_public {
+            // One-time cleanup. Remove Edited attributes that have the same date as Added.
+            // model.remove_edited_same_as_added();
             model.update_attributes_from_file_monitor();
         }
 

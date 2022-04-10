@@ -1,7 +1,7 @@
 use super::*;
 use manage_projects::model::Model as ProjectModel;
 use std::collections::BTreeMap;
-use crate::model::date::update_date_attributes_from_file_monitor;
+use crate::model::date::{update_date_attributes_from_file_monitor, remove_edited_same_as_added};
 use crate::model::glossary::Glossary;
 // use crate::connectedtext::NAMESPACE_TOOLS;
 
@@ -412,8 +412,14 @@ impl Model {
     */
 
     pub(crate) fn update_attributes_from_file_monitor(&mut self) {
+        // We're still working with the temp attributes.
         AttributeType::fill_attribute_orders(self);
         update_date_attributes_from_file_monitor(self);
+    }
+
+    pub(crate) fn remove_edited_same_as_added(&mut self) {
+        // One-time cleanup. Remove Edited attributes that have the same date as Added.
+        remove_edited_same_as_added(self);
     }
 
     pub(crate) fn add_visibility_attributes(&mut self) {

@@ -128,6 +128,19 @@ impl Topic {
         }
     }
 
+    pub(crate) fn get_temp_attribute_date_opt(&self, attr_type_name: &str) -> Option<NaiveDate> {
+        // This function assumes that if there is a temp attribute with this name, it contains one
+        // date value.
+        self.temp_attributes.get(attr_type_name).map(|attr_values| {
+            let value_count = attr_values.len();
+            assert_eq!(1, value_count, "In topic \"{}\", expected one value for attribute \"{}\", found {}.", self.name, attr_type_name, value_count);
+            match AttributeType::value_to_date_multiple_formats_r(&attr_values[0]) {
+                Ok(date) => date,
+                Err(msg) => panic!("In topic \"{}\", error parsing attribute \"{}\", string was \"{}\". msg = \"{}\"", self.name, attr_type_name, attr_values[0], msg),
+            }
+        })
+    }
+
     pub(crate) fn set_temp_attribute_date(&mut self, attr_type_name: &str, value: &NaiveDate) {
         self.temp_attributes.remove(attr_type_name);
         self.temp_attributes.insert(attr_type_name.to_string(), vec![AttributeType::date_to_canonical_value(value)]);
