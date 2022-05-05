@@ -158,8 +158,8 @@ impl Model {
         // that uses the title form.
         // if topic_name.eq("//www.alteryx.com/") { panic!(); }
         let topic_ref = make_topic_ref(namespace, topic_name);
-        //et debug = topic_ref.eq("tools:crates_io");
-        //f debug { //bg!(&topic_ref, topic_refs.get(&topic_ref)); }
+        //et debug = topic_ref.eq("tools:open_data_protocol_odata");
+        //f debug { //bg!(&topic_ref, topic_refs.get(&topic_ref), topic_refs.keys()); panic!() }
         match topic_refs.get(&topic_ref) {
             Some(topic_key) => Ok(topic_key.clone()),
             None => {

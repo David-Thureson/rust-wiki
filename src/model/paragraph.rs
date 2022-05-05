@@ -49,6 +49,7 @@ pub(crate) enum Paragraph {
         text: String,
     },
     Unknown {
+        line_index: usize,
         text: String,
     },
 }
@@ -108,8 +109,9 @@ impl Paragraph {
     }
     */
 
-    pub(crate) fn new_unknown(text: &str) -> Self {
+    pub(crate) fn new_unknown(line_index: usize, text: &str) -> Self {
         Self::Unknown {
+            line_index,
             text: text.to_string()
         }
     }

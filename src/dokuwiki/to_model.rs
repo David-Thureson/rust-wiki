@@ -192,7 +192,13 @@ impl BuildProcess {
             let file_name = util::file::dir_entry_to_file_name(dir_entry);
             if file_name.ends_with(".txt") {
                 //let path_name = util::file::path_name(dir_entry.path());
-                let content = fs::read_to_string(&dir_entry.path()).unwrap();
+                let content_raw = fs::read_to_string(&dir_entry.path()).unwrap();
+
+                // Get rid of any lines that have only whitespace, as this may confuse the parsing
+                // code. Also get rid of any whitespace at the end of non-empty lines.
+                let content = content_raw.split(DELIM_LINEFEED)
+                    .map(|line| line.trim_end())
+                    .join(DELIM_LINEFEED);
 
                 // if content.contains("“") { dbg!(&file_name); panic!() }
                 // let content = content.replace("‘", "'");
@@ -272,8 +278,11 @@ impl BuildProcess {
             assert!(!first_paragraph.contains(DELIM_LINEFEED));
 
             let mut topic = Topic::new(&topic_source_file.namespace_name, &topic_source_file.topic_name);
+            let mut line_index = 2;
             for paragraph in paragraphs.iter() {
-                topic.add_paragraph(Paragraph::new_unknown(paragraph));
+                let lines_this_paragraph = paragraph.matches(DELIM_LINEFEED).count() + 2;
+                topic.add_paragraph(Paragraph::new_unknown(line_index,paragraph));
+                line_index += lines_this_paragraph;
             }
             model.add_topic(topic);
         }
@@ -318,7 +327,7 @@ impl BuildProcess {
         // automatically. So if that's the case, leave the placeholder paragraph in place.
         if !self.topic_parse_state.is_past_real_sections {
             match source_paragraph {
-                Paragraph::Unknown { text } => {
+                Paragraph::Unknown { line_index, text } => {
                     let text = util::parse::trim_linefeeds(&text);
                     if self.topic_parse_state.is_debug { println!("\nNEW PARAGRAPH{}\n|{}|\n", "=".repeat(80), &text); }
                     // For each of the calls in the next statement, the called function returns:
@@ -335,7 +344,7 @@ impl BuildProcess {
                         || self.paragraph_as_marker_start_or_end_rc(topic, &text, paragraph_index, context)?
                         || self.paragraph_as_table_rc(topic, &text, paragraph_index, glossaries, context)?
                         || self.paragraph_as_list_rc(topic, &text, paragraph_index, context)?
-                        || self.paragraph_as_text_rc(topic, &text, paragraph_index, context)?
+                        || self.paragraph_as_text_rc(topic, line_index, &text, paragraph_index, context)?
                     ) {
                         panic!("Unable to resolve paragraph.")
                         // let new_paragraph = Paragraph::new_text_unresolved(&text);
@@ -593,6 +602,7 @@ impl BuildProcess {
                             AttributeType::assert_legal_attribute_type_name(&attr_type_name);
                             let mut attr_values = vec![];
                             // let cell_items = row[1].text.split(",").collect::<Vec<_>>();
+                            assert!(row.len() > 1, "row.len() = {}, context = {}", row.len(), context);
                             let text = row[1].get_text_block().get_unresolved_text();
 
                             if self.is_public && text.contains(MARKER_REDACTION) {
@@ -723,8 +733,9 @@ impl BuildProcess {
         }
     }
 
-    fn paragraph_as_text_rc(&self, topic: &mut Topic, text: &str, paragraph_index: usize, context: &str) -> Result<bool, String> {
-        let context = &format!("{} Seems to be a text paragraph.", context);
+    fn paragraph_as_text_rc(&self, topic: &mut Topic, line_index: usize, text: &str, paragraph_index: usize, context: &str) -> Result<bool, String> {
+        let context = &format!("{} Seems to be a text paragraph starting at line {}.", context, line_index);
+        // if topic.get_name().eq("Profisee Installs") { //rintln!("paragraph_as_text_rc: line {}: {}", line_index + 1, text); }
         let text_block = if self.topic_parse_state.is_in_code {
             // We're in code, so take the text exactly as it is rather than looking for things like
             // links.
@@ -926,7 +937,6 @@ impl TopicFile {
     fn get_key(&self) -> String {
         make_topic_file_key(&self.namespace_name, &self.file_name)
     }
-
 }
 
 pub fn make_topic_file_key(namespace_name: &str, file_name: &str) -> String {
