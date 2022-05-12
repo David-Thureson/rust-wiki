@@ -101,17 +101,21 @@ impl Model {
         &mut self.topics
     }
 
-    pub(crate) fn find_topic_mut(&mut self, topic_key: &TopicKey) -> &mut Topic {
+    pub(crate) fn find_topic_mut_opt(&mut self, topic_key: &TopicKey) -> Option<&mut Topic> {
         if self.topics.contains_key(topic_key) {
-            self.topics.get_mut(topic_key).unwrap()
+            Some(self.topics.get_mut(topic_key).unwrap())
         } else {
             let topic_ref = make_topic_ref(topic_key.get_namespace(), topic_key.get_topic_name());
             if let Some(ref_topic_key) = self.topic_refs.get(&topic_ref) {
-                self.topics.get_mut(ref_topic_key).unwrap()
+                Some(self.topics.get_mut(ref_topic_key).unwrap())
             } else {
-                panic!("Not able to find topic with topic_key = {} and topic_ref = \"{}\".", topic_key, topic_ref)
+                None
             }
         }
+    }
+
+    pub(crate) fn find_topic_mut(&mut self, topic_key: &TopicKey) -> &mut Topic {
+        self.find_topic_mut_opt(topic_key).expect(&format!("Not able to find topic with topic_key = {}.", topic_key))
     }
 
     /*

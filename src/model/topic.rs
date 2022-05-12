@@ -650,7 +650,7 @@ impl Topic {
         for (parent_topic_key, combo_topic_key) in parent_combo_pairs.iter() {
             let link_rc = r!(Link::new_topic_from_key(None, combo_topic_key));
             // let parent_topic = model.get_topics_mut().get_mut(&parent_topic_key);
-            let parent_topic = model.find_topic_mut(&parent_topic_key);
+            let parent_topic = model.find_topic_mut_opt(&parent_topic_key).expect(&format!("In topic {}, not able to find parent topic {}.", combo_topic_key, parent_topic_key));
             parent_topic.combo_subtopics.push(link_rc);
             /*
             match parent_topic {
