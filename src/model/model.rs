@@ -114,8 +114,8 @@ impl Model {
         }
     }
 
-    pub(crate) fn find_topic_mut(&mut self, topic_key: &TopicKey) -> &mut Topic {
-        self.find_topic_mut_opt(topic_key).expect(&format!("Not able to find topic with topic_key = {}.", topic_key))
+    pub(crate) fn find_topic_mut(&mut self, topic_key: &TopicKey, context: &str) -> &mut Topic {
+        self.find_topic_mut_opt(topic_key).expect(&format!("{}: Not able to find topic with topic_key = {},", context, topic_key))
     }
 
     /*

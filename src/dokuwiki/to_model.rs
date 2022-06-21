@@ -787,8 +787,13 @@ impl BuildProcess {
                         format!("{}{}{}", DELIM_LINK_START, item_text, DELIM_LINK_END)
                     };
                     //bg!(&link_text);
-                    let link = self.make_link_rc(&link_text, context)?;
-                    items.push(TextItem::new_link(link));
+                    if link_text.starts_with("[[bc") {
+                        // Ignore links to this namespace. Treat them as normal text.
+                        items.push(TextItem::new_text_in_context(&*link_text, context));
+                    } else {
+                        let link = self.make_link_rc(&link_text, context)?;
+                        items.push(TextItem::new_link(link));
+                    }
                 }
             } else {
                 // Assume it's plain text.

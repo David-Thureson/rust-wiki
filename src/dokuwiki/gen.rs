@@ -375,12 +375,21 @@ pub(crate) fn legal_file_name(name: &str) -> String {
     let page_name = name;
     let page_name = page_name.replace("(", "");
     let page_name = page_name.replace(")", "");
+    let page_name = page_name.replace("'", "");
+    let page_name = page_name.replace("C#", "Cs");
+    let page_name = page_name.replace("F#", "Fs");
+    let page_name = page_name.replace("C++", "Cpp");
+    let page_name = page_name.replace("Notepad++", "Notepadpp");
+    //if page_name.contains("+") || page_name.contains("+") {
+    //    println!("{}", page_name);
+    //}
     let page_name = page_name.trim().to_lowercase()
         .chars()
         .map(|c| {
             // if c.is_alphabetic() || c.is_digit(10) || c == '.' || c == '-' || c == '_' {
             if c.is_alphabetic() || c.is_digit(10) || c == '.' || c == '_' {
                 c
+            /*
             } else if c == '#' {
                 // This means "C#" will be turned into "cs" rather than simply "c" which would
                 // overwrite a topic titled "C".
@@ -389,6 +398,7 @@ pub(crate) fn legal_file_name(name: &str) -> String {
                 // This means "C++" will be turned into "cpp" rather than simply "c" which would
                 // overwrite a topic titled "C".
                 'p'
+                */
             } else {
                 '_'
             }

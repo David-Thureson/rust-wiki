@@ -72,7 +72,7 @@ impl Topic {
     */
 
     pub(crate) fn set_parents(&mut self, parents: Vec<LinkRc>) {
-        assert!(self.parents.is_empty());
+        assert!(self.parents.is_empty(), "Topic {} may have multiple sets of breadcrumbs.", self.get_topic_key());
         assert!(!parents.is_empty());
         assert!(parents.len() <= 2);
         self.parents = parents;
@@ -630,9 +630,10 @@ impl Topic {
             }
         }
         for (parent_topic_key, child_topic_key) in parent_child_pairs.iter() {
+            let context = format!("parent = {}; child = {}", parent_topic_key.to_string(), child_topic_key.to_string());
             // let parent_topic_key= b!(parent_link_rc).get_topic_key().unwrap();
             let link_rc = r!(Link::new_topic_from_key(None, child_topic_key));
-            let parent_topic = model.find_topic_mut(&parent_topic_key);
+            let parent_topic = model.find_topic_mut(&parent_topic_key, &context);
             parent_topic.subtopics.push(link_rc);
             /*
             match parent_topic {

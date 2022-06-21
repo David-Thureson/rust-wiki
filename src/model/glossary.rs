@@ -252,9 +252,9 @@ impl Glossary {
                     && !item.is_excluded_by_tag(&excluded_tags)) {
             let definition = if !item.type_.is_term() && !include_terms {
                 // We're creating a table only of acronyms and abbreviations, so use a slightly
-                // shorter definition that doesn't include the "Acronym for " or "Abbreviation of"
+                // shorter definition that doesn't include the "Acronym for" or "Abbreviation of"
                 // prefix.
-                &item.alt_definition.as_ref().expect(&format!("Expected item to have an alt_definition: \"{}\".", item.name))
+                &item.alt_definition.as_ref().expect(&format!("Expected item to have an alt_definition: \"{}\". Maybe it doesn't start correctly with \"Acronym for\" or \"Abbreviation of\".", item.name))
             } else {
                 &item.definition
             };

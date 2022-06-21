@@ -15,6 +15,6 @@ pub(crate) fn main() {
     util::date_time::print_elapsed(true, "round trip", "", ||
         dokuwiki::gen_tools_wiki::dokuwiki_round_trip(compare_only, is_public)
     );
-
+    
     // tools_wiki::project::update_coding_project_info(compare_only);
 }
