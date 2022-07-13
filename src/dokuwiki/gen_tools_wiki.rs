@@ -207,6 +207,8 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Model, use_l
         wiki::page_link(&namespace_nav, wiki::PAGE_NAME_ATTR_DATE,None),
         wiki::page_link("bc:gen", "Components Main", Some("BC")),
         wiki::page_link("bca:gen", "Components Main", Some("BCA")),
+        wiki::page_link("bctopic:gen", "Components Main", Some("BCTopic")),
+        wiki::page_link("bcatopic:gen", "Components Main", Some("BCATopic")),
     ]);
     if !model.is_public() {
         links.push(wiki::page_link(&namespace_nav, wiki::PAGE_NAME_REPORTS, None));

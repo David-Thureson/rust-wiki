@@ -494,6 +494,18 @@ impl <'a> GenFromModel<'a> {
                 }
                 //bg!(&topic_keys);
                 topic_keys.reverse();
+
+                /*
+                // Try a limit of 60 or 65 characters.
+                // Gather all of the links so we know how long the chain of breadcrumbs will be.
+                let charCount = 0;
+                for TopicKey topic_key in topic_keys.iter()
+                {
+                    let title = topic_key.
+
+                }
+                */
+
                 let breadcrumbs = topic_keys.iter()
                     .map(|topic_key| self.page_link_simple(topic_key))
                     .join(&format!(" {} ", wiki::DELIM_BREADCRUMB_RIGHT));

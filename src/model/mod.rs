@@ -105,6 +105,7 @@ pub(crate) const ATTRIBUTE_NAME_COMPLETED: &str = "Completed";
 pub(crate) const ATTRIBUTE_NAME_CONTEXT: &str = "Context";
 pub(crate) const ATTRIBUTE_NAME_COURSE: &str = "Course";
 pub(crate) const ATTRIBUTE_NAME_CREATED: &str = "Created";
+pub(crate) const ATTRIBUTE_NAME_DEPARTMENT: &str = "Department";
 pub(crate) const ATTRIBUTE_NAME_DOMAIN: &str = "Domain";
 pub(crate) const ATTRIBUTE_NAME_DOWNLOADED: &str = "Downloaded";
 pub(crate) const ATTRIBUTE_NAME_EDITED: &str = "Edited";
@@ -151,7 +152,7 @@ pub(crate) const ATTRIBUTE_NAME_USED_ONLINE: &str = "Used Online";
 pub(crate) const ATTRIBUTE_NAME_VISIBILITY: &str = "Visibility";
 pub(crate) const ATTRIBUTE_NAME_YEAR: &str = "Year";
 
-pub(crate) const ATTRIBUTE_ORDER: [&str; 56] = [
+pub(crate) const ATTRIBUTE_ORDER: [&str; 57] = [
     ATTRIBUTE_NAME_SCHOOL,
     ATTRIBUTE_NAME_TITLE,
     ATTRIBUTE_NAME_SERIES,
@@ -184,6 +185,7 @@ pub(crate) const ATTRIBUTE_ORDER: [&str; 56] = [
     ATTRIBUTE_NAME_FOLDER,
     ATTRIBUTE_NAME_PRIORITY,
     ATTRIBUTE_NAME_STATUS,
+    ATTRIBUTE_NAME_DEPARTMENT,
     ATTRIBUTE_NAME_ORGANIZATION,
     ATTRIBUTE_NAME_FOUNDER,
     ATTRIBUTE_NAME_COMPANY,
@@ -210,7 +212,7 @@ pub(crate) const ATTRIBUTE_ORDER: [&str; 56] = [
     ATTRIBUTE_NAME_VISIBILITY,
 ];
 
-pub(crate) const PUBLIC_ATTRIBUTES: [&str; 36] = [
+pub(crate) const PUBLIC_ATTRIBUTES: [&str; 37] = [
     ATTRIBUTE_NAME_SCHOOL,
     ATTRIBUTE_NAME_TITLE,
     ATTRIBUTE_NAME_SERIES,
@@ -234,6 +236,7 @@ pub(crate) const PUBLIC_ATTRIBUTES: [&str; 36] = [
     ATTRIBUTE_NAME_OPERATING_SYSTEM,
     ATTRIBUTE_NAME_PRIORITY,
     ATTRIBUTE_NAME_STATUS,
+    ATTRIBUTE_NAME_DEPARTMENT,
     ATTRIBUTE_NAME_ORGANIZATION,
     ATTRIBUTE_NAME_FOUNDER,
     ATTRIBUTE_NAME_COMPANY,
@@ -249,13 +252,14 @@ pub(crate) const PUBLIC_ATTRIBUTES: [&str; 36] = [
     ATTRIBUTE_NAME_EDITED,
 ];
 
-pub(crate) const INDEXED_ATTRIBUTES: [&str; 22] = [
+pub(crate) const INDEXED_ATTRIBUTES: [&str; 23] = [
     ATTRIBUTE_NAME_AUTHOR,
     ATTRIBUTE_NAME_BOOK,
     ATTRIBUTE_NAME_COMPANY,
     ATTRIBUTE_NAME_CONTEXT,
     ATTRIBUTE_NAME_COURSE,
     ATTRIBUTE_NAME_DOMAIN,
+    ATTRIBUTE_NAME_DEPARTMENT,
     ATTRIBUTE_NAME_FORMAT,
     ATTRIBUTE_NAME_FOUNDER,
     ATTRIBUTE_NAME_IDE,
