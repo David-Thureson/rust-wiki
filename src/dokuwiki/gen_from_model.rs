@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::cell::{RefCell, Ref};
 use crate::model::{AttributeValueType, TopicKey, Topic, TableCell, LinkRc, links_to_topic_keys, ATTRIBUTE_NAME_EDITED, ATTRIBUTE_NAME_ADDED, TopicTreeNode, ATTRIBUTE_VALUE_UNKNOWN, ATTRIBUTE_NAME_VISIBILITY, Model};
 use std::collections::BTreeMap;
-use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD, legal_file_name, image_ref_from_file_name, PAGE_NAME_TERMS, PAGE_NAME_CLOUD_TERMS, PAGE_NAME_PROFISEE_TERMS};
+use crate::dokuwiki::{PAGE_NAME_ATTR_VALUE, WikiAttributeTable, PAGE_NAME_ATTR_DATE, PAGE_NAME_ATTR_YEAR, DELIM_TABLE_CELL_BOLD, DELIM_TABLE_CELL, WikiGenPage, HEADLINE_LINKS, RECENT_TOPICS_THRESHOLD, legal_file_name, image_ref_from_file_name, PAGE_NAME_TERMS, PAGE_NAME_CLOUD_TERMS, PAGE_NAME_PROFISEE_TERMS, PAGE_NAME_SOC_SVC_TERMS};
 use crate::tree::TreeNode;
 use crate::dokuwiki::to_model::{make_topic_file_key, TopicFile};
 use crate::model::glossary::Glossary;
@@ -251,6 +251,7 @@ impl <'a> GenFromModel<'a> {
         let base_glossary = model.get_glossaries().get(PAGE_NAME_TERMS).unwrap();
         self.gen_glossary_page(PAGE_NAME_CLOUD_TERMS, &base_glossary, Some(vec!["az", "cl", "d"]), None);
         self.gen_glossary_page(PAGE_NAME_PROFISEE_TERMS, &base_glossary, Some(vec!["pr"]), None);
+        self.gen_glossary_page(PAGE_NAME_SOC_SVC_TERMS, &base_glossary, Some(vec!["ss"]), None);
     }
 
     pub(crate) fn gen_glossary_page(&mut self, page_name: &str, base_glossary: &Glossary, included_tags: Option<Vec<&str>>, excluded_tags: Option<Vec<&str>>) {

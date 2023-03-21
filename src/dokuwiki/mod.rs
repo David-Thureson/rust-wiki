@@ -25,22 +25,23 @@ pub(crate) const FILE_MONITOR_SCAN_MINUTES: f32 = 1.0;
 
 pub(crate) const RECENT_TOPICS_THRESHOLD: usize = 100;
 
-pub(crate) const PAGE_NAME_SIDEBAR: &str = "Sidebar";
-pub(crate) const PAGE_NAME_MAIN: &str = "Main";
-pub(crate) const PAGE_NAME_START:   &str = "Start";
-pub(crate) const PAGE_NAME_RECENT_TOPICS: &str = "Recent Topics";
-pub(crate) const PAGE_NAME_REPORTS: &str = "Reports";
+pub(crate) const PAGE_NAME_SIDEBAR:         &str = "Sidebar";
+pub(crate) const PAGE_NAME_MAIN:            &str = "Main";
+pub(crate) const PAGE_NAME_START:           &str = "Start";
+pub(crate) const PAGE_NAME_RECENT_TOPICS:   &str = "Recent Topics";
+pub(crate) const PAGE_NAME_REPORTS:         &str = "Reports";
 pub(crate) const PAGE_NAME_DOKUWIKI_MARKUP: &str = "DokuWiki Markup";
-pub(crate) const PAGE_NAME_ALL_TOPICS: &str = "All Topics";
-pub(crate) const PAGE_NAME_CATEGORIES: &str = "Categories";
-pub(crate) const PAGE_NAME_SUBTOPICS: &str = "Subtopics";
-pub(crate) const PAGE_NAME_ATTR: &str = "Attributes";
-pub(crate) const PAGE_NAME_ATTR_VALUE: &str = "Attribute Values";
-pub(crate) const PAGE_NAME_ATTR_YEAR: &str = "Years";
-pub(crate) const PAGE_NAME_ATTR_DATE: &str = "Dates";
-pub(crate) const PAGE_NAME_TERMS: &str = "Terms";
-pub(crate) const PAGE_NAME_CLOUD_TERMS: &str = "Cloud and Data Management Terms";
-pub(crate) const PAGE_NAME_PROFISEE_TERMS: &str = "Profisee Terms";
+pub(crate) const PAGE_NAME_ALL_TOPICS:      &str = "All Topics";
+pub(crate) const PAGE_NAME_CATEGORIES:      &str = "Categories";
+pub(crate) const PAGE_NAME_SUBTOPICS:       &str = "Subtopics";
+pub(crate) const PAGE_NAME_ATTR:            &str = "Attributes";
+pub(crate) const PAGE_NAME_ATTR_VALUE:      &str = "Attribute Values";
+pub(crate) const PAGE_NAME_ATTR_YEAR:       &str = "Years";
+pub(crate) const PAGE_NAME_ATTR_DATE:       &str = "Dates";
+pub(crate) const PAGE_NAME_TERMS:           &str = "Terms";
+pub(crate) const PAGE_NAME_CLOUD_TERMS:     &str = "Cloud and Data Management Terms";
+pub(crate) const PAGE_NAME_PROFISEE_TERMS:  &str = "Profisee Terms";
+pub(crate) const PAGE_NAME_SOC_SVC_TERMS:   &str = "Social Services Terms";
 
 pub(crate) const HEADLINE_LINKS: &str = "Generated Links";
 

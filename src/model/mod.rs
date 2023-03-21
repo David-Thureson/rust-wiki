@@ -100,6 +100,7 @@ pub(crate) const ATTRIBUTE_NAME_ADDED: &str = "Added";
 pub(crate) const ATTRIBUTE_NAME_ADDRESS: &str = "Address";
 pub(crate) const ATTRIBUTE_NAME_AUTHOR: &str = "Author";
 pub(crate) const ATTRIBUTE_NAME_BOOK: &str = "Book";
+pub(crate) const ATTRIBUTE_NAME_CELL_PHONE: &str = "Cell Phone";
 pub(crate) const ATTRIBUTE_NAME_COMPANY: &str = "Company";
 pub(crate) const ATTRIBUTE_NAME_COMPLETED: &str = "Completed";
 pub(crate) const ATTRIBUTE_NAME_CONTEXT: &str = "Context";
@@ -143,6 +144,7 @@ pub(crate) const ATTRIBUTE_NAME_SKYPE: &str = "Skype";
 pub(crate) const ATTRIBUTE_NAME_SLACK: &str = "Slack";
 pub(crate) const ATTRIBUTE_NAME_STARTED: &str = "Started";
 pub(crate) const ATTRIBUTE_NAME_STATUS: &str = "Status";
+pub(crate) const ATTRIBUTE_NAME_TIME_ZONE: &str = "Time Zone";
 pub(crate) const ATTRIBUTE_NAME_TITLE: &str = "Title";
 pub(crate) const ATTRIBUTE_NAME_TRANSLATOR: &str = "Translator";
 pub(crate) const ATTRIBUTE_NAME_TWITTER: &str = "Twitter";
@@ -150,9 +152,10 @@ pub(crate) const ATTRIBUTE_NAME_UPDATED: &str = "Updated";
 pub(crate) const ATTRIBUTE_NAME_USED_LOCALLY: &str = "Used Locally";
 pub(crate) const ATTRIBUTE_NAME_USED_ONLINE: &str = "Used Online";
 pub(crate) const ATTRIBUTE_NAME_VISIBILITY: &str = "Visibility";
+pub(crate) const ATTRIBUTE_NAME_WORK_PHONE: &str = "Work Phone";
 pub(crate) const ATTRIBUTE_NAME_YEAR: &str = "Year";
 
-pub(crate) const ATTRIBUTE_ORDER: [&str; 57] = [
+pub(crate) const ATTRIBUTE_ORDER: [&str; 60] = [
     ATTRIBUTE_NAME_SCHOOL,
     ATTRIBUTE_NAME_TITLE,
     ATTRIBUTE_NAME_SERIES,
@@ -191,6 +194,9 @@ pub(crate) const ATTRIBUTE_ORDER: [&str; 57] = [
     ATTRIBUTE_NAME_COMPANY,
     ATTRIBUTE_NAME_EMAIL,
     ATTRIBUTE_NAME_PHONE,
+    ATTRIBUTE_NAME_WORK_PHONE,
+    ATTRIBUTE_NAME_CELL_PHONE,
+    ATTRIBUTE_NAME_TIME_ZONE,
     ATTRIBUTE_NAME_TWITTER,
     ATTRIBUTE_NAME_SKYPE,
     ATTRIBUTE_NAME_FACEBOOK,
@@ -212,7 +218,7 @@ pub(crate) const ATTRIBUTE_ORDER: [&str; 57] = [
     ATTRIBUTE_NAME_VISIBILITY,
 ];
 
-pub(crate) const PUBLIC_ATTRIBUTES: [&str; 37] = [
+pub(crate) const PUBLIC_ATTRIBUTES: [&str; 38] = [
     ATTRIBUTE_NAME_SCHOOL,
     ATTRIBUTE_NAME_TITLE,
     ATTRIBUTE_NAME_SERIES,
@@ -240,6 +246,7 @@ pub(crate) const PUBLIC_ATTRIBUTES: [&str; 37] = [
     ATTRIBUTE_NAME_ORGANIZATION,
     ATTRIBUTE_NAME_FOUNDER,
     ATTRIBUTE_NAME_COMPANY,
+    ATTRIBUTE_NAME_TIME_ZONE,
     ATTRIBUTE_NAME_PRICING,
     ATTRIBUTE_NAME_SIGNED_UP,
     ATTRIBUTE_NAME_DOWNLOADED,
@@ -252,7 +259,7 @@ pub(crate) const PUBLIC_ATTRIBUTES: [&str; 37] = [
     ATTRIBUTE_NAME_EDITED,
 ];
 
-pub(crate) const INDEXED_ATTRIBUTES: [&str; 23] = [
+pub(crate) const INDEXED_ATTRIBUTES: [&str; 24] = [
     ATTRIBUTE_NAME_AUTHOR,
     ATTRIBUTE_NAME_BOOK,
     ATTRIBUTE_NAME_COMPANY,
@@ -275,6 +282,7 @@ pub(crate) const INDEXED_ATTRIBUTES: [&str; 23] = [
     ATTRIBUTE_NAME_SCHOOL,
     ATTRIBUTE_NAME_SERIES,
     ATTRIBUTE_NAME_STATUS,
+    ATTRIBUTE_NAME_TIME_ZONE,
     ATTRIBUTE_NAME_TRANSLATOR,
 ];
 

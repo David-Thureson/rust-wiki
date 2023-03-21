@@ -275,6 +275,7 @@ impl BuildProcess {
             // so we don't need this paragraph.
             let first_paragraph = paragraphs.remove(0).to_string();
             // The first paragraph should be a single line.
+            if first_paragraph.contains(DELIM_LINEFEED) { println!("{}", content); }
             assert!(!first_paragraph.contains(DELIM_LINEFEED));
 
             let mut topic = Topic::new(&topic_source_file.namespace_name, &topic_source_file.topic_name);

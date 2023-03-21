@@ -54,6 +54,9 @@ impl Glossary {
         let mut acronyms = BTreeMap::new();
         let mut keys = vec![];
         for (row_index, row) in self.raw_list.get_rows().iter().enumerate() {
+
+            assert!(row.len() == 4, "On the terms page, row {}: Term row does not have four cells: {:?}", row_index, row);
+
             // At first treat everything like a term including acronyms.
             // At this point the first cell should have a text block with a single resolved
             // TextItem.

@@ -5,6 +5,8 @@ use crate::model::date::{update_date_attributes_from_file_monitor, remove_edited
 use crate::model::glossary::Glossary;
 // use crate::connectedtext::NAMESPACE_TOOLS;
 
+const CHECK_SECTION_LINKS: bool = false;
+
 pub(crate) type TopicRefs = BTreeMap<String, TopicKey>;
 pub(crate) type NameTopicMap = BTreeMap<String, TopicKey>;
 pub(crate) type GlossaryMap = BTreeMap<String, Glossary>;
@@ -321,7 +323,7 @@ impl Model {
                         self.check_topic_link(&mut errors, "links", &this_topic_key, topic_key);
                     },
                     LinkType::Section { section_key } => {
-                        if !self.has_section(section_key) {
+                        if CHECK_SECTION_LINKS && !self.has_section(section_key) {
                             self.print_sections(section_key.get_topic_key());
                             errors.add(&topic.get_topic_key(), &format!("Model::check_links(): Section link {} not found.", section_key));
                         }
