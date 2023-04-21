@@ -87,7 +87,7 @@ pub(crate) fn parse_header_optional(text: &str) -> Result<Option<(String, usize)
     Ok(None)
 }
 
-pub(crate) fn parse_breadcrumb_optional(text: &str, context: &str, is_public: bool) -> Result<Option<Vec<TopicKey>>, String> {
+pub(crate) fn parse_breadcrumb_optional(text: &str, context: &str, is_filtered: bool) -> Result<Option<Vec<TopicKey>>, String> {
     // A breadcrumb paragraph showing the parent and grandparent topic will look like this with
     // the links worked out:
     //   **[[tools:android|Android]] => [[tools:android_development|Android Development]] => Android Sensors**
@@ -102,7 +102,7 @@ pub(crate) fn parse_breadcrumb_optional(text: &str, context: &str, is_public: bo
     //bg!(text);
     if !text.contains(DELIM_LINEFEED) && text.contains(DELIM_BREADCRUMB_RIGHT) {
         // Presumably this is a breadcrumb line.
-        if is_public && text.contains(MARKER_REDACTION) {
+        if is_filtered && text.contains(MARKER_REDACTION) {
             // There appears to be at least one parent reference to a private topic, or at least
             // part of the referenced topic name is a redacted phrase, so leave this topic
             // without parent topics. Returning Ok() with an empty vector means we think this is

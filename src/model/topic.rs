@@ -22,6 +22,8 @@ pub(crate) struct Topic {
     subtopics: Vec<LinkRc>,
     subtopic_tree_node: Option<Rc<RefCell<TopicTreeNode>>>,
     combo_subtopics: Vec<LinkRc>,
+    is_included: bool,
+    is_redacted: bool,
     // listed_topics: Vec<TopicKey>,
 }
 
@@ -55,6 +57,8 @@ impl Topic {
             subtopics: vec![],
             subtopic_tree_node: None,
             combo_subtopics: vec![],
+            is_included: true,
+            is_redacted: false,
             // listed_topics: vec![],
             // sections: Default::default(),
         }
@@ -85,6 +89,25 @@ impl Topic {
     pub(crate) fn get_parent(&self, index: usize) -> LinkRc {
         self.parents[index].clone()
     }
+
+    /*
+    pub(crate) fn get_root_topic_ref(&self) -> String {
+        // For now this doesn't work for combination topics. Assume each topic in the chain has
+        // zero or one parent.
+        if self.parents.len() == 1 {
+            let parent_topic_key = b!(&self.get_parent(0)).get_topic_key().unwrap();
+
+            get_root_topic_ref()
+        } else {
+            // The topic is its own root.
+            self.get_topic_ref()
+        }
+    }
+
+    pub(crate) fn get_topic_ref(&self) -> String {
+        make_topic_ref(&self.namespace, &self.name);
+    }
+    */
 
     pub(crate) fn get_namespace(&self) -> &str {
         &self.namespace
@@ -1061,7 +1084,7 @@ impl Display for SectionKey {
     }
 }
 
-pub(crate) fn make_topic_ref(namespace: &str, topic_name: &str) -> String {
+pub fn make_topic_ref(namespace: &str, topic_name: &str) -> String {
     // For now use the DokuWiki conventions. If we later need to generate a different wiki format,
     // create a function like this for each wiki engine and pass it to the gen process.
     let canonical_topic_name = super::dokuwiki::gen::internal_link_name(topic_name);

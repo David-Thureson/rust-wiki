@@ -43,8 +43,8 @@ pub(crate) use table::*;
 pub(crate) mod textblock;
 pub(crate) use textblock::*;
 
-pub(crate) mod topic;
-pub(crate) use topic::*;
+pub mod topic;
+pub use topic::*;
 
 pub(crate) mod topic_error_list;
 pub(crate) use topic_error_list::*;
@@ -59,10 +59,11 @@ pub(crate) const PANIC_ON_MODEL_ERROR: bool = true;
 
 pub(crate) const FILE_NAME_REDACT: &str = "C:/Projects/Rust/utility/wiki/redact.txt";
 
-pub(crate) const NAMESPACE_ROOT: &str = "";
+pub const NAMESPACE_ROOT: &str = "";
 // pub(crate) const NAMESPACE_UNDECIDED: &str = "{undecided}";
-const NAMESPACE_BOOK: &str = ":book";
-const NAMESPACE_NAVIGATION: &str = ":nav";
+pub const NAMESPACE_TOOLS: &str = ":tools";
+pub const NAMESPACE_BOOK: &str = ":book";
+pub const NAMESPACE_NAVIGATION: &str = ":nav";
 // const NAMESPACE_ATTRIBUTE: &str = ":attr";
 
 // pub(crate) const ATTRIBUTE_VALUE_MISSING: &str = "{missing}";

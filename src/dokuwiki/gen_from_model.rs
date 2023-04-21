@@ -237,7 +237,7 @@ impl <'a> GenFromModel<'a> {
     #[allow(dead_code)]
     pub(crate) fn gen_reports_page(&self) {
         let mut page = wiki::WikiGenPage::new(&self.model.namespace_navigation(), wiki::PAGE_NAME_REPORTS,None);
-        if !self.model.is_public() {
+        if !self.model.filter_is_public() {
             // self.gen_reports_page_public_topics_by_category(&mut page);
             // self.gen_reports_page_public_ref_to_private(&mut page);
             // self.gen_reports_page_redactions(&mut page);
@@ -263,12 +263,12 @@ impl <'a> GenFromModel<'a> {
 
         page.add_headline("Acronyms and Abbreviations", 1);
 
-        let table = base_glossary.make_table(false, true, false, &included_tags, &excluded_tags, self.model.is_public());
+        let table = base_glossary.make_table(false, true, false, &included_tags, &excluded_tags, self.model.filter_is_public());
         self.add_table(&mut page, &table);
 
         page.add_headline("Terms", 1);
 
-        let table = base_glossary.make_table(true, false, false, &included_tags, &excluded_tags, self.model.is_public());
+        let table = base_glossary.make_table(true, false, false, &included_tags, &excluded_tags, self.model.filter_is_public());
         self.add_table(&mut page, &table);
 
         page.write(&self.path_pages);
@@ -319,7 +319,7 @@ impl <'a> GenFromModel<'a> {
     fn gen_reports_page_redactions(&self, _page: &mut WikiGenPage) {
         // While redactions should be used only for public renders, the report of redactions is
         // private. So in this case we did the redactions just to get the report.
-        assert!(!self.model.is_public());
+        assert!(!self.model.is_filtered());
         //let redaction_record = self.model.get_redaction_record().unwrap();
     }
 
@@ -779,7 +779,7 @@ impl <'a> GenFromModel<'a> {
 
     fn add_glossary(&mut self, page: &mut wiki::WikiGenPage, glossaries: &BTreeMap<String, Glossary>, glossary_name: &str) {
         let glossary = glossaries.get(glossary_name).unwrap();
-        let table = glossary.make_table(true, true, true, &None, &None, self.model.is_public());
+        let table = glossary.make_table(true, true, true, &None, &None, self.model.filter_is_public());
         self.add_table(page, &table);
     }
 

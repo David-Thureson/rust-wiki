@@ -13,14 +13,16 @@ pub(crate) struct BuildProcess {
     pub(crate) path_source: String,
     pub(crate) gen_path_pages: String,
     pub(crate) compare_only: bool,
-    pub(crate) is_public: bool,
+    pub(crate) is_filtered: bool,
+    pub(crate) filter_is_public: bool,
+    pub(crate) filter_main_topic_ref: Option<String>,
     pub(crate) topic_source_files: BTreeMap<String, TopicFile>,
     pub(crate) topic_dest_files: BTreeMap<String, TopicFile>,
     pub(crate) topic_files_to_delete: Vec<String>,
     pub(crate) topic_refs: TopicRefs,
     pub(crate) errors: TopicErrorList,
     pub(crate) topic_limit: Option<usize>,
-    topic_parse_state: TopicParseState,
+    pub(crate) topic_parse_state: TopicParseState,
 }
 
 #[derive(Debug)]
@@ -32,7 +34,7 @@ pub(crate) struct TopicFile {
 }
 
 #[derive(Debug)]
-struct TopicParseState {
+pub(crate) struct TopicParseState {
     is_past_attributes: bool,
     is_past_first_header: bool,
     is_in_code: bool,
@@ -43,14 +45,24 @@ struct TopicParseState {
 }
 
 impl BuildProcess {
-    pub(crate) fn new(wiki_name: &str, namespace_main: &str, path_source: &str, compare_only: bool, is_public: bool, topic_limit: Option<usize>) -> Self {
+    pub(crate) fn new(wiki_name: &str, namespace_main: &str, path_source: &str, compare_only: bool, filter_is_public: bool, filter_main_topic_ref: Option<String>, topic_limit: Option<usize>) -> Self {
+
+        let is_filtered = filter_is_public || filter_main_topic_ref.is_some();
+
+        if is_filtered {
+            assert!(compare_only);
+        }
+        assert!(!filter_is_public || filter_main_topic_ref.is_none());
+
         Self {
             wiki_name: wiki_name.to_string(),
             namespace_main: namespace_main.to_string(),
             path_source: path_source.to_string(),
             gen_path_pages: "".to_string(),
             compare_only,
-            is_public,
+            is_filtered,
+            filter_is_public,
+            filter_main_topic_ref,
             topic_source_files: Default::default(),
             topic_dest_files: Default::default(),
             topic_files_to_delete: vec![],
@@ -62,7 +74,7 @@ impl BuildProcess {
     }
 
     pub(crate) fn build(&mut self, project: Option<file_monitor::model::Project>) -> Model {
-        let mut model = Model::new(&self.wiki_name, &self.namespace_main, self.is_public);
+        let mut model = Model::new(&self.wiki_name, &self.namespace_main, self.filter_is_public,self.filter_main_topic_ref.clone());
 
         if let Some(project) = project {
             model.set_file_monitor_project(project);
@@ -79,7 +91,8 @@ impl BuildProcess {
         // self.parse_from_folder(&mut model, &namespace_book, topic_limit_per_namespace);
         assert!(!self.topic_source_files.is_empty());
 
-        if self.is_public {
+        if self.is_filtered {
+            model.filter_set_topics_include_and_redacted();
             model.finalize_redacted_phrases();
             // model.print_redacted_phrases();
 
@@ -119,12 +132,12 @@ impl BuildProcess {
 
         model.build_glossaries();
 
-        if !self.is_public {
+        if !self.is_filtered {
             tools_wiki::project::add_project_info_to_model(&mut model);
             tools_wiki::project::update_projects_and_libraries(&mut model);
         }
 
-        // if !model.is_public() {
+        // if !model.is_filtered() {
         //     model.remove_non_public_parent_topic_refs();
         // }
 
@@ -138,7 +151,7 @@ impl BuildProcess {
         // It's not necessary to check whether parents link to subtopics, since those links will be
         // generated.
         // self.check_subtopic_relationships(&mut model);
-        // if !model.is_public() {
+        // if !model.is_filtered() {
             self.errors.print_and_list_missing_topics(Some("First pass"));
         // }
 
@@ -146,7 +159,7 @@ impl BuildProcess {
         // report_category_tree(&model);
         // model.catalog_possible_list_types().print_by_count(0, None);
 
-        if !model.is_public() {
+        if !model.is_filtered() {
             model.add_missing_category_topics();
         }
         // model.catalog_links();
@@ -156,7 +169,7 @@ impl BuildProcess {
         // Call the make tree functions after the last call to model.catalog_links().
         model.make_category_tree();
         model.make_subtopic_tree();
-        if !self.is_public {
+        if !self.is_filtered {
             // One-time cleanup. Remove Edited attributes that have the same date as Added.
             // model.remove_edited_same_as_added();
             model.update_attributes_from_file_monitor();
@@ -165,7 +178,7 @@ impl BuildProcess {
         // One-time fix.
         // remove_edited_attribute_from_private_topics(&mut model);
 
-        if !self.is_public {
+        if !self.is_filtered {
             model.add_visibility_attributes();
         }
         //bg!(&model.attributes);
@@ -178,8 +191,11 @@ impl BuildProcess {
         model
     }
 
+    #[allow(unused_variables)]
     fn read_from_folder(&mut self, model: &mut Model, namespace_name: &str, topic_limit: Option<usize>) {
-        // Read each page's text file. If this is a public build and the topic is not public,
+        // Read each page's text file.
+        //
+        // Obsolete: If this is a public build and the topic is not public,
         // add that file name and topic name to the list of redacted phrases but otherwise don't
         // include the topic in the build.
         let mut errors = vec![];
@@ -214,6 +230,16 @@ impl BuildProcess {
                 assert!(topic_name_line.ends_with(DELIM_HEADER), "Topic name \"{}\" should end with \"{}\".", &topic_name_line, DELIM_HEADER);
                 let topic_name = topic_name_line.replace(DELIM_HEADER, "").trim().to_string();
 
+                /*
+                let mut include_topic = true;
+                let mut redact_topic = false;
+                if model.is_public() && !content.contains(MARKER_PUBLIC_IN_TEXT_FILE) {
+                    include_topic = false;
+                    redact_topic = true;
+                } else if let Some(filter_main_topic) = &self.filter_main_topic {
+                    let root_topic_name = root_topic_name(&content);
+                }
+
                 // If we're doing a public-only build we don't even want to read the file unless
                 // it's explicitly tagged as a public topic.
                 if model.is_public() && !content.contains(MARKER_PUBLIC_IN_TEXT_FILE) {
@@ -226,14 +252,14 @@ impl BuildProcess {
                     let topic_file_key = make_topic_file_key(namespace_name, &file_name);
                     assert!(!self.topic_files_to_delete.contains(&topic_file_key));
                     self.topic_files_to_delete.push(topic_file_key);
-                } else {
+                } else {*/
                     let topic_source_file = TopicFile::new(namespace_name, &file_name, &topic_name, content);
                     self.add_topic_source_file(topic_source_file);
                     topic_count += 1;
                     if topic_limit.map_or(false, |topic_limit| topic_count >= topic_limit) {
                         return;
                     }
-                }
+                // }
             }
         }
         if !errors.is_empty() {
@@ -259,7 +285,7 @@ impl BuildProcess {
             let mut content = util::format::remove_repeated_n(&content, "\n", 2);
             assert_no_extra_lines(&topic_source_file.file_name, &content);
 
-            if model.is_public() {
+            if model.is_filtered() {
                 if let Some(mut new_content) = redaction::redact_text(&content, model.get_redacted_phrases()) {
                     //rintln!("BuildProcess::parse_topics(): redactions in \"{}\".", topic_source_file.topic_name);
                     std::mem::swap(&mut content, &mut new_content);
@@ -377,7 +403,7 @@ impl BuildProcess {
             if text.trim().contains(DELIM_LINEFEED) {
                 return err_func("The text seems to be a category format but it has linefeeds.");
             } else {
-                if self.is_public && text.contains(MARKER_REDACTION) {
+                if self.is_filtered && text.contains(MARKER_REDACTION) {
                     // This appears to be a category reference to a private topic, or at least
                     // part of the referenced topic name is a redacted phrase, so leave this topic
                     // without a category. Returning Ok(true) means this paragraph has been
@@ -467,7 +493,7 @@ impl BuildProcess {
         }
         let context = &format!("{} Seems to be a breadcrumb paragraph.", context);
         let err_func = |msg: &str| Err(format!("{} paragraph_as_breadcrumb_rc: {}: text = \"{}\".", context, msg, text));
-        match parse_breadcrumb_optional(text, context, self.is_public) {
+        match parse_breadcrumb_optional(text, context, self.is_filtered) {
             Ok(Some(parent_topic_keys)) => {
                 // If the vector of topic keys is empty, that means we found the redaction marker,
                 // so one or more of the parent references can't be used. In that case, leave the
@@ -585,7 +611,7 @@ impl BuildProcess {
                         // that don't go into a public build, like Visibility and contact
                         // information.
                         let mut use_this_attribute = true;
-                        if self.is_public {
+                        if self.filter_is_public {
                             let is_attr_public = PUBLIC_ATTRIBUTES.contains(&&*attr_type_name);
                             //bg!(&attr_type_name, is_attr_public);
                             if !is_attr_public {
@@ -606,7 +632,7 @@ impl BuildProcess {
                             assert!(row.len() > 1, "row.len() = {}, context = {}", row.len(), context);
                             let text = row[1].get_text_block().get_unresolved_text();
 
-                            if self.is_public && text.contains(MARKER_REDACTION) {
+                            if self.is_filtered && text.contains(MARKER_REDACTION) {
                                 //rintln!("{}: Ignoring \"{}\" attribute because the values contain a redaction: \"{}\".", context, attr_type_name, text);
                             } else {
                                 // We want to split the attribute values using commas, but commas might be
@@ -706,7 +732,7 @@ impl BuildProcess {
                     let mut resolved_list = List::new(list.get_type().clone(), resolved_header);
                     for list_item in list.get_items() {
                         let resolved_text_block = self.make_text_block_rc(&list_item.get_text_block().get_unresolved_text(), context)?;
-                        if self.is_public && resolved_text_block.is_redaction() {
+                        if self.is_filtered && resolved_text_block.is_redaction() {
                             //rintln!("{}: paragraph_as_list_rc(): ignoring fully redacted list item.", context);
                         } else {
                             let resolved_list_item = ListItem::new(list_item.get_depth(), list_item.is_ordered(), resolved_text_block);
@@ -775,7 +801,7 @@ impl BuildProcess {
             if *item_is_delimited {
                 //bg!(&item_text);
                 // Assume it's an internal or external link, or an image link.
-                if self.is_public && item_text.contains(MARKER_REDACTION) {
+                if self.is_filtered && item_text.contains(MARKER_REDACTION) {
                     //rintln!("{}: make_text_block_rc(): removing a link with a redaction: \"{}\".", context, item_text);
                     // Replace the whole link with a simple text item consisting only of the
                     // redaction marker.
@@ -950,8 +976,8 @@ pub fn make_topic_file_key(namespace_name: &str, file_name: &str) -> String {
     format!("{}:{}", namespace_name, file_name_before_extension)
 }
 
-pub(crate) fn build_model(name: &str, namespace_main: &str, compare_only: bool, is_public: bool, topic_limit: Option<usize>, project: Option<file_monitor::model::Project>) -> (Model, BuildProcess) {
-    let mut bp = BuildProcess::new(name, namespace_main,PATH_PAGES, compare_only, is_public, topic_limit);
+pub(crate) fn build_model(name: &str, namespace_main: &str, compare_only: bool, filter_is_public: bool, filter_main_topic_ref: Option<String>, topic_limit: Option<usize>, project: Option<file_monitor::model::Project>) -> (Model, BuildProcess) {
+    let mut bp = BuildProcess::new(name, namespace_main,PATH_PAGES, compare_only, filter_is_public, filter_main_topic_ref, topic_limit);
     let model = bp.build(project);
     (model, bp)
 }

@@ -14,7 +14,9 @@ pub(crate) type GlossaryMap = BTreeMap<String, Glossary>;
 pub(crate) struct Model {
     _name: String,
     main_namespace: String,
-    is_public: bool,
+    is_filtered: bool,
+    filter_is_public: bool,
+    filter_root_topic_ref: Option<String>,
     namespaces: BTreeMap<String, String>,
     topics: BTreeMap<TopicKey, Topic>,
     topic_refs: TopicRefs,
@@ -32,12 +34,15 @@ pub(crate) struct Model {
 }
 
 impl Model {
-    pub(crate) fn new(name: &str, main_namespace: &str, is_public: bool) -> Self {
+    pub(crate) fn new(name: &str, main_namespace: &str, filter_is_public: bool, filter_root_topic_ref: Option<String>) -> Self {
         TopicKey::assert_legal_namespace(main_namespace);
+        assert!(!filter_is_public || filter_root_topic_ref.is_none());
         let mut wiki = Self {
             _name: name.to_string(),
             main_namespace: main_namespace.to_string(),
-            is_public,
+            is_filtered: filter_is_public || filter_root_topic_ref.is_some(),
+            filter_is_public,
+            filter_root_topic_ref,
             namespaces: Default::default(),
             topics: Default::default(),
             topic_refs: Default::default(),
@@ -601,8 +606,16 @@ impl Model {
     }
      */
 
-    pub(crate) fn is_public(&self) -> bool {
-        self.is_public
+    pub(crate) fn is_filtered(&self) -> bool {
+        self.is_filtered
+    }
+
+    pub(crate) fn filter_is_public(&self) -> bool {
+        self.filter_is_public
+    }
+
+    pub fn filter_root_topic_ref(&self) -> &Option<String> {
+        &self.filter_root_topic_ref
     }
 
     #[allow(dead_code)]
@@ -610,7 +623,7 @@ impl Model {
         self.topics.get(topic_key).unwrap().is_public()
     }
 
-    pub(crate) fn add_redacted_phrase(&mut self, phrase: String) {
+    pub fn add_redacted_phrase(&mut self, phrase: String) {
         self.redacted_phrases.push(phrase);
     }
 
@@ -631,6 +644,37 @@ impl Model {
             println!("\t\"{}\"", phrase);
         }
         println!();
+    }
+
+    pub(crate) fn filter_set_topics_include_and_redacted(&mut self) {
+        // FILTER UNCOMMENT
+        /*
+        let mut topic_is_included = true;
+        let mut topic_is_redacted = false;
+        for topic in self.topics.values_mut() {
+            let topic_is_public = topic.is_public();
+            if let Some(filter_root_topic_ref) = &self.filter_root_topic_ref {
+                let root_topic_ref = topic.get_root_topic_ref();
+                topic_is_included = root_topic_ref == filter_root_topic_ref;
+                topic_is_redacted = !topic_is_included && !topic_is_public;
+            } else {
+                assert!(self.filter_is_public);
+                topic_is_included = topic_is_public;
+                topic_is_redacted = !topic_is_included;
+            }
+            topic.is_included = topic_is_included;
+            topic.is_redacted = topic_is_redacted;
+            if !topic_is_included {
+                let topic_key = topic.get_topic_key();
+                assert!(!self.topic_files_to_delete.contains(&topic_key));
+                self.topic_files_to_delete.push(topic_key);
+            }
+            if topic_is_redacted {
+                self.add_redacted_phrase(topic.get_name().to_string());
+                self.add_redacted_phrase(topic.get_topic_ref());
+            }
+        }
+         */
     }
 
     pub(crate) fn finalize_redacted_phrases(&mut self) {

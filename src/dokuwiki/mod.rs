@@ -78,6 +78,7 @@ pub(crate) const MARKER_CODE_END: &str = "</code>";
 // Change the symbols if this causes a parsing issue.
 pub(crate) const MARKER_REDACTION: &str = "~~~redacted~~~";
 pub(crate) const MARKER_REDACTION_FINAL: &str = "%%*****%%";
+#[allow(dead_code)]
 pub(crate) const MARKER_PUBLIC_IN_TEXT_FILE: &str = "^ Visibility | Public |";
 pub(crate) const MARKER_DELETE_THIS_FILE: &str = "{{{delete}}}";
 pub(crate) const MARKER_TERMS_ADD_DEFINITION: &str = "(//add definition//)";

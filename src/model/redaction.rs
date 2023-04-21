@@ -24,8 +24,8 @@ use crate::*;
 use crate::model::FILE_NAME_REDACT;
 
 pub(crate) fn finalize_redacted_phrases(mut phrases: Vec<String>) -> Vec<String> {
-    // The model already has a list of redacted phrases consisting of the file names and topic
-    // names for private topics.
+    // The model already has a list of redacted phrases consisting of the topic names and topic
+    // refs for redacted topics.
     assert!(!phrases.is_empty());
 
     let mut blacklist = util::file::read_file_as_lines_r(FILE_NAME_REDACT).unwrap();

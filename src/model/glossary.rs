@@ -215,7 +215,7 @@ impl Glossary {
         list.insert(key, item);
     }
 
-    pub(crate) fn make_table(&self, include_terms: bool, include_acronyms: bool, mut show_tags: bool, included_tags: &Option<Vec<&str>>, excluded_tags: &Option<Vec<&str>>, is_public: bool) -> Table {
+    pub(crate) fn make_table(&self, include_terms: bool, include_acronyms: bool, mut show_tags: bool, included_tags: &Option<Vec<&str>>, excluded_tags: &Option<Vec<&str>>, filter_is_public: bool) -> Table {
         // This is the final table used for generating the page, as opposed to the initial raw
         // table we got at the beginning of the process.
         // If both include_terms and include_acronyms are false, the table will be empty.
@@ -228,11 +228,11 @@ impl Glossary {
             assert!(!tags.is_empty());
         }
 
-        if is_public {
+        if filter_is_public {
             show_tags = false;
         }
 
-        let excluded_tags = if is_public {
+        let excluded_tags = if filter_is_public {
             match excluded_tags {
                 Some(tags) => {
                     let mut tags = tags.clone();

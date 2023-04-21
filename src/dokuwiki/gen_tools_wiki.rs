@@ -8,20 +8,20 @@ use crate::dokuwiki::to_model::BuildProcess;
 
 pub(crate) const PROJECT_NAME: &str = "Tools";
 
-pub fn dokuwiki_round_trip(mut compare_only: bool, is_public: bool) {
+pub fn dokuwiki_round_trip(mut compare_only: bool, filter_is_public: bool, filter_main_topic_ref: Option<String>) {
     println!("\nDokuWiki round trip test: Start.");
 
-    if is_public {
+    if filter_is_public || filter_main_topic_ref.is_some() {
         compare_only = true;
     }
 
-    let (model, build_process) = prep_round_trip(compare_only, is_public);
+    let (model, build_process) = prep_round_trip(compare_only, filter_is_public, filter_main_topic_ref);
     complete_round_trip(model, build_process);
 
     println!("\nDokuWiki round trip test: Done.");
 }
 
-pub(crate) fn prep_round_trip(compare_only: bool, is_public: bool) -> (model::Model, BuildProcess) {
+pub(crate) fn prep_round_trip(compare_only: bool, filter_is_public: bool, filter_main_topic_ref: Option<String>) -> (model::Model, BuildProcess) {
     println!("\ndokuwiki::gen_tools_wiki::prep_round_trip(): Start.");
 
     let project = file_monitor::model::set_up_project(FILE_MONITOR_PROJECT_NAME_DOKUWIKI, FILE_MONITOR_SCAN_MINUTES);
@@ -31,7 +31,7 @@ pub(crate) fn prep_round_trip(compare_only: bool, is_public: bool) -> (model::Mo
     }
 
     // Create a model from the DokuWiki pages.
-    let (model, build_process) = super::to_model::build_model(PROJECT_NAME, &PROJECT_NAME.to_lowercase(), compare_only, is_public, None, Some(project));
+    let (model, build_process) = super::to_model::build_model(PROJECT_NAME, &PROJECT_NAME.to_lowercase(), compare_only, filter_is_public, filter_main_topic_ref, None, Some(project));
 
     // Back up the DokuWiki pages.
     let backup_folder_old = util::file::back_up_folder_next_number_r(PATH_PAGES, FOLDER_WIKI_GEN_BACKUP, FOLDER_PREFIX_WIKI_GEN_BACKUP, 4).unwrap();
@@ -48,7 +48,7 @@ pub(crate) fn complete_round_trip(mut model: model::Model, mut build_process: Bu
 
     println!("\ndokuwiki::gen_tools_wiki::complete_round_trip(): Start.");
 
-    if model.is_public() {
+    if model.is_filtered() {
         assert!(build_process.compare_only);
     }
 
@@ -56,7 +56,7 @@ pub(crate) fn complete_round_trip(mut model: model::Model, mut build_process: Bu
 
     // Create DokuWiki pages from this new model.
     build_process.gen_path_pages = if build_process.compare_only { FOLDER_WIKI_COMPARE_NEW.to_string() } else { PATH_PAGES.to_string() };
-    // if build_process.compare_only || model.is_public() {
+    // if build_process.compare_only || model.is_filtered() {
     //     clean_up_tools_dokuwiki_files(&build_process.gen_path_pages, false);
     // }
 
@@ -79,9 +79,9 @@ pub(crate) fn complete_round_trip(mut model: model::Model, mut build_process: Bu
         util::file::copy_folder_recursive_overwrite_r(PATH_PAGES, FOLDER_WIKI_COMPARE_NEW).unwrap();
 
         if let Some(file_monitor_project) = model.get_file_monitor_project() {
-            // If we're doing the public build, leave the file monitor paused since we don't want
+            // If we're doing the filtered build, leave the file monitor paused since we don't want
             // to count any changes until the next private build.
-            if !model.is_public() {
+            if !model.is_filtered() {
                 file_monitor_project.clear_marker(&FileMonitorMarker::Pause);
             }
         }
@@ -193,7 +193,7 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Model, use_l
     };
     let namespace_nav = model.qualify_namespace(&model.namespace_navigation());
     let namespace_main = model.get_main_namespace();
-    if !model.is_public() {
+    if !model.is_filtered() {
         links.push(wiki::page_link(&namespace_main, wiki::PAGE_NAME_MAIN, None));
     }
     links.append(&mut vec![
@@ -210,7 +210,7 @@ fn add_main_page_links(page: &mut wiki::WikiGenPage, model: &model::Model, use_l
         wiki::page_link("bctopic:gen", "Components Main", Some("BCTopic")),
         wiki::page_link("bcatopic:gen", "Components Main", Some("BCATopic")),
     ]);
-    if !model.is_public() {
+    if !model.is_filtered() {
         links.push(wiki::page_link(&namespace_nav, wiki::PAGE_NAME_REPORTS, None));
         links.push(wiki::page_link(&namespace_main, wiki::PAGE_NAME_DOKUWIKI_MARKUP, None));
     }
