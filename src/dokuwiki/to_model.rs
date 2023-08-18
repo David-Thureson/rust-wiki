@@ -226,8 +226,8 @@ impl BuildProcess {
                     errors.push(format!("{} should be deleted.", file_name));
                 }
                 let topic_name_line = util::parse::before(&content, DELIM_LINEFEED);
-                assert!(topic_name_line.starts_with(DELIM_HEADER), "Topic name \"{}\" should start with \"{}\".", &topic_name_line, DELIM_HEADER);
-                assert!(topic_name_line.ends_with(DELIM_HEADER), "Topic name \"{}\" should end with \"{}\".", &topic_name_line, DELIM_HEADER);
+                assert!(topic_name_line.starts_with(DELIM_HEADER), "Topic name \"{}\" in file \"{}\" should start with \"{}\".", &topic_name_line, &file_name, DELIM_HEADER);
+                assert!(topic_name_line.ends_with(DELIM_HEADER), "Topic name \"{}\" in file \"{}\" should end with \"{}\".", &topic_name_line, &file_name, DELIM_HEADER);
                 let topic_name = topic_name_line.replace(DELIM_HEADER, "").trim().to_string();
 
                 /*
@@ -318,12 +318,12 @@ impl BuildProcess {
     fn refine_paragraphs(&mut self, model: &mut Model) {
         let mut glossaries = model.take_glossaries();
         for topic in model.get_topics_mut().values_mut() {
-            let context = format!("Refining paragraphs for \"{}\".", topic.get_name());
             self.topic_parse_state = TopicParseState::new();
             // self.topic_parse_state.is_debug = topic.get_name().eq("DokuWiki Markup");
             //rintln!("\n==================================================================\n\n{}\n", context);
             let paragraph_count = topic.get_paragraph_count();
             for paragraph_index in 0..paragraph_count {
+                let context = format!("Refining paragraphs for \"{}\": paragraph index = {}.", topic.get_name(), paragraph_index);
                 match self.refine_one_paragraph_rc(topic, paragraph_index, &mut glossaries, &context) {
                     Err(msg) => {
                         let topic_key = TopicKey::new(&self.namespace_main, topic.get_name());
@@ -412,7 +412,7 @@ impl BuildProcess {
                     return Ok(true);
                 }
                 let category_part = util::parse::after(text, PREFIX_CATEGORY).trim().to_string();
-                match parse_link_optional(&self.topic_refs,&category_part) {
+                match parse_link_optional(&self.topic_refs,&category_part, context) {
                     Ok(Some(link)) => {
                         match link.get_label() {
                             Some(label) => {
@@ -836,7 +836,7 @@ impl BuildProcess {
         // let text = text.trim();
         let err_func = |msg: &str| Err(format!("{} make_link_rc: {}: text = \"{}\".", context, msg, text));
         //bg!(context, text);
-        match parse_link_optional(&self.topic_refs, &text)? {
+        match parse_link_optional(&self.topic_refs, &text, context)? {
             Some(link) => Ok(link),
             None => err_func("parse_link_optional didn't think it was a link."),
         }

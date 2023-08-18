@@ -248,8 +248,14 @@ impl <'a> GenFromModel<'a> {
 
     #[allow(dead_code)]
     pub(crate) fn gen_glossary_pages(&mut self, model: &Model) {
+        // If this fails, it's likely that there's some extra text between the attributes block and
+        // the start of the table with terms. There should be nothing but a blank line between those
+        // elements. Otherwise, it's likely that the terms table is malformed, such as with a
+        // linefeed in one of the cells.
         let base_glossary = model.get_glossaries().get(PAGE_NAME_TERMS).unwrap();
-        self.gen_glossary_page(PAGE_NAME_CLOUD_TERMS, &base_glossary, Some(vec!["az", "cl", "d"]), None);
+        // self.gen_glossary_page(PAGE_NAME_CLOUD_TERMS, &base_glossary, Some(vec!["az", "cl", "d"]), None);
+        // self.gen_glossary_page(PAGE_NAME_CLOUD_TERMS, &base_glossary, Some(vec!["az"]), None);
+        self.gen_glossary_page(PAGE_NAME_CLOUD_TERMS, &base_glossary, Some(vec!["ai", "ml", "cv", "nlp", "text"]), None);
         self.gen_glossary_page(PAGE_NAME_PROFISEE_TERMS, &base_glossary, Some(vec!["pr"]), None);
         self.gen_glossary_page(PAGE_NAME_SOC_SVC_TERMS, &base_glossary, Some(vec!["ss"]), None);
     }

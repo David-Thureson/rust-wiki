@@ -2,7 +2,7 @@ use crate::*;
 use super::*;
 use crate::model::{TopicKey, HorizontalAlignment, Model, TopicRefs, LIST_TYPE_GENERAL};
 
-pub(crate) fn parse_link_optional(topic_refs: &TopicRefs, text: &str) -> Result<Option<model::Link>, String> {
+pub(crate) fn parse_link_optional(topic_refs: &TopicRefs, text: &str, context: &str) -> Result<Option<model::Link>, String> {
     // Example topic link:
     //   [[tools:combinations|Combinations]]
     // Example section link:
@@ -25,7 +25,7 @@ pub(crate) fn parse_link_optional(topic_refs: &TopicRefs, text: &str) -> Result<
         } else {
             // Internal link.
             let (topic_ref, section_name) = util::parse::split_1_or_2(dest, DELIM_LINK_SECTION);
-            let topic_key = topic_ref_to_topic_key(topic_refs, topic_ref)?;
+            let topic_key = topic_ref_to_topic_key(topic_refs, topic_ref, context)?;
             if let Some(section_name) = section_name {
                 model::Link::new_section(label, topic_key.get_namespace(), topic_key.get_topic_name(), section_name)
             } else {
@@ -249,13 +249,13 @@ fn eval_breadcrumb_topic_ref(topic_ref: &str) -> Result<TopicKey, String> {
 }
 */
 
-pub(crate) fn topic_ref_to_topic_key(topic_refs: &TopicRefs, topic_ref: &str) -> Result<model::TopicKey, String> {
+pub(crate) fn topic_ref_to_topic_key(topic_refs: &TopicRefs, topic_ref: &str, context: &str) -> Result<model::TopicKey, String> {
     // Something like "tools:books:Zero to One".
     if !topic_ref.contains(DELIM_NAMESPACE) {
         let msg = if topic_ref.is_empty() {
-            format!("Topic reference is empty. Possibly an internal link starting with \"[[#\", which is not handled yet in the round trip.")
+            format!("{} Topic reference is empty. Possibly an internal link starting with \"[[#\", which is not handled yet in the round trip.", context)
         } else {
-            format!("Namespace delimiter \"{}\" not found in topic reference \"{}\".", DELIM_NAMESPACE, topic_ref)
+            format!("{} Namespace delimiter \"{}\" not found in topic reference \"{}\".", DELIM_NAMESPACE, topic_ref, context)
         };
         return Err(msg);
     }
